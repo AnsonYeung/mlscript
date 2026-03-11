@@ -3,7 +3,7 @@ name: CI with Nix
 on:
   pull_request:
   push:
-    branches: [ mlscript, hkmc2 ]
+    branches: [ mlscript, hkmc2, test ]
 
 jobs:
   build:

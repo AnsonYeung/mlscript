@@ -273,17 +273,20 @@ handler_stack(100)
 // * For some reason, this works locally with values 100 and 100,
 // * but it makes the CI sometimes fail unexpectedly (see https://github.com/hkust-taco/mlscript/pull/410).
 // * Since the test is flaky, I'll disable it for now
-:exit
-====================================================================================================
+// :exit
+// ====================================================================================================
 
-:silent
+// :silent
 let
-  // N = 100
-  // M = 100
-  N = 5
-  M = 10
+  N = 100
+  M = 100
+  // N = 5
+  // M = 10
+//│ M = 100
+//│ N = 100
 
 :stackSafe
+:ssjs
 fun shift_stack(n, f) =
   if n >= 0 then
     shift_stack(n - 1, f)
@@ -298,5 +301,185 @@ fun handler_stack(n) =
     handler_stack(n - 1)
   "ok"
 handler_stack(M)
+//│ JS:
+//│ let handler_stack1, shift_stack1, handleBlock$6, Handler$h$raise1, Handler$h$13, handleBlock$$1, tmp13, $_stack$_safe$_body$_15;
+//│ Handler$h$raise1 = function Handler$h$raise(k) {
+//│   runtime.checkArgs("Handler$h$raise", 1, true, arguments.length);
+//│   let stackDelayRes;
+//│   runtime.stackDepth = runtime.stackDepth + 1;
+//│   stackDelayRes = runtime.checkCall(runtime.checkDepth());
+//│   if (runtime.curEffect !== null) {
+//│     return runtime.checkCall(runtime.unwind(Handler$h$raise1, -1, null, null, null, 1, 1, k, 0))
+//│   }
+//│   return runtime.checkCall(shift_stack1(N, k))
+//│ };
+//│ handleBlock$$1 = (undefined, function (n, h5) {
+//│   runtime.checkArgs("", 2, true, arguments.length);
+//│   return () => {
+//│     let stackDelayRes;
+//│     runtime.stackDepth = runtime.stackDepth + 1;
+//│     stackDelayRes = runtime.checkCall(runtime.checkDepth());
+//│     if (runtime.curEffect !== null) {
+//│       return runtime.checkCall(runtime.unwind(handleBlock$$1, -1, null, null, null, 2, 2, n, h5, 0, 0))
+//│     }
+//│     return runtime.checkCall(handleBlock$6(n, h5))
+//│   }
+//│ });
+//│ globalThis.Object.freeze(class Handler$h$12 extends Eff3 {
+//│   static {
+//│     Handler$h$13 = this
+//│   }
+//│   constructor() {
+//│     let tmp14;
+//│     tmp14 = super();
+//│     if (runtime.curEffect !== null) {
+//│       tmp14 = runtime.checkCall(runtime.illegalEffect("in a constructor"));
+//│     }
+//│     tmp14;
+//│   }
+//│   #Handler$h$$cap;
+//│   get raise$__checkNotMethod() { runtime.deboundMethod("raise", "Handler$h$"); }
+//│   raise() {
+//│     runtime.checkArgs("raise", 0, true, arguments.length);
+//│     let stackDelayRes;
+//│     runtime.stackDepth = runtime.stackDepth + 1;
+//│     stackDelayRes = runtime.checkCall(runtime.checkDepth());
+//│     if (runtime.curEffect !== null) {
+//│       return runtime.checkCall(runtime.unwind(this.raise, -1, "StackSafety.mls:297:5", null, this, 1, 0, 0))
+//│     }
+//│     return runtime.mkEffect(this, Handler$h$raise1)
+//│   }
+//│   toString() { return runtime.render(this); }
+//│   static [definitionMetadata] = ["class", "Handler$h$"]; 
+//│ });
+//│ handleBlock$6 = (undefined, function (n, h5) {
+//│   runtime.checkArgs("", 2, true, arguments.length);
+//│   let scrut, tmp14, pc, curDepth, stackDelayRes;
+//│   runtime.stackDepth = runtime.stackDepth + 1;
+//│   curDepth = runtime.stackDepth;
+//│   stackDelayRes = runtime.checkCall(runtime.checkDepth());
+//│   if (runtime.curEffect !== null) {
+//│     return runtime.checkCall(runtime.unwind(handleBlock$6, -1, null, null, null, 1, 2, n, h5, 0))
+//│   }
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   main: while (true) {
+//│     switch (pc) {
+//│       case 0:
+//│         let res;
+//│         res = runtime.safeCall(h5.raise());
+//│         runtime.stackDepth = curDepth;
+//│         runtime.resumeValue = res;
+//│         if (runtime.curEffect !== null) {
+//│           return runtime.checkCall(runtime.unwind(handleBlock$6, 4, "StackSafety.mls:299:3", null, null, 1, 2, n, h5, 0))
+//│         }
+//│         pc = 4;
+//│         continue main;
+//│         break;
+//│       case 1:
+//│         return "ok";
+//│         break;
+//│       case 2:
+//│         runtime.resumeValue;
+//│         pc = 1;
+//│         continue main;
+//│         break;
+//│       case 3:
+//│         let res1;
+//│         res1 = runtime.checkCall(handler_stack1(tmp14));
+//│         runtime.stackDepth = curDepth;
+//│         runtime.resumeValue = res1;
+//│         if (runtime.curEffect !== null) {
+//│           return runtime.checkCall(runtime.unwind(handleBlock$6, 2, "StackSafety.mls:301:5", null, null, 1, 2, n, h5, 0))
+//│         }
+//│         pc = 2;
+//│         continue main;
+//│         break;
+//│       case 4:
+//│         runtime.resumeValue;
+//│         scrut = n >= 0;
+//│         if (scrut === true) {
+//│           tmp14 = n - 1;
+//│           pc = 3;
+//│           continue main
+//│         } else {
+//│           pc = 1;
+//│           continue main
+//│         }
+//│         /* unreachable */
+//│         break;
+//│     }
+//│     break;
+//│   }
+//│ });
+//│ shift_stack1 = function shift_stack(n, f4) {
+//│   runtime.checkArgs("shift_stack", 2, true, arguments.length);
+//│   let scrut, tmp14, stackDelayRes;
+//│   runtime.stackDepth = runtime.stackDepth + 1;
+//│   stackDelayRes = runtime.checkCall(runtime.checkDepth());
+//│   if (runtime.curEffect !== null) {
+//│     return runtime.checkCall(runtime.unwind(shift_stack1, -1, "StackSafety.mls:290:1", null, null, 1, 2, n, f4, 0))
+//│   }
+//│   scrut = n >= 0;
+//│   if (scrut === true) {
+//│     tmp14 = n - 1;
+//│     return runtime.checkCall(shift_stack1(tmp14, f4))
+//│   } else {
+//│     return runtime.safeCall(f4())
+//│   }
+//│ };
+//│ handler_stack1 = function handler_stack(n) {
+//│   runtime.checkArgs("handler_stack", 1, true, arguments.length);
+//│   let h5, tmp14, handleBlock$$here, pc, curDepth, stackDelayRes;
+//│   runtime.stackDepth = runtime.stackDepth + 1;
+//│   curDepth = runtime.stackDepth;
+//│   stackDelayRes = runtime.checkCall(runtime.checkDepth());
+//│   if (runtime.curEffect !== null) {
+//│     return runtime.checkCall(runtime.unwind(handler_stack1, -1, "StackSafety.mls:295:1", null, null, 1, 1, n, 0))
+//│   }
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   main: while (true) {
+//│     switch (pc) {
+//│       case 0:
+//│         let res;
+//│         h5 = new Handler$h$13();
+//│         runtime.stackDepth = curDepth;
+//│         handleBlock$$here = runtime.checkCall(handleBlock$$1(n, h5));
+//│         res = runtime.enterHandleBlock(h5, handleBlock$$here);
+//│         runtime.stackDepth = curDepth;
+//│         runtime.resumeValue = res;
+//│         if (runtime.curEffect !== null) {
+//│           return runtime.checkCall(runtime.unwind(handler_stack1, 1, null, null, null, 1, 1, n, 0))
+//│         }
+//│         pc = 1;
+//│         continue main;
+//│         break;
+//│       case 1:
+//│         tmp14 = runtime.resumeValue;
+//│         return tmp14;
+//│         break;
+//│     }
+//│     break;
+//│   }
+//│ };
+//│ $_stack$_safe$_body$_15 = (undefined, function () {
+//│   runtime.checkArgs("", 0, true, arguments.length);
+//│   return runtime.checkCall(handler_stack1(M))
+//│ });
+//│ tmp13 = runtime.runStackSafe(1000, $_stack$_safe$_body$_15);
+//│ if (runtime.curEffect !== null) {
+//│   tmp13 = runtime.checkCall(runtime.topLevelEffect(false));
+//│ }
+//│ block$res19 = tmp13;
+//│ undefined
 //│ = "ok"
 
