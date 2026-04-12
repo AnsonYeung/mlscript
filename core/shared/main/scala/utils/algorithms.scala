@@ -124,7 +124,8 @@ object algorithms {
     */
   case class SccsInfo[A](
     sccs: Map[Int, List[A]],
-    edges: Map[Int, Iterable[Int]],
+    sccInnerEdges: Map[Int, List[(A, A)]],
+    edges: Map[Int, List[Int]],
     inDegs: Map[Int, Int],
     outDegs: Map[Int, Int],
   )
@@ -147,6 +148,14 @@ object algorithms {
       } yield node -> id
     ).toMap
 
+    val sccInnerEdges = edges.filter {
+      case (a, b) => lookup(a) == lookup(b)
+    }.groupBy {
+      case (a, _) => lookup(a)
+    }.map {
+      case (id, edges) => id -> edges.toList
+    }
+
     val notInSccEdges = edges.map {
       case (a, b) => (lookup(a), lookup(b))
     }.filter {
@@ -160,7 +169,7 @@ object algorithms {
     val sccEdges = withIdx.map {
       case (a, _) => a -> Nil // add default case
     } ++ outs.map {
-      case (a, edges) => a -> edges.map(_._2)
+      case (a, edges) => a -> edges.map(_._2).toList
     }.toMap
     
     val inDegs = notInSccEdges.groupBy {
@@ -173,6 +182,6 @@ object algorithms {
       case (a, edges) => a -> edges.size
     }
 
-    SccsInfo(withIdx, sccEdges, inDegs, outDegs)
+    SccsInfo(withIdx, sccInnerEdges, sccEdges, inDegs, outDegs)
   }
 }

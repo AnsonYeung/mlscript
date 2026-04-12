@@ -200,7 +200,7 @@ class UsedVarAnalyzer(b: Block, scopeData: ScopeData)(using State):
     .toSet
     
     // (sccs, sccEdges) forms a directed acyclic graph (DAG)
-    val algorithms.SccsInfo(sccs, sccEdges, inDegs, outDegs) = algorithms.sccsWithInfo(edges, childInfo)
+    val algorithms.SccsInfo(sccs, _, sccEdges, inDegs, outDegs) = algorithms.sccsWithInfo(edges, childInfo)
 
     val rootInfo = s.obj.toInfo
     val (rootId, rootElems) = sccs.find:
