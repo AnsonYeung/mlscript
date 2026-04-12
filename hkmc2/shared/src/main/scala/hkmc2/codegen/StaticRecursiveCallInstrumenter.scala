@@ -64,4 +64,7 @@ class StaticRecursiveCallInstrumenter(using State):
 
   def rewrite(prog: Program): Program =
     val analysisResult = Analyzer.analyze(prog)
-    prog
+
+    object Rewriter extends BlockTransformer(SymbolSubst.Id)
+    
+    Rewriter.applyProgram(prog)
