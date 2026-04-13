@@ -69,6 +69,7 @@ abstract class MLsDiffMaker extends DiffMaker:
   val effectHandlers = Command("effectHandlers")(_.trim)
   val effectHandlersOptions = Set("debug", "")
   val stackSafe = Command("stackSafe")(_.trim)
+  val stackSafeStaticRecursion = NullaryCommand("sssr")
   val liftDefns = NullaryCommand("lift")
   val importQQ = NullaryCommand("qq")
   val stageCode = NullaryCommand("staging")
@@ -113,6 +114,7 @@ abstract class MLsDiffMaker extends DiffMaker:
               else
                 S(StackSafety(stackLimit = value))
         ,
+        stackSafeStaticRecursion = stackSafeStaticRecursion.isSet,
       )),
       liftDefns = Opt.when(liftDefns.isSet)(LiftDefns()),
       patMatConsequentSharingThreshold = patMatConsequentSharingThreshold.get

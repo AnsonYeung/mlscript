@@ -1118,8 +1118,12 @@ class Lowering()(using Config, TL, Raise, State, Ctx):
       if lift then Lifter(scopeFlattened).transform
       else scopeFlattened
     
-    val (withHandlers2, stackSafetyInfo) = effectiveConfig.effectHandlers.fold((lifted, Map.empty)): opt =>
-      HandlerLowering(handlerPaths, opt).translateTopLevel(lifted)
+    val staticStackSafe =
+      if effectiveConfig.staticRecursionStackSafety then StaticRecursiveCallInstrumenter().rewrite(lifted)
+      else lifted
+    
+    val (withHandlers2, stackSafetyInfo) = effectiveConfig.effectHandlers.fold((staticStackSafe, Map.empty)): opt =>
+      HandlerLowering(handlerPaths, opt).translateTopLevel(staticStackSafe)
       
     val stackSafe = effectiveConfig.stackSafety match
       case N => withHandlers2

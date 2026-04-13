@@ -40,7 +40,7 @@ class CallGraphBuilder extends BlockTraverser:
         (caller, callee)
     algorithms.sccsWithInfo(edges, interestingTsyms)
 
-  def addToGraph(caller: TermSymbol, callee: TermSymbol) =
+  def addToGraph(caller: TermSymbol, callee: TermSymbol): Unit =
     graph(caller) += callee
 
   def addTSymToGraph(ts: TermSymbol) = currentSymbol.map: caller =>
@@ -56,10 +56,12 @@ class CallGraphBuilder extends BlockTraverser:
     currentSymbol = ts
     f
     currentSymbol = oldSymbol
+  
+  def wrapFunction(fun: FunDefn, ignore: Boolean) =
+    wrapSymbol(if ignore then N else S(fun.dSym))(super.applyFunDefn(fun))
 
   override def applyFunDefn(fun: FunDefn): Unit =
-    wrapSymbol(S(fun.dSym)):
-      super.applyFunDefn(fun)
+    wrapFunction(fun, false)
   
   override def applyDefn(defn: Defn): Unit =
     defn match

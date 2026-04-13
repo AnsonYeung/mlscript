@@ -38,6 +38,8 @@ case class Config(
   
   def stackSafety: Opt[StackSafety] = effectHandlers.flatMap(_.stackSafety)
 
+  def staticRecursionStackSafety: Bool = effectHandlers.exists(_.stackSafeStaticRecursion)
+
   def checkInstantiateEffect: Bool = effectHandlers.exists(_.checkInstantiateEffect)
   
   // NOTE: We force the rewriting of while loops to functions when handler lowering is on
@@ -82,6 +84,7 @@ object Config:
   case class EffectHandlers(
     debug: Bool,
     stackSafety: Opt[StackSafety],
+    stackSafeStaticRecursion: Bool,
     // Whether we check `Instantiate` nodes for effects. Currently, effects cannot be raised in constructors.
     checkInstantiateEffect: Bool = false,
     // A debug option that allows codegen to continue even if an unlifted definition is encountered.
@@ -183,9 +186,10 @@ object ConfigParser:
   
   private def parseEffectHandlers(tree: Tree, current: Opt[Config.EffectHandlers])(using Raise): Opt[Config.EffectHandlers] = tree match
     case App(Ident("EffectHandlers"), Tup(args)) =>
-      val base = current.getOrElse(Config.EffectHandlers(debug = false, stackSafety = N))
+      val base = current.getOrElse(Config.EffectHandlers(debug = false, stackSafety = N, stackSafeStaticRecursion = false))
       var debug = base.debug
       var stackSafety = base.stackSafety
+      var stackSafeStaticRecursion = base.stackSafeStaticRecursion
       var checkInstantiateEffect = base.checkInstantiateEffect
       var softLifterError = base.softLifterError
       var doNotInstrumentTopLevelModCtor = base.doNotInstrumentTopLevelModCtor
@@ -194,6 +198,8 @@ object ConfigParser:
           parseBool(value).foreach(v => debug = v)
         case InfixApp(Ident("stackSafety"), Keywrd(Keyword.`:`), value) =>
           parseOpt(value)(parseStackSafety).foreach(v => stackSafety = v)
+        case InfixApp(Ident("stackSafeStaticRecursion"), Keywrd(Keyword.`:`), value) =>
+          parseBool(value).foreach(v => stackSafeStaticRecursion = v)
         case InfixApp(Ident("checkInstantiateEffect"), Keywrd(Keyword.`:`), value) =>
           parseBool(value).foreach(v => checkInstantiateEffect = v)
         case InfixApp(Ident("softLifterError"), Keywrd(Keyword.`:`), value) =>
