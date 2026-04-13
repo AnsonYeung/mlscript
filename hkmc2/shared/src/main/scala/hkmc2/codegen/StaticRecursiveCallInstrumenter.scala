@@ -115,9 +115,10 @@ class StaticRecursiveCallInstrumenter(using State):
           val nf = enterSymbol(S((f.dSym, handlerVar)))(applyFunDefn(f))
           val phead = nf.params.head
           val inner = nf.copy(dSym = innerSym, sym = innerBSym,
-            params = ParamList(phead.flags, Param.simple(handlerVar) :: phead.params, phead.restParam) :: Nil)(nf.forceTailRec, nf.configOverride)
-          // TODO: add effect to inner
-          val extraVarParam = copyVarSymbol(handlerVar)
+            params = ParamList(phead.flags, Param.simple(handlerVar) :: phead.params, phead.restParam) :: Nil,
+            body = Assign(State.noSymbol, Call(handlerVar.asPath.selSN("raise"), Nil)(true, true, false), nf.body)
+          )(nf.forceTailRec, nf.configOverride)
+          val handlerInstanceVar = copyVarSymbol(handlerVar)
           val newVars = phead.params.map(p => copyVarSymbol(p.sym))
           val newRstParams = phead.restParam.map(rp => copyVarSymbol(rp.sym))
           val wrapper = FunDefn(N, f.sym, f.dSym,
