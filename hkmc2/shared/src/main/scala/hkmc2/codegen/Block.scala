@@ -461,7 +461,33 @@ case class HandleBlock(
     rest: Block
 ) extends Block with ProductWithTail with NonBlockTail
 
+// Also known as shift0
+case class Suspend(
+    tag: Path,
+    handlerFun: Path,
+    rest: Block,
+) extends Block with ProductWithTail with NonBlockTail
+
+// Also known as reset0
+case class HandleSuspension(
+    tag: Path,
+    body: Block,
+    rest: Block,
+) extends Block with ProductWithTail with NonBlockTail
+
 object HandleBlock:
+  private def create(
+      lhs: Local,
+      res: Local,
+      par: Path,
+      args: Ls[Path],
+      cls: ClassSymbol,
+      handlers: Ls[Handler],
+      body: Block,
+      rest: Block
+    ): Block =
+      ???
+
   def apply(
       lhs: Local,
       res: Local,
@@ -474,8 +500,8 @@ object HandleBlock:
     ) =
   rest match
   case Scoped(syms, rest) =>
-    Scoped(syms, new HandleBlock(lhs, res, par, args, cls, handlers, body, rest))
-  case _ => new HandleBlock(lhs, res, par, args, cls, handlers, body, rest)
+    Scoped(syms, create(lhs, res, par, args, cls, handlers, body, rest))
+  case _ => create(lhs, res, par, args, cls, handlers, body, rest)
 
 
 sealed abstract class Defn:
