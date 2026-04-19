@@ -19,13 +19,7 @@ import hkmc2.syntax.SpreadKind
   * 
   * Instrument any statically known (mutually) recursive calls so that they will yield an effect,
   * which unwinds the stack to avoid stack overflow. The analysis is similar to tail recursive
-  * optimization, except here we don't care whether the call is tail or not. For calls inside
-  * lambdas, we'll assume those to be called within the function and not delayed. In the IR, the
-  * lambda correspond to a naked ref of TermSymbol. We treat such ref as a recursive call. This
-  * is valid since all usage to the naked reference will be indirect, to which we don't offer
-  * guarantee if it's used in a recursive manner.
-  * 
-  * We already require lifting to be enabled for effect handlers, so we assume it here as well.
+  * optimization, except here we don't care whether the call is tail or not.
   */
 class StaticRecursiveCallInstrumenter(using State):
   
