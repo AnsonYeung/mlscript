@@ -211,6 +211,9 @@ object Elaborator:
         val bufferable = assumeObject("bufferable")
       object scope extends VirtualModule(assumeBuiltinMod("scope")):
         val locally = assumeObject("locally")
+      object runtime extends VirtualModule(assumeBuiltinMod("runtime")):
+        val suspend = assumeObject("suspend")
+        val handle_suspension = assumeObject("handle_suspension")
       def getBuiltinOp(op: Str): Opt[Str] =
         if getBuiltin(op).isDefined then builtinBinOps.get(op) else N
       /** Classes that do not use `instanceof` in pattern matching. */
@@ -376,7 +379,14 @@ extends Importer with ucs.SplitElaborator:
     case _ => N
   
   def annot(tree: Tree): Ctxl[Opt[Annot]] = tree match
-    case Keywrd(kw @ (Keyword.`abstract` | Keyword.`declare` | Keyword.`data` | Keyword.`staged`)) => S(Annot.Modifier(kw))
+    case Keywrd(kw @ (
+      Keyword.`abstract`
+      | Keyword.`declare`
+      | Keyword.`data`
+      | Keyword.`staged`
+      | Keyword.`public`
+      | Keyword.`private`
+    )) => S(Annot.Modifier(kw))
     case App(Ident("config"), Tup(args)) =>
       val modify = ConfigParser.parseOverrides(args)
       S(Annot.Config(modify))
@@ -1299,8 +1309,12 @@ extends Importer with ucs.SplitElaborator:
           res
         
         def withFields(using Ctx)(fn: (Ctx) ?=> (Term.Blk, Ctx)): (Term.Blk, Ctx) =
-          val fields: Ls[Statement] = pss.flatMap: ps =>
-            ps.params.flatMap: p =>
+          softAssert(pss.sizeCompare(td.clsParams) === 0,
+            s"mismatched parameter list numbers ${pss} vs ${td.clsParams}")
+          val fields: Ls[Statement] = pss.zip(td.clsParams).flatMap: (ps, cps) =>
+            softAssert(ps.params.sizeCompare(cps) === 0,
+              s"mismatched param list lengths ${ps.params} vs ${cps}")
+            ps.params.zip(cps).flatMap: (p, cp) =>
               // For class-like types, "desugar" the parameters into additional class fields.
               
               val owner = td.symbol match
@@ -1313,7 +1327,8 @@ extends Importer with ucs.SplitElaborator:
               then
                 val k = if p.flags.mut then MutVal else ImmutVal
                 val fsym = BlockMemberSymbol(p.sym.nme, Nil)
-                val tsym = TermSymbol(k, owner, p.sym.id) // TODO?
+                val tsym = cp
+                cp.decl = S(p)
                 val fdef = TermDefinition(
                   k,
                   fsym,

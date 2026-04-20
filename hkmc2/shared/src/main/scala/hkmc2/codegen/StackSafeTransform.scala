@@ -34,7 +34,7 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
   
   def wrapStackSafe(body: Block, resSym: Local, rest: Block) =
     val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
-    val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, body)(forceTailRec = false, configOverride = N)
+    val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, body)(forceTailRec = false, configOverride = N, visibility = Visibility.Public)
     Scoped(Set.single(bodSym),
       Define(bodFun, Assign(resSym, Call(runStackSafePath, intLit(depthLimit).asArg :: bodSym.asPath.asArg :: Nil)(true, true, false), rest))
     )
@@ -73,8 +73,6 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
               extract(r, false, _ => applyBlock(rest), lhs, curDepth)
           else
             super.applyBlock(b)
-        
-        case HandleBlock(l, res, par, args, cls, hdr, bod, rst) => lastWords("HandleBlock in stack safe transformation")
         
         case _ => super.applyBlock(b)
         
@@ -155,6 +153,6 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
 
 
   def rewriteFn(defn: FunDefn) = 
-    FunDefn(defn.owner, defn.sym, defn.dSym, defn.params, rewriteBlk(defn.body, L(defn.sym)))(defn.forceTailRec, defn.configOverride)
+    FunDefn(defn.owner, defn.sym, defn.dSym, defn.params, rewriteBlk(defn.body, L(defn.sym)))(defn.forceTailRec, defn.configOverride, defn.visibility)
 
   def transformTopLevel(b: Block) = transform(b, TempSymbol(N), true)
