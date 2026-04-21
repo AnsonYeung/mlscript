@@ -554,7 +554,6 @@ let Runtime1;
           }
           break;
         }
-        runtime.safeCall(globalThis.console.log(result));
         return result
       }
       toString() { return runtime.render(this); }

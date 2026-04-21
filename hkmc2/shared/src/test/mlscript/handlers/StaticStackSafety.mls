@@ -58,7 +58,6 @@ hi(100)
 //│ tmp = inlinedVal;
 //│ if (runtime.curEffect === null) { tmp } else { tmp = runtime.topLevelEffect(false); tmp }
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-//│ > 5050
 //│ = 5050
 
 
