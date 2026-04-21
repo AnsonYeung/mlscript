@@ -21,7 +21,7 @@ import hkmc2.syntax.SpreadKind
   * which unwinds the stack to avoid stack overflow. The analysis is similar to tail recursive
   * optimization, except here we don't care whether the call is tail or not.
   */
-class StaticRecursiveCallInstrumenter(using State, Elaborator.Ctx):
+class StaticRecursiveCallInstrumenter(using State, Elaborator.Ctx, TL):
   
   class AnalysisResult(
     val loopBreakers: Set[TermSymbol],
@@ -33,7 +33,7 @@ class StaticRecursiveCallInstrumenter(using State, Elaborator.Ctx):
     // Whether the call from caller to callee is a recursive call that needs to pass the extra handler and call the inner function.
     // Other calls do not need to be changed at all.
     def isCallRecursive(caller: TermSymbol, callee: TermSymbol) =
-      sccMap.get(caller) == sccMap.get(callee)
+      sccMap.get(caller) == sccMap.get(callee) && sccMap.get(caller).isDefined
     // Whether the function needs to yield at its start.
     def needRaiseEffect(ts: TermSymbol) = loopBreakers.contains(ts)
   
@@ -42,10 +42,13 @@ class StaticRecursiveCallInstrumenter(using State, Elaborator.Ctx):
     // Ignore all methods
     override def addToGraph(caller: TermSymbol, callee: TermSymbol) =
       if !caller.owner.isDefined && !callee.owner.isDefined then
+        tl.log(s"Adding edge from ${caller} to ${callee}")
         super.addToGraph(caller, callee)
     
-    // Treat naked ref as a call, as explained in the class comment.
-    override def applyNakedRefTsym(ts: TermSymbol): Unit = addTSymToGraph(ts)
+    // Treat naked ref as a call
+    override def applyNakedRefTsym(ts: TermSymbol): Unit =
+      tl.log(s"Adding edge from ${currentSymbol} to ${ts} for naked ref")
+      addTSymToGraph(ts)
 
     // No multi-parameter list
     override def wrapFunction(fun: FunDefn, ignore: Boolean): Unit =
@@ -58,20 +61,22 @@ class StaticRecursiveCallInstrumenter(using State, Elaborator.Ctx):
       // For each strongly connected component, we pick one function as the loop breaker, which will be
       // transformed. We need to do this recursively until there is no cycle in the call graph.
       graph.sccs.flatMap: (sccId, tsyms) =>
-        if graph.sccInnerEdges(sccId).nonEmpty then
+        if graph.sccInnerEdges.getOrElse(sccId, Nil).nonEmpty then
           val loopBreaker = tsyms.head
-          val newSubGraph = graph.sccInnerEdges(sccId).filter:
+          val newSubGraph = graph.sccInnerEdges.getOrElse(sccId, Nil).filter:
             case (_, b) => b =/= loopBreaker
           computeLoopBreakers(algorithms.sccsWithInfo(newSubGraph, tsyms)) ++ collection.View.Single(loopBreaker)
         else collection.View.empty
     
     def analyze(prog: Program) =
       val graph = buildSccGraph(prog)
+      tl.log(graph)
       val loopBreakers = computeLoopBreakers(graph).toSet
+      tl.log(loopBreakers)
       AnalysisResult(
         loopBreakers,
         graph.sccs.flatMap((sccId, tsyms) => tsyms.map((_, sccId))).toMap,
-        graph.sccs.flatMap((sccId, tsyms) => if graph.sccInnerEdges(sccId).isEmpty then tsyms else Nil).toSet,
+        graph.sccs.flatMap((sccId, tsyms) => if graph.sccInnerEdges.getOrElse(sccId, Nil).isEmpty then tsyms else Nil).toSet,
       )
   
   def copyVarSymbol(s: VarSymbol): VarSymbol =

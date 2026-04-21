@@ -6,110 +6,184 @@
 
 
 :expect 5050
-:sjs
 fun hi(n) =
   if n === 0 then 0
   else n + hi(n - 1)
 hi(100)
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let hi, hi1, tmp, n, inlinedVal;
-//│ runtime.resetEffects();
-//│ hi1 = function hi(handler, n1) {
-//│   let scrut, tmp1, tmp2, pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       runtime.resumeValue = handler.raise();
-//│       if (runtime.curEffect === null) {
-//│         pc = 3;
-//│       } else {
-//│         return runtime.unwind(hi1, 3, null, null, null, 1, 2, handler, n1, 0)
-//│       }
-//│     case 3:
-//│       runtime.resumeValue;
-//│       scrut = n1 === 0;
-//│       if (scrut === true) {
-//│         return 0
-//│       }
-//│       tmp1 = n1 - 1;
-//│       pc = 2;
-//│     case 2:
-//│       runtime.resumeValue = hi1(handler, tmp1);
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(hi1, 1, null, null, null, 1, 2, handler, n1, 0)
-//│       }
-//│     case 1:
-//│       tmp2 = runtime.resumeValue;
-//│       return n1 + tmp2;
-//│   }
-//│ };
-//│ hi = function hi(n1) {
-//│   return runtime.runStaticStackSafe(hi1, n1)
-//│ };
-//│ n = 100;
-//│ inlinedVal = runtime.runStaticStackSafe(hi1, n);
-//│ tmp = inlinedVal;
-//│ if (runtime.curEffect === null) { tmp } else { tmp = runtime.topLevelEffect(false); tmp }
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 5050
 
 
-:sjs
-class A with
-  fun f() =
-    fun g() = 0
-    g()
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let A1, g;
-//│ runtime.resetEffects();
-//│ g = function g(handler) {
-//│   let pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       runtime.resumeValue = handler.raise();
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(g, 1, null, null, null, 1, 1, handler, 0)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return 0;
-//│   }
-//│ };
-//│ (class A {
-//│   static {
-//│     A1 = this
-//│   }
-//│   f() {
-//│     let inlinedVal1;
-//│     inlinedVal1 = runtime.runStaticStackSafe(g);
-//│     return inlinedVal1
-//│   }
-//│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "A"]; 
-//│ });
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-
-:sjs
+// TODO: Call to g within f is recursive and non wrapper passed to g
+:sir
 fun f() =
   fun g() = f()
   id(g)
+//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
+//│ let g⁰, f⁰, g¹, f¹;
+//│ do runtime⁰.resetEffects﹖();
+//│ define g¹ as fun g²(handler) {
+//│   let pc;
+//│   match runtime⁰.resumePc﹖
+//│     -1 =>
+//│       set pc = 0;
+//│       end
+//│     else
+//│       let saveOffset;
+//│       set pc = runtime⁰.resumePc﹖;
+//│       set runtime⁰.resumePc = -1;
+//│       end
+//│   loop main:
+//│     match pc
+//│       0 =>
+//│         block brk0:
+//│           set runtime⁰.resumeValue = handler.raise﹖();
+//│           match runtime⁰.curEffect﹖
+//│             null =>
+//│               break brk0
+//│             else
+//│               return runtime⁰.unwind﹖(g², 1, null, null, null, 1, 1, handler, 0)
+//│           end
+//│         set pc = 1;
+//│         end
+//│     match pc
+//│       1 =>
+//│         do runtime⁰.resumeValue﹖;
+//│         return f²(handler)
+//│       else
+//│         end
+//│     end
+//│   end
+//│ };
+//│ define g⁰ as fun g³() {
+//│   return runtime⁰.runStaticStackSafe﹖(g²)
+//│ };
+//│ define f¹ as fun f²(handler) {
+//│   let pc;
+//│   match runtime⁰.resumePc﹖
+//│     -1 =>
+//│       set pc = 0;
+//│       end
+//│     else
+//│       let saveOffset;
+//│       set pc = runtime⁰.resumePc﹖;
+//│       set runtime⁰.resumePc = -1;
+//│       end
+//│   loop main:
+//│     match pc
+//│       0 =>
+//│         block brk0:
+//│           set runtime⁰.resumeValue = handler.raise﹖();
+//│           match runtime⁰.curEffect﹖
+//│             null =>
+//│               break brk0
+//│             else
+//│               return runtime⁰.unwind﹖(f², 1, null, null, null, 1, 1, handler, 0)
+//│           end
+//│         set pc = 1;
+//│         end
+//│     match pc
+//│       1 =>
+//│         do runtime⁰.resumeValue﹖;
+//│         return Predef⁰.id⁰(g³)
+//│       else
+//│         end
+//│     end
+//│   end
+//│ };
+//│ define f⁰ as fun f³() { return runtime⁰.runStaticStackSafe﹖(f²) };
+//│ end
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+
+
+// g and h not instrumented
+:sir
+fun f() =
+  fun g() = 1
+  fun h() = g()
+  if false do f()
+  id(h)
+//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
+//│ let g⁴, h⁰, f⁴, f⁵;
+//│ do runtime⁰.resetEffects﹖();
+//│ define g⁴ as fun g⁵() {
+//│   return 1
+//│ };
+//│ define h⁰ as fun h¹() {
+//│   return g⁵()
+//│ };
+//│ define f⁵ as fun f⁶(handler) {
+//│   let scrut, pc;
+//│   match runtime⁰.resumePc﹖
+//│     -1 =>
+//│       set pc = 0;
+//│       end
+//│     else
+//│       let saveOffset;
+//│       set pc = runtime⁰.resumePc﹖;
+//│       set runtime⁰.resumePc = -1;
+//│       end
+//│   loop main:
+//│     match pc
+//│       0 =>
+//│         block brk0:
+//│           set runtime⁰.resumeValue = handler.raise﹖();
+//│           match runtime⁰.curEffect﹖
+//│             null =>
+//│               break brk0
+//│             else
+//│               return runtime⁰.unwind﹖(f⁶, 3, null, null, null, 1, 1, handler, 0)
+//│           end
+//│         set pc = 3;
+//│         end
+//│     match pc
+//│       3 =>
+//│         do runtime⁰.resumeValue﹖;
+//│         set scrut = false;
+//│         match scrut
+//│           true =>
+//│             set runtime⁰.resumeValue = f⁶(handler);
+//│             match runtime⁰.curEffect﹖
+//│               null =>
+//│                 set pc = 2;
+//│                 continue main
+//│               else
+//│                 return runtime⁰.unwind﹖(f⁶, 2, null, null, null, 1, 1, handler, 0)
+//│             end
+//│           else
+//│             set pc = 1;
+//│             continue main
+//│         end
+//│       2 =>
+//│         begin
+//│           do runtime⁰.resumeValue﹖;
+//│           set pc = 1;
+//│           end;
+//│         match pc
+//│           1 =>
+//│             return Predef⁰.id⁰(h¹)
+//│           else
+//│             end
+//│         end
+//│       1 =>
+//│         return Predef⁰.id⁰(h¹)
+//│       else
+//│         end
+//│     end
+//│   end
+//│ };
+//│ define f⁴ as fun f⁷() { return runtime⁰.runStaticStackSafe﹖(f⁶) };
+//│ end
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+
+
+// TODO: Non wrapper passed to id
+:sjs
+fun f() =
+  fun g() = f()
+  fun h() = g()
+  id(h)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let g2, f, g3, f1;
+//│ let h1, f4, g3, f5, h2;
 //│ runtime.resetEffects();
 //│ g3 = function g(handler) {
 //│   let pc;
@@ -129,166 +203,10 @@ fun f() =
 //│       }
 //│     case 1:
 //│       runtime.resumeValue;
-//│       return f1(handler);
-//│   }
-//│ };
-//│ g2 = function g() {
-//│   return runtime.runStaticStackSafe(g3)
-//│ };
-//│ f1 = function f(handler) {
-//│   let pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       runtime.resumeValue = handler.raise();
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(f1, 1, null, null, null, 1, 1, handler, 0)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return Predef.id(g2);
-//│   }
-//│ };
-//│ f = function f() { return runtime.runStaticStackSafe(f1) };
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-
-:sjs
-fun f() =
-  fun g() = 1
-  fun h() = g()
-  if false do f()
-  id(h)
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let h, f2, g4, h1, f3;
-//│ runtime.resetEffects();
-//│ g4 = function g(handler) {
-//│   let pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       runtime.resumeValue = handler.raise();
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(g4, 1, null, null, null, 1, 1, handler, 0)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return 1;
-//│   }
-//│ };
-//│ h1 = function h(handler) {
-//│   let pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       runtime.resumeValue = handler.raise();
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(h1, 1, null, null, null, 1, 1, handler, 0)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return g4(handler);
-//│   }
-//│ };
-//│ h = function h() {
-//│   return runtime.runStaticStackSafe(h1)
-//│ };
-//│ f3 = function f(handler) {
-//│   let scrut, pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   main: while (true) {
-//│     switch (pc) {
-//│       case 0:
-//│         runtime.resumeValue = handler.raise();
-//│         if (runtime.curEffect === null) {
-//│           pc = 3;
-//│         } else {
-//│           return runtime.unwind(f3, 3, null, null, null, 1, 1, handler, 0)
-//│         }
-//│       case 3:
-//│         runtime.resumeValue;
-//│         scrut = false;
-//│         if (scrut === true) {
-//│           runtime.resumeValue = f3(handler);
-//│           if (runtime.curEffect === null) {
-//│             pc = 2;
-//│             continue main
-//│           }
-//│           return runtime.unwind(f3, 2, null, null, null, 1, 1, handler, 0);
-//│         }
-//│         pc = 1;
-//│         continue main;
-//│       case 2:
-//│         runtime.resumeValue;
-//│         pc = 1;
-//│         if (pc === 1) {
-//│           return Predef.id(h)
-//│         }
-//│         break;
-//│       case 1:
-//│         return Predef.id(h);
-//│     }
-//│     break;
-//│   }
-//│ };
-//│ f2 = function f() { return runtime.runStaticStackSafe(f3) };
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-
-:sjs
-fun f() =
-  fun g() = f()
-  fun h() = g()
-  id(h)
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let h2, f4, g5, f5, h3;
-//│ runtime.resetEffects();
-//│ g5 = function g(handler) {
-//│   let pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       runtime.resumeValue = handler.raise();
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(g5, 1, null, null, null, 1, 1, handler, 0)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
 //│       return f5(handler);
 //│   }
 //│ };
-//│ h3 = function h(handler) {
+//│ h2 = function h(handler) {
 //│   let pc;
 //│   if (runtime.resumePc === -1) {
 //│     pc = 0;
@@ -302,15 +220,15 @@ fun f() =
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
 //│       } else {
-//│         return runtime.unwind(h3, 1, null, null, null, 1, 1, handler, 0)
+//│         return runtime.unwind(h2, 1, null, null, null, 1, 1, handler, 0)
 //│       }
 //│     case 1:
 //│       runtime.resumeValue;
-//│       return g5(handler);
+//│       return g3(handler);
 //│   }
 //│ };
-//│ h2 = function h() {
-//│   return runtime.runStaticStackSafe(h3)
+//│ h1 = function h() {
+//│   return runtime.runStaticStackSafe(h2)
 //│ };
 //│ f5 = function f(handler) {
 //│   let pc;
@@ -330,7 +248,7 @@ fun f() =
 //│       }
 //│     case 1:
 //│       runtime.resumeValue;
-//│       return Predef.id(h2);
+//│       return Predef.id(h1);
 //│   }
 //│ };
 //│ f4 = function f() { return runtime.runStaticStackSafe(f5) };

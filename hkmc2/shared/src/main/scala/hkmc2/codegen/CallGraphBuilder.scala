@@ -26,7 +26,7 @@ object CallToTermSymbol:
 
 // The call graph ignores `Instantiate` / constructor.
 class CallGraphBuilder extends BlockTraverser:
-  val graph = Map.empty[TermSymbol, Buffer[TermSymbol]].withDefault(_ => Buffer.empty)
+  val graph = MutMap.empty[TermSymbol, Buffer[TermSymbol]]
   var currentSymbol: Opt[TermSymbol] = N
 
   def buildSccGraph(prog: Program) =
@@ -41,7 +41,7 @@ class CallGraphBuilder extends BlockTraverser:
     algorithms.sccsWithInfo(edges, interestingTsyms)
 
   def addToGraph(caller: TermSymbol, callee: TermSymbol): Unit =
-    graph(caller) += callee
+    graph.getOrElseUpdate(caller, Buffer.empty) += callee
 
   def addTSymToGraph(ts: TermSymbol) = currentSymbol.map: caller =>
     addToGraph(caller, ts)
@@ -58,7 +58,8 @@ class CallGraphBuilder extends BlockTraverser:
     currentSymbol = oldSymbol
   
   def wrapFunction(fun: FunDefn, ignore: Boolean) =
-    wrapSymbol(if ignore then N else S(fun.dSym))(super.applyFunDefn(fun))
+    graph.getOrElseUpdate(fun.dSym, Buffer.empty)
+    wrapSymbol(if ignore then N else S(fun.dSym))(applyBlock(fun.body))
 
   override def applyFunDefn(fun: FunDefn): Unit =
     wrapFunction(fun, false)
