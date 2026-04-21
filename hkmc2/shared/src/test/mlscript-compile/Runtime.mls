@@ -493,14 +493,14 @@ class StaticStackDelayHandler(thunk) with
         thunk = null
         result = saved(())
       if curEffect !== null do
-        return unwind(continue, 0, "<MLscript runtime>", dbgInfo, this, 1, 0, 0)
+        return unwind(continue, 0, "MLscript runtime", dbgInfo, this, 1, 0, 0)
     result
 
 fun runStaticStackSafe(f, ...args) =
   let handler = StaticStackDelayHandler(null)
   set resumeValue = enterHandleBlock(handler, () => f(handler, ...args))
   if curEffect !== null then
-    unwind(handler.continue, 0, "<MLscript runtime>", dbgInfo, handler, 1, 0, 0)
+    unwind(handler.continue, 0, "MLscript runtime", dbgInfo, handler, 1, 0, 0)
   else
     handler.continue()
 

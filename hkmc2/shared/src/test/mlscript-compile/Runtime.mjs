@@ -548,7 +548,7 @@ let Runtime1;
             result = tmp1;
             scrut1 = Runtime.curEffect !== null;
             if (scrut1 === true) {
-              return Runtime.unwind(this.continue, 0, "<MLscript runtime>", Runtime.#dbgInfo, this, 1, 0, 0)
+              return Runtime.unwind(this.continue, 0, "MLscript runtime", Runtime.#dbgInfo, this, 1, 0, 0)
             }
             continue lbl;
           }
@@ -1183,7 +1183,7 @@ let Runtime1;
     Runtime.resumeValue = tmp;
     scrut = Runtime.curEffect !== null;
     if (scrut === true) {
-      return Runtime.unwind(handler.continue, 0, "<MLscript runtime>", Runtime.#dbgInfo, handler, 1, 0, 0)
+      return Runtime.unwind(handler.continue, 0, "MLscript runtime", Runtime.#dbgInfo, handler, 1, 0, 0)
     }
     return runtime.safeCall(handler.continue());
   } 

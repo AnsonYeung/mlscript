@@ -19,7 +19,7 @@ fun f() =
   fun g() = f()
   id(g)
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ let g⁰, f⁰, g¹, f¹;
+//│ let g⁰, f⁰, f¹, g¹;
 //│ do runtime⁰.resetEffects﹖();
 //│ define g¹ as fun g²(handler) {
 //│   let pc;
@@ -183,7 +183,7 @@ fun f() =
   fun h() = g()
   id(h)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let h1, f4, g3, f5, h2;
+//│ let h1, f4, f5, g3, h2;
 //│ runtime.resetEffects();
 //│ g3 = function g(handler) {
 //│   let pc;

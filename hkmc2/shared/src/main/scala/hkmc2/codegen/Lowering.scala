@@ -1107,24 +1107,24 @@ class Lowering()(using Config, TL, Raise, State, Ctx):
           ).givenIn:
             deforest.Deforest(Program(imps.map(imp => imp.sym -> imp.str), desug)).main
     
+    val staticStackSafe =
+      if effectiveConfig.staticRecursionStackSafety then StaticRecursiveCallInstrumenter().rewrite(deforested)
+      else deforested
+    
     val handlerPaths = new HandlerPaths
     
     val shouldFlattenScopes = effectiveConfig.effectHandlers.isDefined
     
     val scopeFlattened =
-      if shouldFlattenScopes then ScopeFlattener().applyBlock(deforested)
-      else deforested
+      if shouldFlattenScopes then ScopeFlattener().applyBlock(staticStackSafe)
+      else staticStackSafe
     
     val lifted =
       if lift then Lifter(scopeFlattened).transform
       else scopeFlattened
     
-    val staticStackSafe =
-      if effectiveConfig.staticRecursionStackSafety then StaticRecursiveCallInstrumenter().rewrite(lifted)
-      else lifted
-    
-    val (withHandlers2, stackSafetyInfo) = effectiveConfig.effectHandlers.fold((staticStackSafe, Map.empty)): opt =>
-      HandlerLowering(handlerPaths, opt).translateTopLevel(staticStackSafe)
+    val (withHandlers2, stackSafetyInfo) = effectiveConfig.effectHandlers.fold((lifted, Map.empty)): opt =>
+      HandlerLowering(handlerPaths, opt).translateTopLevel(lifted)
       
     val stackSafe = effectiveConfig.stackSafety match
       case N => withHandlers2
