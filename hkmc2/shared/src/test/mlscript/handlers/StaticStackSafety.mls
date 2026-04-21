@@ -2,23 +2,20 @@
 :effectHandlers
 :lift
 :noTailRec
-
-
-:d
 :sssr
-:expect 0
+
+
+:expect 5050
 :sjs
-:soir
 fun hi(n) =
   if n === 0 then 0
-  else hi(n - 1)
-hi(0)
-//│ Elab: { fun member:hi‹731›(n‹732›) = if { let scrut = builtin:===⁰‹83›(n⁰‹732›, 0); tmp:scrut⁰‹735› is true then 0; else member:hi⁰‹731›(builtin:-⁰‹73›(n⁰‹732›, 1)) }; member:hi⁰‹731›(0) }
+  else n + hi(n - 1)
+hi(100)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let hi, hi1, tmp, n, inlinedVal;
 //│ runtime.resetEffects();
 //│ hi1 = function hi(handler, n1) {
-//│   let scrut, tmp1, pc;
+//│   let scrut, tmp1, tmp2, pc;
 //│   if (runtime.resumePc === -1) {
 //│     pc = 0;
 //│   } else {
@@ -29,149 +26,313 @@ hi(0)
 //│     case 0:
 //│       runtime.resumeValue = handler.raise();
 //│       if (runtime.curEffect === null) {
-//│         pc = 2;
+//│         pc = 3;
 //│       } else {
-//│         return runtime.unwind(hi1, 2, null, null, null, 1, 2, handler, n1, 0)
+//│         return runtime.unwind(hi1, 3, null, null, null, 1, 2, handler, n1, 0)
 //│       }
-//│       /* Rest moved to non-abortive branch(es) */
-//│     case 2:
+//│     case 3:
 //│       runtime.resumeValue;
 //│       scrut = n1 === 0;
 //│       if (scrut === true) {
 //│         return 0
 //│       }
 //│       tmp1 = n1 - 1;
-//│       pc = 1;
-//│       /* (Unreachable:) rest of abortive match */
+//│       pc = 2;
+//│     case 2:
+//│       runtime.resumeValue = hi1(handler, tmp1);
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(hi1, 1, null, null, null, 1, 2, handler, n1, 0)
+//│       }
 //│     case 1:
-//│       return hi1(handler, tmp1);
+//│       tmp2 = runtime.resumeValue;
+//│       return n1 + tmp2;
 //│   }
 //│ };
 //│ hi = function hi(n1) {
-//│   return hi1(n1)
+//│   return runtime.runStaticStackSafe(hi1, n1)
 //│ };
-//│ n = 0;
-//│ inlinedVal = hi1(n);
+//│ n = 100;
+//│ inlinedVal = runtime.runStaticStackSafe(hi1, n);
 //│ tmp = inlinedVal;
-//│ if (runtime.curEffect === null) {
-//│   tmp
-//│ } else { tmp = runtime.topLevelEffect(false); tmp }
-//│ /* Rest moved to non-abortive branch(es) */
-//│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
-//│ let hi⁰, hi¹, tmp, n¹, inlinedVal;
-//│ do runtime⁰.resetEffects﹖();
-//│ define hi¹ as fun hi²(handler, n) {
-//│   let scrut, tmp1, pc;
-//│   match runtime⁰.resumePc﹖
-//│     -1 =>
-//│       set pc = 0;
-//│       end
-//│     else
-//│       let saveOffset;
-//│       set pc = runtime⁰.resumePc﹖;
-//│       set runtime⁰.resumePc = -1;
-//│       end
-//│   match pc
-//│     0 =>
-//│       set runtime⁰.resumeValue = handler.raise﹖();
-//│       match runtime⁰.curEffect﹖
-//│         null =>
-//│           set pc = 2;
-//│           end
-//│         else
-//│           return runtime⁰.unwind﹖(‹term:hi‹766››, 2, null, null, null, 1, 2, handler, n, 0)
-//│       end /* Rest moved to non-abortive branch(es) */
-//│   match pc
-//│     2 =>
-//│       do runtime⁰.resumeValue﹖;
-//│       set scrut = ===⁰(n, 0);
-//│       match scrut
-//│         true =>
-//│           return 0
-//│         else
-//│           set tmp1 = -⁰(n, 1);
-//│           set pc = 1;
-//│           end
-//│       end /* (Unreachable:) rest of abortive match */
-//│   match pc
-//│     1 =>
-//│       return ‹term:hi‹766››(handler, tmp1)
-//│     else
-//│       end
-//│   end
-//│ };
-//│ define hi⁰ as fun hi³(n) {
-//│   return ‹term:hi‹766››(n)
-//│ };
-//│ set n¹ = 0;
-//│ set inlinedVal = ‹term:hi‹766››(n¹);
-//│ set tmp = inlinedVal;
-//│ match runtime⁰.curEffect﹖
-//│   null =>
-//│     tmp
-//│   else
-//│     set tmp = runtime⁰.topLevelEffect﹖(false);
-//│     tmp
-//│ end /* Rest moved to non-abortive branch(es) */
+//│ if (runtime.curEffect === null) { tmp } else { tmp = runtime.topLevelEffect(false); tmp }
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:242)
-//│ ═══[RUNTIME ERROR] Error: Function 'hi' expected 2 arguments but got 1
-//│     at Runtime.checkArgs (file:///home/attempt0/mlscript/static-recursion-stack-safety/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:593:41)
-//│     at hi (REPL10:1:125)
-//│     at REPL10:1:1050
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:598:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:927:10)
-//│     at REPLServer.emit (node:events:518:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:281)
-//│ ═══[RUNTIME ERROR] Expected: '0', got: 'undefined'
+//│ > 5050
+//│ = 5050
 
 
-:lot
+:sjs
 class A with
   fun f() =
     fun g() = 0
     g()
-//│ —————————————| Lowered IR Tree |————————————————————————————————————————————————————————————————————
-//│ Program:
-//│   main = Scoped(syms = {member:g⁰, member:A⁰}): 
-//│     body = Assign:
-//│       lhs = ‹no symbol›⁰
-//│       rhs = Call:
-//│         fun = Select:
-//│           qual = Ref:
-//│             l = tmp:runtime⁰
-//│           name = Ident of "resetEffects"
-//│       rest = Define: \
-//│       defn = FunDefn:
-//│         sym = member:g⁰
-//│         dSym = term:g¹
-//│         params = Ls of 
-//│           ParamList: ‹empty›
-//│         body = Return:
-//│           res = Lit of IntLit of 0
-//│           implct = false
-//│       rest = Define: \
-//│       defn = ClsLikeDefn:
-//│         isym = class:A¹
-//│         sym = member:A⁰
-//│         k = Cls
-//│         methods = Ls of 
-//│           FunDefn:
-//│             owner = S of class:A¹
-//│             sym = member:f⁰
-//│             dSym = term:A¹/f¹
-//│             params = Ls of 
-//│               ParamList: ‹empty›
-//│             body = Return:
-//│               res = Call:
-//│                 fun = Ref{disamb=term:g¹}:
-//│                   l = member:g⁰
-//│                   disamb = S of term:g¹
-//│               implct = false
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ let A1, g;
+//│ runtime.resetEffects();
+//│ g = function g(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(g, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return 0;
+//│   }
+//│ };
+//│ (class A {
+//│   static {
+//│     A1 = this
+//│   }
+//│   f() {
+//│     let inlinedVal1;
+//│     inlinedVal1 = runtime.runStaticStackSafe(g);
+//│     return inlinedVal1
+//│   }
+//│   toString() { return runtime.render(this); }
+//│   static [definitionMetadata] = ["class", "A"]; 
+//│ });
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+
+:sjs
+fun f() =
+  fun g() = f()
+  id(g)
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ let g2, f, g3, f1;
+//│ runtime.resetEffects();
+//│ g3 = function g(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(g3, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return f1(handler);
+//│   }
+//│ };
+//│ g2 = function g() {
+//│   return runtime.runStaticStackSafe(g3)
+//│ };
+//│ f1 = function f(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(f1, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return Predef.id(g2);
+//│   }
+//│ };
+//│ f = function f() { return runtime.runStaticStackSafe(f1) };
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+
+:sjs
+fun f() =
+  fun g() = 1
+  fun h() = g()
+  if false do f()
+  id(h)
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ let h, f2, g4, h1, f3;
+//│ runtime.resetEffects();
+//│ g4 = function g(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(g4, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return 1;
+//│   }
+//│ };
+//│ h1 = function h(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(h1, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return g4(handler);
+//│   }
+//│ };
+//│ h = function h() {
+//│   return runtime.runStaticStackSafe(h1)
+//│ };
+//│ f3 = function f(handler) {
+//│   let scrut, pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   main: while (true) {
+//│     switch (pc) {
+//│       case 0:
+//│         runtime.resumeValue = handler.raise();
+//│         if (runtime.curEffect === null) {
+//│           pc = 3;
+//│         } else {
+//│           return runtime.unwind(f3, 3, null, null, null, 1, 1, handler, 0)
+//│         }
+//│       case 3:
+//│         runtime.resumeValue;
+//│         scrut = false;
+//│         if (scrut === true) {
+//│           runtime.resumeValue = f3(handler);
+//│           if (runtime.curEffect === null) {
+//│             pc = 2;
+//│             continue main
+//│           }
+//│           return runtime.unwind(f3, 2, null, null, null, 1, 1, handler, 0);
+//│         }
+//│         pc = 1;
+//│         continue main;
+//│       case 2:
+//│         runtime.resumeValue;
+//│         pc = 1;
+//│         if (pc === 1) {
+//│           return Predef.id(h)
+//│         }
+//│         break;
+//│       case 1:
+//│         return Predef.id(h);
+//│     }
+//│     break;
+//│   }
+//│ };
+//│ f2 = function f() { return runtime.runStaticStackSafe(f3) };
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+
+:sjs
+fun f() =
+  fun g() = f()
+  fun h() = g()
+  id(h)
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ let h2, f4, g5, f5, h3;
+//│ runtime.resetEffects();
+//│ g5 = function g(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(g5, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return f5(handler);
+//│   }
+//│ };
+//│ h3 = function h(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(h3, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return g5(handler);
+//│   }
+//│ };
+//│ h2 = function h() {
+//│   return runtime.runStaticStackSafe(h3)
+//│ };
+//│ f5 = function f(handler) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       runtime.resumeValue = handler.raise();
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(f5, 1, null, null, null, 1, 1, handler, 0)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return Predef.id(h2);
+//│   }
+//│ };
+//│ f4 = function f() { return runtime.runStaticStackSafe(f5) };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

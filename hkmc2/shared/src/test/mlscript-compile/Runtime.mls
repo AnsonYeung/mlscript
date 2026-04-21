@@ -480,6 +480,31 @@ fun runStackSafe(limit, f) =
       throw new Error("Effect crossed through stack safe boundary")
   result
 
+let dbgInfo = ["<stack safety thunk>"]
+
+class StaticStackDelayHandler(thunk) with
+  fun raise() = mkEffect of this, k =>
+    set thunk = k
+  fun continue() =
+    let result = resumeValue
+    while thunk !== null do
+      let saved = thunk
+      set
+        thunk = null
+        result = saved(())
+      if curEffect !== null do
+        return unwind(continue, 0, "<MLscript runtime>", dbgInfo, this, 1, 0, 0)
+    console.log(result)
+    result
+
+fun runStaticStackSafe(f, ...args) =
+  let handler = StaticStackDelayHandler(null)
+  set resumeValue = enterHandleBlock(handler, () => f(handler, ...args))
+  if curEffect !== null then
+    unwind(handler.continue, 0, "<MLscript runtime>", dbgInfo, handler, 1, 0, 0)
+  else
+    handler.continue()
+
 class Int31(v) with
   fun zext() = bitand(v, bitnot(shl(1, 31))) as Int
   fun sext() = bitor(v, shl(1, 31)) as Int

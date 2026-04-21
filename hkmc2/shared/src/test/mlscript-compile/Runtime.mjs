@@ -10,6 +10,7 @@ let Runtime1;
   static {
     Runtime1 = this
   }
+  static #dbgInfo;
   static #curEffect;
   static #resumeValue;
   static #resumeArr;
@@ -510,6 +511,54 @@ let Runtime1;
       }
       toString() { return runtime.render(this); }
       static [definitionMetadata] = ["object", "StackDelayHandler"]; 
+    });
+    Runtime.#dbgInfo = globalThis.Object.freeze([
+      "<stack safety thunk>"
+    ]);
+    this.StaticStackDelayHandler = function StaticStackDelayHandler(thunk) {
+      return globalThis.Object.freeze(new StaticStackDelayHandler.class(thunk));
+    };
+    (class StaticStackDelayHandler {
+      static {
+        Runtime.StaticStackDelayHandler.class = this
+      }
+      constructor(thunk) {
+        this.#thunk = thunk;
+      }
+      #thunk;
+      raise() {
+        let lambda;
+        const this$StaticStackDelayHandler = this;
+        lambda = (undefined, function (k) {
+          this$StaticStackDelayHandler.#thunk = k;
+          return runtime.Unit
+        });
+        return Runtime.mkEffect(this, lambda)
+      } 
+      continue() {
+        let result;
+        result = Runtime.resumeValue;
+        lbl: while (true) {
+          let scrut, saved, scrut1, tmp1;
+          scrut = this.#thunk !== null;
+          if (scrut === true) {
+            saved = this.#thunk;
+            this.#thunk = null;
+            tmp1 = runtime.safeCall(saved(runtime.Unit));
+            result = tmp1;
+            scrut1 = Runtime.curEffect !== null;
+            if (scrut1 === true) {
+              return Runtime.unwind(this.continue, 0, "<MLscript runtime>", Runtime.#dbgInfo, this, 1, 0, 0)
+            }
+            continue lbl;
+          }
+          break;
+        }
+        runtime.safeCall(globalThis.console.log(result));
+        return result
+      }
+      toString() { return runtime.render(this); }
+      static [definitionMetadata] = ["class", "StaticStackDelayHandler", [null]]; 
     });
     this.Int31 = function Int31(v) {
       return globalThis.Object.freeze(new Int31.class(v));
@@ -1124,6 +1173,20 @@ let Runtime1;
       Runtime.stackLimit = old;
     }
     return tmp
+  } 
+  static runStaticStackSafe(f, ...args) {
+    let handler, scrut, lambda, tmp;
+    handler = Runtime.StaticStackDelayHandler(null);
+    lambda = (undefined, function () {
+      return runtime.safeCall(f(handler, ...args))
+    });
+    tmp = Runtime.enterHandleBlock(handler, lambda);
+    Runtime.resumeValue = tmp;
+    scrut = Runtime.curEffect !== null;
+    if (scrut === true) {
+      return Runtime.unwind(handler.continue, 0, "<MLscript runtime>", Runtime.#dbgInfo, handler, 1, 0, 0)
+    }
+    return runtime.safeCall(handler.continue());
   } 
   static plus_impl(lhs, rhs) {
     if (lhs instanceof Runtime.Int31.class) {

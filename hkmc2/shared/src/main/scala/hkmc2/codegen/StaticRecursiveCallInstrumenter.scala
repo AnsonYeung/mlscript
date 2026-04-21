@@ -21,15 +21,15 @@ import hkmc2.syntax.SpreadKind
   * which unwinds the stack to avoid stack overflow. The analysis is similar to tail recursive
   * optimization, except here we don't care whether the call is tail or not.
   */
-class StaticRecursiveCallInstrumenter(using State):
+class StaticRecursiveCallInstrumenter(using State, Elaborator.Ctx):
   
   class AnalysisResult(
     val loopBreakers: Set[TermSymbol],
     val sccMap: Map[TermSymbol, Int],
     val trivialSccs: Set[TermSymbol],
   ):
-    // Whether the function needs to have a wrapper, for external entry to the scc.
-    def needWrapper(ts: TermSymbol) = !trivialSccs.contains(ts)
+    // Whether the function needs to have a inner function for recursive calls.
+    def needInner(ts: TermSymbol) = !trivialSccs.contains(ts)
     // Whether the call from caller to callee is a recursive call that needs to pass the extra handler and call the inner function.
     // Other calls do not need to be changed at all.
     def isCallRecursive(caller: TermSymbol, callee: TermSymbol) =
@@ -87,7 +87,7 @@ class StaticRecursiveCallInstrumenter(using State):
       val wrapperToInner = MutMap.empty[(BlockMemberSymbol, TermSymbol), (BlockMemberSymbol, TermSymbol)]
       var currentSymbol: Opt[(TermSymbol, VarSymbol)] = N
 
-      def getOrCreateWrapper(bSym: BlockMemberSymbol, dSym: TermSymbol): (BlockMemberSymbol, TermSymbol) =
+      def getOrCreateWrapperSymbols(bSym: BlockMemberSymbol, dSym: TermSymbol): (BlockMemberSymbol, TermSymbol) =
         wrapperToInner.getOrElseUpdate((bSym, dSym),
         locally:
           val innerBSym = BlockMemberSymbol(bSym.nme, Nil, bSym.nameIsMeaningful)
@@ -103,8 +103,8 @@ class StaticRecursiveCallInstrumenter(using State):
         result
 
       override def applyBlock(b: Block) = b match
-        case Define(f: FunDefn, rst) if analysisResult.needWrapper(f.dSym) =>
-          val (innerBSym, innerSym) = getOrCreateWrapper(f.sym, f.dSym)
+        case Define(f: FunDefn, rst) if analysisResult.needInner(f.dSym) =>
+          val (innerBSym, innerSym) = getOrCreateWrapperSymbols(f.sym, f.dSym)
           val handlerVar = VarSymbol(Tree.Ident("handler"))
           val nf = enterSymbol(S((f.dSym, handlerVar)))(applyFunDefn(f))
           val phead = nf.params.head
@@ -120,9 +120,8 @@ class StaticRecursiveCallInstrumenter(using State):
               phead.flags,
               phead.params.zip(newVars).map((p, v) => replaceParamSym(p, v)),
               phead.restParam.zip(newRstParams).map((rp, v) => replaceParamSym(rp, v))) :: Nil,
-            // TODO: handle block
-            Return(Call(Value.Ref(innerBSym, S(innerSym)),
-              newVars.map(_.asPath.asArg) ++ newRstParams.map(r => Arg(S(SpreadKind.Eager), r.asPath))
+            Return(Call(State.runtimeSymbol.asPath.selSN("runStaticStackSafe"),
+              Value.Ref(innerBSym, S(innerSym)).asArg :: newVars.map(_.asPath.asArg) ++ newRstParams.map(r => Arg(S(SpreadKind.Eager), r.asPath))
             )(true, true, false), false)
             )(false, f.configOverride, f.visibility)
           Scoped(Set.single(innerBSym), Define(inner, Define(wrapper, applyBlock(rst))))
@@ -134,7 +133,7 @@ class StaticRecursiveCallInstrumenter(using State):
             if analysisResult.isCallRecursive(currentFun, ts)
         =>
           // This is a recursive call that needs to be transformed.
-          val (innerBSym, innerSym) = getOrCreateWrapper(bms, ts)
+          val (innerBSym, innerSym) = getOrCreateWrapperSymbols(bms, ts)
           k(Call(
             Value.Ref(innerBSym, S(innerSym)),
             Value.Ref(handlerVar, N).asArg :: args
