@@ -32,6 +32,8 @@ case class Scope
   lazy val cfg: Cfg = parentOrCfg.fold(identity, _.cfg)
   
   private val existingNames = MutMap.empty[Str, Local]
+
+  var emitAwait: Bool = parentOrCfg.fold(_ => true, _.emitAwait)
   
   private var thisProxyAccessed = false
   lazy val thisProxy =

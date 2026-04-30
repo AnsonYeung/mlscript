@@ -141,14 +141,16 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
     case c @ Call(fun, args) =>
       val base = subexpression(fun)
       val argsDoc = args.map(argument).mkDocument(", ")
+      val aw = if scope.emitAwait then "await " else ""
       if c.isMlsFun
       then if checkMLsCalls
-        then doc"$runtimeVar.checkCall(${base}(${argsDoc}))"
-        else doc"${base}(${argsDoc})"
-      else doc"$runtimeVar.safeCall(${base}(${argsDoc}))"
+        then doc"${aw}$runtimeVar.checkCall(${aw}${base}(${argsDoc}))"
+        else doc"${aw}${base}(${argsDoc})"
+      else doc"${aw}$runtimeVar.safeCall(${aw}${base}(${argsDoc}))"
     case Lambda(ps, bod) => scope.nest givenIn:
+      scope.emitAwait = true
       val (params, bodyDoc) = setupFunction(none, ps, bod, isLambda = true)
-      doc"($params) => ${ braced(bodyDoc) }"
+      doc"async ($params) => ${ braced(bodyDoc) }"
     case s @ Select(qual, id) => 
       val dotClass = s.symbol match
         case S(ds) if ds.shouldBeLifted => doc".class"
@@ -315,7 +317,9 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
             val displayName = if sym.nameIsMeaningful then S(dSym.name) else N
             
             // * We may need to set up the function in a nested scope in one case below, so this is marked as lazy.
-            lazy val (params, bodyDoc) = setupFunction(displayName, ps, result, isLambda = false)
+            lazy val (params, bodyDoc) = scope.nest.givenIn:
+              scope.emitAwait = true
+              setupFunction(displayName, ps, result, isLambda = false)
             
             val symName = sym.nme
             
@@ -327,17 +331,18 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
               // * Maybe the function's internal name was already bound in scope;
               // * in that case, we need to forward it to a different variable to avoid unintended capture.
               case S(otherSym) if (otherSym isnt sym) && bod.freeVars.contains(otherSym) => scope.nest.givenIn:
+                scope.emitAwait = true
                 val externalName = scope.allocateName(otherSym, prefix = "proxy$", shadow = true)
                 val (params, bodyDoc) = setupFunction(displayName, ps, result, isLambda = false)
                 doc"const $externalName = $symName; ${
-                  varName} = function $symName($params) ${ braced(bodyDoc) };"
+                  varName} = async function $symName($params) ${ braced(bodyDoc) };"
               case _ =>
-                doc"${varName} = function ${sym.nme}($params) ${ braced(bodyDoc) };"
+                doc"${varName} = async function ${sym.nme}($params) ${ braced(bodyDoc) };"
             else
               // * In JS, `let x = (0, function (args) {...})` makes the function anonymous;
               // * otherwise, using `let x = function (args) {...}` would name the function `x`,
               // * which is not meaningful, here.
-              doc"${getVar(sym, dSym.toLoc)} = (undefined, function ($params) ${ braced(bodyDoc) });"
+              doc"${getVar(sym, dSym.toLoc)} = (undefined, async function ($params) ${ braced(bodyDoc) });"
             
           case ClsLikeDefn(ownr, isym, sym, ctorSym, kind, paramsOpt, auxParams, par, mtds,
               privFlds, pubFlds, preCtor, ctor, modo, bufferable)
@@ -353,10 +358,13 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
                     case (ps, block) =>
                       Return(Lambda(ps, block), false)
                   val (params, bodyDoc) = scope.nest.givenIn:
+                    scope.emitAwait = true
                     setupFunction(S(td.sym.nme), ps, result, isLambda = false)
-                  doc" # $mtdPrefix${td.sym.nme}($params) ${ braced(bodyDoc) }"
+                  doc" # $mtdPrefix${"async "}${td.sym.nme}($params) ${ braced(bodyDoc) }"
                 case td @ FunDefn(params = Nil, body = bod) =>
-                  doc" # ${mtdPrefix}get ${td.sym.nme}() ${ braced(body(bod, endSemi = true)) }"
+                  scope.nest.givenIn:
+                    scope.emitAwait = false
+                    doc" # ${mtdPrefix}get ${td.sym.nme}() ${ braced(body(bod, endSemi = true)) }"
               .mkDocument(" ")
             
             def mkPrivs(pubFlds: Ls[BlockMemberSymbol -> TermSymbol], privFlds: Ls[TermSymbol],
