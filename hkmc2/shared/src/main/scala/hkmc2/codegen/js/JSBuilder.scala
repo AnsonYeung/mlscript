@@ -302,6 +302,10 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
       case defn: (FunDefn | ClsLikeDefn) =>
         
         val outerScope = scope
+        var staticInitUsed = false
+        lazy val staticInitBlocker =
+          staticInitUsed = true
+          scope.allocateName(new TempSymbol(N, "staticInitAwaiter"))
         val (thisProxy, res) = scope.nestRebindThis(
             // * Either this is an InnerSymbol or this is a Fun,
             // * and we need to rebind `this` to None to shadow it.
@@ -394,7 +398,7 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
                   val mtdPrefix = "static "
                   val privs = mkPrivs(mod.publicFields, mod.privateFields, mtdPrefix, mod.isym)
                   val ctorCode = if mod.ctor.isEmpty then doc"" else doc" # static " :: braced:
-                    body(mod.ctor, endSemi = true)
+                    doc" # $staticInitBlocker = (async () => ${braced(body(mod.ctor, endSemi = true))})();"
                   privs :: ctorCode :: {
                     mkMethods(mod.methods, mtdPrefix)
                   }
@@ -548,11 +552,15 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
                 case N =>
                   doc"$freezeDefns(${clsJS});"
         
-        thisProxy match
+        val withThisProxy = thisProxy match
           case S(proxy) if !scope.thisProxyDefined =>
             scope.thisProxyDefined = true
             doc"const $proxy = this; # $res${returningTerm(rst, endSemi)}"
           case _ => doc"$res${returningTerm(rst, endSemi)}"
+        if staticInitUsed then
+          doc"let $staticInitBlocker; # $withThisProxy" :: doc" # await $staticInitBlocker;"
+        else
+          withThisProxy
       
       doc" # $resJS"
       
