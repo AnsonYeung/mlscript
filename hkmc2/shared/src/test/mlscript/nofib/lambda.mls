@@ -7,7 +7,7 @@ lambda.main()
 //│ ═══[RUNTIME ERROR] TypeError: Cannot convert object to primitive value
 //│     at Array.join (<anonymous>)
 //│     at Array.toString (<anonymous>)
-//│     at lambda.main (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/lambda.mjs:989:45)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async REPL10:1:234
-//│     at async node:repl:647:29
+//│     at lambda.main (file:///home/attempt0/mlscript/hkmc2/hkmc2/shared/src/test/mlscript-compile/nofib/lambda.mjs:989:45)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+//│     at async REPL10:1:233
+//│     at async node:repl:660:31

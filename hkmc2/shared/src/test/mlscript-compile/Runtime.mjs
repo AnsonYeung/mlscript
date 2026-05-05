@@ -97,7 +97,7 @@ let staticInitAwaiter;
           lambda = (undefined, async function () {
             let tmp1;
             tmp1 = await Runtime.resume(this$EffectHandle.reified.contTrace);
-            return await tmp1(value)
+            return await runtime.safeCall(await tmp1(value))
           });
           return await Runtime1.try(lambda)
         } 
@@ -148,31 +148,31 @@ let staticInitAwaiter;
         static async slice(xs, i, j) {
           let tmp1;
           tmp1 = xs.length - j;
-          return await xs.slice(i, tmp1)
+          return await runtime.safeCall(await xs.slice(i, tmp1))
         } 
         static async lazySlice(xs, i, j) {
           let tmp1;
-          tmp1 = await LazyArray.dropLeftRight(i, j);
-          return await tmp1(xs)
+          tmp1 = await runtime.safeCall(await LazyArray.dropLeftRight(i, j));
+          return await runtime.safeCall(await tmp1(xs))
         } 
         static async lazyConcat(...args) {
-          return await LazyArray.__concat(...args)
+          return await runtime.safeCall(await LazyArray.__concat(...args))
         } 
         static async get(xs, i) {
           let scrut, scrut1, tmp1;
           scrut = i >= xs.length;
           if (scrut === true) {
-            throw await globalThis.RangeError("Tuple.get: index out of bounds")
+            throw await runtime.safeCall(await globalThis.RangeError("Tuple.get: index out of bounds"))
           }
           tmp1 = - xs.length;
           scrut1 = i < tmp1;
           if (scrut1 === true) {
-            throw await globalThis.RangeError("Tuple.get: negative index out of bounds")
+            throw await runtime.safeCall(await globalThis.RangeError("Tuple.get: negative index out of bounds"))
           }
           return xs.at(i);
         } 
         static async isArrayLike(xs) {
-          return await Iter.isArrayLike(xs)
+          return await runtime.safeCall(await Iter.isArrayLike(xs))
         }
         toString() { return runtime.render(this); }
         static [definitionMetadata] = ["class", "Tuple"]; 
@@ -182,21 +182,21 @@ let staticInitAwaiter;
           Runtime.Str = this
         }
         static async startsWith(string, prefix) {
-          return await string.startsWith(prefix)
+          return await runtime.safeCall(await string.startsWith(prefix))
         } 
         static async get(string, i) {
           let scrut;
           scrut = i >= string.length;
           if (scrut === true) {
-            throw await globalThis.RangeError("Str.get: index out of bounds")
+            throw await runtime.safeCall(await globalThis.RangeError("Str.get: index out of bounds"))
           }
-          return await string.at(i);
+          return await runtime.safeCall(await string.at(i));
         } 
         static async take(string, n) {
-          return await string.slice(0, n)
+          return await runtime.safeCall(await string.slice(0, n))
         } 
         static async leave(string, n) {
-          return await string.slice(n)
+          return await runtime.safeCall(await string.slice(n))
         }
         toString() { return runtime.render(this); }
         static [definitionMetadata] = ["class", "Str"]; 
@@ -243,12 +243,12 @@ let staticInitAwaiter;
           let scrut, tmp1, tmp2, tmp3, tmp4, tmp5;
           scrut = TraceLogger.enabled;
           if (scrut === true) {
-            tmp1 = await "| ".repeat(TraceLogger.indentLvl);
-            tmp2 = await "  ".repeat(TraceLogger.indentLvl);
+            tmp1 = await runtime.safeCall(await "| ".repeat(TraceLogger.indentLvl));
+            tmp2 = await runtime.safeCall(await "  ".repeat(TraceLogger.indentLvl));
             tmp3 = "\n" + tmp2;
-            tmp4 = await msg.replaceAll("\n", tmp3);
+            tmp4 = await runtime.safeCall(await msg.replaceAll("\n", tmp3));
             tmp5 = tmp1 + tmp4;
-            return await globalThis.console.log(tmp5)
+            return await runtime.safeCall(await globalThis.console.log(tmp5))
           }
           return runtime.Unit;
         }
@@ -311,7 +311,7 @@ let staticInitAwaiter;
           Runtime.resumePc = this.saved.at(1);
           scrut = argListsLength === 0;
           if (scrut === true) {
-            await globalThis.console.log("cannot resume getters");
+            await runtime.safeCall(await globalThis.console.log("cannot resume getters"));
           }
           lbl: while (true) {
             let scrut1, argListLength1, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tmp14, tmp15;
@@ -322,8 +322,8 @@ let staticInitAwaiter;
               tmp8 = currentArgList + 1;
               tmp9 = currentArgList + 1;
               tmp10 = tmp9 + argListLength1;
-              tmp11 = await this.saved.slice(tmp8, tmp10);
-              tmp12 = await f.apply(this.saved.at(4), tmp11);
+              tmp11 = await runtime.safeCall(await this.saved.slice(tmp8, tmp10));
+              tmp12 = await runtime.safeCall(await f.apply(this.saved.at(4), tmp11));
               f = tmp12;
               tmp13 = argListLength1 + 1;
               tmp14 = currentArgList + tmp13;
@@ -341,8 +341,8 @@ let staticInitAwaiter;
           tmp3 = currentArgList + 1;
           tmp4 = currentArgList + 1;
           tmp5 = tmp4 + argListLength;
-          tmp6 = await this.saved.slice(tmp3, tmp5);
-          return await f.apply(this.saved.at(4), tmp6)
+          tmp6 = await runtime.safeCall(await this.saved.slice(tmp3, tmp5));
+          return await runtime.safeCall(await f.apply(this.saved.at(4), tmp6))
         } 
         get getLocals() {
           let debugInfo, i, cur, res, i1;
@@ -372,7 +372,7 @@ let staticInitAwaiter;
               tmp2 = cur + 1;
               tmp3 = tmp2 + debugInfo.at(i1);
               tmp4 = globalThis.Object.freeze(new Runtime.LocalVarInfo.class(debugInfo.at(tmp1), this.saved.at(tmp3)));
-              res.push(tmp4);
+              runtime.safeCall(res.push(tmp4));
               tmp5 = i1 + 2;
               i1 = tmp5;
               continue lbl1
@@ -532,14 +532,14 @@ let staticInitAwaiter;
         #v;
         async zext() {
           let tmp1, tmp2;
-          tmp1 = await Runtime.shl(1, 31);
-          tmp2 = await Runtime.bitnot(tmp1);
-          return await Runtime.bitand(this.#v, tmp2)
+          tmp1 = await runtime.safeCall(await Runtime.shl(1, 31));
+          tmp2 = await runtime.safeCall(await Runtime.bitnot(tmp1));
+          return await runtime.safeCall(await Runtime.bitand(this.#v, tmp2))
         } 
         async sext() {
           let tmp1;
-          tmp1 = await Runtime.shl(1, 31);
-          return await Runtime.bitor(this.#v, tmp1)
+          tmp1 = await runtime.safeCall(await Runtime.shl(1, 31));
+          return await runtime.safeCall(await Runtime.bitor(this.#v, tmp1))
         }
         toString() { return runtime.render(this); }
         static [definitionMetadata] = ["class", "Int31", [null]]; 
@@ -549,7 +549,7 @@ let staticInitAwaiter;
     })();
   }
   static get unreachable() {
-    throw globalThis.Error("unreachable");
+    throw runtime.safeCall(globalThis.Error("unreachable"));
   } 
   static async assertFail(file, line) {
     let tmp, tmp1, tmp2, tmp3;
@@ -557,7 +557,7 @@ let staticInitAwaiter;
     tmp1 = tmp + ":";
     tmp2 = tmp1 + line;
     tmp3 = tmp2 + ")";
-    throw await globalThis.Error(tmp3)
+    throw await runtime.safeCall(await globalThis.Error(tmp3))
   } 
   static async checkArgs(functionName, expected, isUB, got) {
     let scrut, name, scrut1, scrut2, tmp, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tmp14;
@@ -601,7 +601,7 @@ let staticInitAwaiter;
       tmp12 = tmp10 + tmp11;
       tmp13 = tmp12 + " but got ";
       tmp14 = tmp13 + got;
-      throw await globalThis.Error(tmp14)
+      throw await runtime.safeCall(await globalThis.Error(tmp14))
     }
     return runtime.Unit;
   } 
@@ -613,7 +613,7 @@ let staticInitAwaiter;
   } 
   static async checkCall(x) {
     if (x === undefined) {
-      throw await globalThis.Error("MLscript call unexpectedly returned `undefined`, the forbidden value.")
+      throw await runtime.safeCall(await globalThis.Error("MLscript call unexpectedly returned `undefined`, the forbidden value."))
     }
     return x;
   } 
@@ -623,11 +623,11 @@ let staticInitAwaiter;
     tmp1 = tmp + "' of class '";
     tmp2 = tmp1 + clsName;
     tmp3 = tmp2 + "' was accessed without being called.";
-    throw await globalThis.Error(tmp3)
+    throw await runtime.safeCall(await globalThis.Error(tmp3))
   } 
   static async try(f) {
     let res, scrut, tmp;
-    res = await f();
+    res = await runtime.safeCall(await f());
     scrut = Runtime.curEffect !== null;
     if (scrut === true) {
       tmp = Runtime.curEffect;
@@ -642,8 +642,8 @@ let staticInitAwaiter;
       indent: 2,
       breakLength: 76
     });
-    tmp = await Runtime.render(x, rcd);
-    return await globalThis.console.log(tmp)
+    tmp = await runtime.safeCall(await Runtime.render(x, rcd));
+    return await runtime.safeCall(await globalThis.console.log(tmp))
   } 
   static async resetEffects() {
     let tmp;
@@ -665,10 +665,10 @@ let staticInitAwaiter;
         scrut = tr.handler === Runtime.PrintStackEffect;
         if (scrut === true) {
           tmp2 = await Runtime.showStackTrace("Stack Trace:", tr, debug, tr.handlerFun);
-          await globalThis.console.log(tmp2);
+          await runtime.safeCall(await globalThis.console.log(tmp2));
           Runtime.curEffect = null;
           tmp3 = await Runtime.resume(tr.contTrace);
-          tmp4 = await tmp3(runtime.Unit);
+          tmp4 = await runtime.safeCall(await tmp3(runtime.Unit));
           v = tmp4;
           tr = Runtime.curEffect;
           continue lbl
@@ -720,8 +720,8 @@ let staticInitAwaiter;
                     tmp13 = await Rendering.render(l.value);
                     return tmp12 + tmp13
                   });
-                  tmp3 = await curLocals.map(lambda);
-                  tmp4 = await tmp3.join(", ");
+                  tmp3 = await runtime.safeCall(await curLocals.map(lambda));
+                  tmp4 = await runtime.safeCall(await tmp3.join(", "));
                   tmp5 = " with locals: " + tmp4;
                 } else {
                   tmp5 = "";
@@ -773,7 +773,7 @@ let staticInitAwaiter;
       result = tmp + cont.saved.at(1);
       lambda = (undefined, async function (m, marker) {
         let scrut3, tmp5, tmp6;
-        scrut3 = await m.has(cont);
+        scrut3 = await runtime.safeCall(await m.has(cont));
         if (scrut3 === true) {
           tmp5 = ", " + marker;
           tmp6 = result + tmp5;
@@ -782,19 +782,19 @@ let staticInitAwaiter;
         }
         return runtime.Unit;
       });
-      await hl.forEach(lambda);
-      scrut = await vis.has(cont);
+      await runtime.safeCall(await hl.forEach(lambda));
+      scrut = await runtime.safeCall(await vis.has(cont));
       if (scrut === true) {
         tmp1 = reps + 1;
         reps = tmp1;
         scrut1 = reps > 10;
         if (scrut1 === true) {
-          throw await globalThis.Error("10 repeated continuation frame (loop?)")
+          throw await runtime.safeCall(await globalThis.Error("10 repeated continuation frame (loop?)"))
         }
         tmp2 = result + ", REPEAT";
         result = tmp2;
       } else {
-        await vis.add(cont);
+        await runtime.safeCall(await vis.add(cont));
       }
       tmp3 = result + ") -> ";
       tmp4 = await Runtime.showFunctionContChain(cont.next, hl, vis, reps);
@@ -812,7 +812,7 @@ let staticInitAwaiter;
       result = cont.handler.constructor.name;
       lambda = (undefined, async function (m, marker) {
         let scrut3, tmp4, tmp5;
-        scrut3 = await m.has(cont);
+        scrut3 = await runtime.safeCall(await m.has(cont));
         if (scrut3 === true) {
           tmp4 = ", " + marker;
           tmp5 = result + tmp4;
@@ -821,19 +821,19 @@ let staticInitAwaiter;
         }
         return runtime.Unit;
       });
-      await hl.forEach(lambda);
-      scrut = await vis.has(cont);
+      await runtime.safeCall(await hl.forEach(lambda));
+      scrut = await runtime.safeCall(await vis.has(cont));
       if (scrut === true) {
         tmp = reps + 1;
         reps = tmp;
         scrut1 = reps > 10;
         if (scrut1 === true) {
-          throw await globalThis.Error("10 repeated continuation frame (loop?)")
+          throw await runtime.safeCall(await globalThis.Error("10 repeated continuation frame (loop?)"))
         }
         tmp1 = result + ", REPEAT";
         result = tmp1;
       } else {
-        await vis.add(cont);
+        await runtime.safeCall(await vis.add(cont));
       }
       tmp2 = result + " -> ";
       tmp3 = await Runtime.showFunctionContChain(cont.next, hl, vis, reps);
@@ -850,26 +850,26 @@ let staticInitAwaiter;
     tmp = globalThis.Object.freeze(new globalThis.Map());
     tmp1 = globalThis.Object.freeze(new globalThis.Set());
     tmp2 = await Runtime.showFunctionContChain(cont, tmp, tmp1, 0);
-    return await globalThis.console.log(tmp2)
+    return await runtime.safeCall(await globalThis.console.log(tmp2))
   } 
   static async debugHandler(cont) {
     let tmp, tmp1, tmp2;
     tmp = globalThis.Object.freeze(new globalThis.Map());
     tmp1 = globalThis.Object.freeze(new globalThis.Set());
     tmp2 = await Runtime.showHandlerContChain(cont, tmp, tmp1, 0);
-    return await globalThis.console.log(tmp2)
+    return await runtime.safeCall(await globalThis.console.log(tmp2))
   } 
   static async debugContTrace(contTrace) {
     let scrut, scrut1, vis, hl, cur, tmp, tmp1, tmp2, tmp3, tmp4;
     if (contTrace instanceof Runtime.ContTrace.class) {
-      await globalThis.console.log("resumed: ", contTrace.resumed);
+      await runtime.safeCall(await globalThis.console.log("resumed: ", contTrace.resumed));
       scrut = contTrace.last === contTrace;
       if (scrut === true) {
-        await globalThis.console.log("<last is self>");
+        await runtime.safeCall(await globalThis.console.log("<last is self>"));
       }
       scrut1 = contTrace.lastHandler === contTrace;
       if (scrut1 === true) {
-        await globalThis.console.log("<lastHandler is self>");
+        await runtime.safeCall(await globalThis.console.log("<lastHandler is self>"));
       }
       vis = globalThis.Object.freeze(new globalThis.Set());
       hl = globalThis.Object.freeze(new globalThis.Map());
@@ -877,40 +877,40 @@ let staticInitAwaiter;
         contTrace.last
       ]);
       tmp1 = globalThis.Object.freeze(new globalThis.Set(tmp));
-      await hl.set("last", tmp1);
+      await runtime.safeCall(await hl.set("last", tmp1));
       tmp2 = globalThis.Object.freeze([
         contTrace.lastHandler
       ]);
       tmp3 = globalThis.Object.freeze(new globalThis.Set(tmp2));
-      await hl.set("last-handler", tmp3);
+      await runtime.safeCall(await hl.set("last-handler", tmp3));
       tmp4 = await Runtime.showFunctionContChain(contTrace.next, hl, vis, 0);
-      await globalThis.console.log(tmp4);
+      await runtime.safeCall(await globalThis.console.log(tmp4));
       cur = contTrace.nextHandler;
       lbl: while (true) {
         let scrut2, tmp5;
         scrut2 = cur !== null;
         if (scrut2 === true) {
           tmp5 = await Runtime.showHandlerContChain(cur, hl, vis, 0);
-          await globalThis.console.log(tmp5);
+          await runtime.safeCall(await globalThis.console.log(tmp5));
           cur = cur.nextHandler;
           continue lbl
         }
         break;
       }
-      return await globalThis.console.log()
+      return await runtime.safeCall(await globalThis.console.log())
     }
-    await globalThis.console.log("Not a cont trace:");
-    return await globalThis.console.log(contTrace);
+    await runtime.safeCall(await globalThis.console.log("Not a cont trace:"));
+    return await runtime.safeCall(await globalThis.console.log(contTrace));
   } 
   static async debugEff(eff) {
     if (eff instanceof Runtime.EffectSig.class) {
-      await globalThis.console.log("Debug EffectSig:");
-      await globalThis.console.log("handler: ", eff.handler.constructor.name);
-      await globalThis.console.log("handlerFun: ", eff.handlerFun);
+      await runtime.safeCall(await globalThis.console.log("Debug EffectSig:"));
+      await runtime.safeCall(await globalThis.console.log("handler: ", eff.handler.constructor.name));
+      await runtime.safeCall(await globalThis.console.log("handlerFun: ", eff.handlerFun));
       return await Runtime.debugContTrace(eff.contTrace)
     }
-    await globalThis.console.log("Not an effect:");
-    return await globalThis.console.log(eff);
+    await runtime.safeCall(await globalThis.console.log("Not an effect:"));
+    return await runtime.safeCall(await globalThis.console.log(eff));
   } 
   static async unwind(...saved) {
     let tmp;
@@ -938,7 +938,7 @@ let staticInitAwaiter;
   } 
   static async enterHandleBlock(handler, body) {
     let tmp, scrut;
-    tmp = await body();
+    tmp = await runtime.safeCall(await body());
     scrut = Runtime.curEffect === null;
     if (scrut === true) {
       return tmp
@@ -992,7 +992,7 @@ let staticInitAwaiter;
       tmp2 = Runtime.stackDepth + 2;
       Runtime.stackDepth = tmp2;
       tmp3 = await Runtime.resume(cur.contTrace);
-      tmp4 = await cur.handlerFun(tmp3);
+      tmp4 = await runtime.safeCall(await cur.handlerFun(tmp3));
       tmp1 = tmp4;
     } finally {
       Runtime.stackDepth = old;
@@ -1021,7 +1021,7 @@ let staticInitAwaiter;
       let scrut, tmp;
       scrut = contTrace.resumed;
       if (scrut === true) {
-        throw await globalThis.Error("Multiple resumption")
+        throw await runtime.safeCall(await globalThis.Error("Multiple resumption"))
       }
       contTrace.resumed = true;
       tmp = await Runtime.resumeContTrace(contTrace, value);
@@ -1040,7 +1040,7 @@ let staticInitAwaiter;
         try {
           tmp1 = Runtime.stackDepth + 3;
           Runtime.stackDepth = tmp1;
-          tmp2 = await cont.resume(value);
+          tmp2 = await runtime.safeCall(await cont.resume(value));
           tmp = tmp2;
         } finally {
           Runtime.stackDepth = old;
@@ -1085,7 +1085,7 @@ let staticInitAwaiter;
     }
     scrut = tmp1;
     if (scrut === true) {
-      return await Runtime.stackHandler.delay()
+      return await runtime.safeCall(await Runtime.stackHandler.delay())
     }
     return runtime.Unit;
   } 
@@ -1112,7 +1112,7 @@ let staticInitAwaiter;
               saved = Runtime.stackResume;
               Runtime.stackResume = null;
               Runtime.stackDepth = 1;
-              tmp3 = await saved(runtime.Unit);
+              tmp3 = await runtime.safeCall(await saved(runtime.Unit));
               result = tmp3;
               scrut2 = Runtime.curEffect !== null;
               if (scrut2 === true) {

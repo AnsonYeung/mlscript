@@ -2,15 +2,15 @@
 :showRepl
 
 //│ REPL> Collected:
-//│ >  Welcome to Node.js v24.9.0.
+//│ >  Welcome to Node.js v26.0.0.
 //│ >  Type ".help" for more information.
 //│ REPL> Sending: console.info = console.error
 //│ REPL> Collected:
 //│ >  [Function: error]
-//│ REPL> Sending: process.chdir('/Users/attempt0/Repos/mlscript')
+//│ REPL> Sending: process.chdir('/home/attempt0/mlscript/hkmc2')
 //│ REPL> Collected:
 //│ >  undefined
-//│ REPL> Sending: const runtime = (await import("/Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs")).default;
+//│ REPL> Sending: const runtime = (await import("/home/attempt0/mlscript/hkmc2/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs")).default;
 //│ REPL> Collected:
 //│ >  undefined
 //│ REPL> Sending: const definitionMetadata = Symbol.for("mlscript.definitionMetadata");
@@ -22,7 +22,7 @@
 //│ REPL> Sending: block$res = undefined
 //│ REPL> Collected:
 //│ >  undefined
-//│ REPL> Sending: let Predef;try { Predef = await import("/Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Predef.mjs").then(m => m.default ?? m); ; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
+//│ REPL> Sending: let Predef;try { Predef = await import("/home/attempt0/mlscript/hkmc2/hkmc2/shared/src/test/mlscript-compile/Predef.mjs").then(m => m.default ?? m); ; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
 //│ REPL> Collected:
 //│ >  undefined
 //│ REPL> Parsed:
@@ -39,7 +39,7 @@ ansi.main()
 //│ REPL> Sending: block$res1 = undefined
 //│ REPL> Collected:
 //│ >  undefined
-//│ REPL> Sending: let ansi;try { ansi = await import("/Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/ansi.mjs").then(m => m.default ?? m); block$res1 = await runtime.checkCall(await ansi.main()); undefined; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
+//│ REPL> Sending: let ansi;try { ansi = await import("/home/attempt0/mlscript/hkmc2/hkmc2/shared/src/test/mlscript-compile/nofib/ansi.mjs").then(m => m.default ?? m); block$res1 = await runtime.checkCall(await ansi.main()); undefined; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
 //│ REPL> Collected:
 //│ >  undefined
 //│ REPL> Parsed:

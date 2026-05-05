@@ -79,10 +79,10 @@ let staticInitAwaiter;
           Predef.meta = this
         }
         static async codegen(t, file) {
-          return await Term.codegen(t, file)
+          return await runtime.safeCall(await Term.codegen(t, file))
         } 
         static async print(t) {
-          return await Term.print(t)
+          return await runtime.safeCall(await Term.print(t))
         }
         toString() { return runtime.render(this); }
         static [definitionMetadata] = ["class", "meta"]; 
@@ -93,28 +93,28 @@ let staticInitAwaiter;
     return x
   } 
   static async apply(f, ...args) {
-    return await f(...args)
+    return await runtime.safeCall(await f(...args))
   } 
   static async pipeInto(x, f) {
-    return await f(x)
+    return await runtime.safeCall(await f(x))
   } 
   static async pipeFrom(f, x) {
-    return await f(x)
+    return await runtime.safeCall(await f(x))
   } 
   static async pipeIntoHi(x, f) {
-    return await f(x)
+    return await runtime.safeCall(await f(x))
   } 
   static async pipeFromHi(f, x) {
-    return await f(x)
+    return await runtime.safeCall(await f(x))
   } 
   static async tap(x, f) {
     let tmp;
-    tmp = await f(x);
+    tmp = await runtime.safeCall(await f(x));
     return (tmp , x)
   } 
   static async pat(f, x) {
     let tmp;
-    tmp = await f(x);
+    tmp = await runtime.safeCall(await f(x));
     return (tmp , x)
   } 
   static async alsoDo(x, eff) {
@@ -123,30 +123,30 @@ let staticInitAwaiter;
   static async andThen(f, g) {
     return async (x) => {
       let tmp;
-      tmp = await f(x);
-      return await g(tmp)
+      tmp = await runtime.safeCall(await f(x));
+      return await runtime.safeCall(await g(tmp))
     }
   } 
   static async compose(f, g) {
     return async (x) => {
       let tmp;
-      tmp = await g(x);
-      return await f(tmp)
+      tmp = await runtime.safeCall(await g(x));
+      return await runtime.safeCall(await f(tmp))
     }
   } 
   static async passTo(receiver, f) {
     return async (...args) => {
-      return await f(receiver, ...args)
+      return await runtime.safeCall(await f(receiver, ...args))
     }
   } 
   static async passToLo(receiver, f) {
     return async (...args) => {
-      return await f(receiver, ...args)
+      return await runtime.safeCall(await f(receiver, ...args))
     }
   } 
   static async call(receiver, f) {
     return async (...args) => {
-      return await f.call(receiver, ...args)
+      return await runtime.safeCall(await f.call(receiver, ...args))
     }
   } 
   static async equals(a, b) {
@@ -161,10 +161,10 @@ let staticInitAwaiter;
         if (scrut1 === true) {
           lambda = (undefined, async function (a1, i) {
             let tmp3;
-            tmp3 = await b.at(i);
+            tmp3 = await runtime.safeCall(await b.at(i));
             return await Predef.equals(a1, tmp3)
           });
-          return await a.every(lambda)
+          return await runtime.safeCall(await a.every(lambda))
         }
       }
     }
@@ -196,7 +196,7 @@ let staticInitAwaiter;
                     }
                     return false;
                   });
-                  scrut5 = await md[2].every(lambda1);
+                  scrut5 = await runtime.safeCall(await md[2].every(lambda1));
                   if (scrut5 === true) {
                     tmp = true;
                   } else {
@@ -244,26 +244,26 @@ let staticInitAwaiter;
   } 
   static async print(...xs) {
     let tmp, tmp1;
-    tmp = await Predef.map(Predef.renderAsStr);
-    tmp1 = await tmp(...xs);
-    return await globalThis.console.log(...tmp1)
+    tmp = await runtime.safeCall(await Predef.map(Predef.renderAsStr));
+    tmp1 = await runtime.safeCall(await tmp(...xs));
+    return await runtime.safeCall(await globalThis.console.log(...tmp1))
   } 
   static async renderAsStr(arg) {
     if (typeof arg === 'string') {
       return arg
     }
-    return await Predef.render(arg);
+    return await runtime.safeCall(await Predef.render(arg));
   } 
   static async check(...args) {
-    return await Predef.js_assert(...args)
+    return await runtime.safeCall(await Predef.js_assert(...args))
   } 
   static async notImplemented(msg) {
     let tmp;
     tmp = "Not implemented: " + msg;
-    throw await globalThis.Error(tmp)
+    throw await runtime.safeCall(await globalThis.Error(tmp))
   } 
   static get notImplementedError() {
-    throw globalThis.Error("Not implemented");
+    throw runtime.safeCall(globalThis.Error("Not implemented"));
   } 
   static async tuple(...xs) {
     return xs
@@ -280,21 +280,21 @@ let staticInitAwaiter;
         return first
       }
       i = len - 1;
-      init = await rest.at(i);
+      init = await runtime.safeCall(await rest.at(i));
       lbl: while (true) {
         let scrut1, tmp, tmp1, tmp2;
         scrut1 = i > 0;
         if (scrut1 === true) {
           tmp = i - 1;
           i = tmp;
-          tmp1 = await rest.at(i);
-          tmp2 = await f(tmp1, init);
+          tmp1 = await runtime.safeCall(await rest.at(i));
+          tmp2 = await runtime.safeCall(await f(tmp1, init));
           init = tmp2;
           continue lbl
         }
         break;
       }
-      return await f(first, init);
+      return await runtime.safeCall(await f(first, init));
     }
   } 
   static async mkStr(...xs) {
@@ -310,17 +310,17 @@ let staticInitAwaiter;
       tmp3 = acc + x;
       return (tmp2 , tmp3)
     });
-    tmp = await Predef.fold(lambda);
-    return await tmp(...xs)
+    tmp = await runtime.safeCall(await Predef.fold(lambda));
+    return await runtime.safeCall(await tmp(...xs))
   } 
   static async use(instance) {
     return instance
   } 
   static async enterHandleBlock(handler, body) {
-    return await Runtime.enterHandleBlock(handler, body)
+    return await runtime.safeCall(await Runtime.enterHandleBlock(handler, body))
   } 
   static async raiseUnhandledEffect() {
-    return await Runtime.mkEffect(Runtime.FatalEffect, null)
+    return await runtime.safeCall(await Runtime.mkEffect(Runtime.FatalEffect, null))
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "Predef"]; 

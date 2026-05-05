@@ -3,16 +3,35 @@
 import "../../mlscript-compile/nofib/lastpiece.mls"
 print of
   lastpiece.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] SyntaxError: Unexpected reserved word
-//│     at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
-//│     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
-//│     at #translate (node:internal/modules/esm/loader:562:20)
-//│     at afterLoad (node:internal/modules/esm/loader:612:29)
-//│     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
-//│     at #createModuleJob (node:internal/modules/esm/loader:641:36)
-//│     at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
-//│     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:318:41)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:683:25)
+//│ > Promise {
+//│ >   'Success!\n' +
+//│ >     '  accchhff\n' +
+//│ >     '  aacnghhf\n' +
+//│ >     '  innnglhf\n' +
+//│ >     '  inmggllf\n' +
+//│ >     '  iimgelkk\n' +
+//│ >     '  dimeelkb\n' +
+//│ >     '  dmmejkkb\n' +
+//│ >     '  ddjjjjbb\n' +
+//│ >     '  \n' +
+//│ >     'Success!\n' +
+//│ >     '  acccjjjj\n' +
+//│ >     '  aacffjgb\n' +
+//│ >     '  hhddfggb\n' +
+//│ >     '  lhhdfgbb\n' +
+//│ >     '  llhdfgnm\n' +
+//│ >     '  lkkennnm\n' +
+//│ >     '  lkeeniim\n' +
+//│ >     '  kkeiiimm\n' +
+//│ >     '  \n' +
+//│ >     'Success!\n' +
+//│ >     '  ammmmccc\n' +
+//│ >     '  aaiimnch\n' +
+//│ >     '  iiinnnhh\n' +
+//│ >     '  gggnlhhj\n' +
+//│ >     '  fkgglljj\n' +
+//│ >     '  fkkklbdj\n' +
+//│ >     '  feeklbdj\n' +
+//│ >     '  ffeebbdd\n' +
+//│ >     '  \n'
+//│ > }

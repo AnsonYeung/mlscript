@@ -16,59 +16,68 @@ let suite = mkSuite()
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/rsa.mls"
-suite.add("rsa", () => rsa.main())
+suite.add("rsa", { defer: true, fn: deferred =>
+  rsa.main()
+  deferred.resolve()
+})
 
 
 // =======================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/scc.mls"
-suite.add("scc", () => scc.main())
+suite.add("scc", { defer: true, fn: deferred =>
+  scc.main()
+  deferred.resolve()
+})
 
 
 // =======================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/secretary.mls"
-suite.add("secretary", () => secretary.main())
+suite.add("secretary", { defer: true, fn: deferred =>
+  secretary.main()
+  deferred.resolve()
+})
 
 
 // =======================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mls"
-suite.add("sorting", () => sorting.main())
+suite.add("sorting", { defer: true, fn: deferred =>
+  sorting.main()
+  deferred.resolve()
+})
 
 
 // =======================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/sphere.mls"
-suite.add("sphere", () => sphere.main())
+suite.add("sphere", { defer: true, fn: deferred =>
+  sphere.main()
+  deferred.resolve()
+})
 
 
 // =======================
 
 
 // need more stack
-// import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/treejoin.mls"
-// suite.add("treejoin", () => treejoin.main())
+import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/treejoin.mls"
+suite.add("treejoin", { defer: true, fn: deferred =>
+  treejoin.main()
+  deferred.resolve()
+})
 
 
 
 
 
 runSuite(suite)
-writeResults(suite, "nofibs3.json")
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: ReplHost could not read more from NodeJS stdout.
-//│ 	at: mlscript.utils.package$.lastWords(package.scala:239)
-//│ 	at: hkmc2.ReplHost.collectUntilPrompt(ReplHost.scala:39)
-//│ 	at: hkmc2.ReplHost.parseQueryResult(ReplHost.scala:79)
-//│ 	at: hkmc2.ReplHost.query(ReplHost.scala:110)
-//│ 	at: hkmc2.JSBackendDiffMaker.mkQuery$1(JSBackendDiffMaker.scala:227)
-//│ 	at: hkmc2.JSBackendDiffMaker.processIRBlock(JSBackendDiffMaker.scala:255)
-//│ 	at: hkmc2.JSBackendDiffMaker.processTerm(JSBackendDiffMaker.scala:186)
-//│ 	at: hkmc2.InvalMLDiffMaker.processTerm(InvalmlDiffMaker.scala:36)
-//│ 	at: hkmc2.LlirDiffMaker.processTerm(LlirDiffMaker.scala:63)
-//│ 	at: hkmc2.BenchDiffMaker.processTerm(BenchDiffMaker.scala:14)
+
+import "../../../../hkmc2/shared/src/test/mlscript-compile/BenchmarkWriter.mjs"
+
+BenchmarkWriter.write(suite, "nofibs3.json")
