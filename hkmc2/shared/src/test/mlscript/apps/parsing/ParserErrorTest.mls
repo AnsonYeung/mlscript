@@ -1,124 +1,105 @@
 :js
 
 import "../../../mlscript-compile/apps/parsing/Test.mls"
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] SyntaxError: Private field '#_endChoice' must be declared in an enclosing class
-//│     at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
-//│     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
-//│     at #translate (node:internal/modules/esm/loader:562:20)
-//│     at afterLoad (node:internal/modules/esm/loader:612:29)
-//│     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
-//│     at #createModuleJob (node:internal/modules/esm/loader:641:36)
-//│     at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
-//│     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:318:41)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
 
 open Test { example }
 
 example of ":tree ((x) ==> x"
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL16:1:70
-//│     at REPL16:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > Error of "unexpected end of input"
+//│ > «⚠»
 
 example of ":tree ((x) ==> x))"
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL19:1:70
-//│     at REPL19:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > App:
+//│ >   callee = Ident of "==>"
+//│ >   argument = Stack of 
+//│ >     Ident of "x"
+//│ >     Ident of "x"
+//│ > Error of "unexpected token Identifier(\")\", true)"
+//│ > «x ==> x»
+//│ > «⚠»
 
 example of """
 type a = b and b = c
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL22:1:70
-//│     at REPL22:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «type a = b and b = c»
 
 example of """
 :tree
 type test = Bar | Test | Foo
 and test' = Bar' | Test' | Foo'
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL25:1:70
-//│     at REPL25:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > Define:
+//│ >   kind = Type
+//│ >   items = Stack of 
+//│ >     Infix:
+//│ >       op = Keyword(`=`, 3, 3)
+//│ >       lhs = Ident of "test"
+//│ >       rhs = Infix:
+//│ >         op = Keyword(`|`, N/A, N/A)
+//│ >         lhs = Ident of "Bar"
+//│ >         rhs = Infix:
+//│ >           op = Keyword(`|`, N/A, N/A)
+//│ >           lhs = Ident of "Test"
+//│ >           rhs = Ident of "Foo"
+//│ >     Infix:
+//│ >       op = Keyword(`=`, 3, 3)
+//│ >       lhs = Ident of "test'"
+//│ >       rhs = Infix:
+//│ >         op = Keyword(`|`, N/A, N/A)
+//│ >         lhs = Ident of "Bar'"
+//│ >         rhs = Infix:
+//│ >           op = Keyword(`|`, N/A, N/A)
+//│ >           lhs = Ident of "Test'"
+//│ >           rhs = Ident of "Foo'"
+//│ > «type test = Bar | Test | Foo and test' = Bar' | Test' | Foo'»
 
 example of """
 :tree
 -2 * 3
 ~2 * 3
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL28:1:70
-//│     at REPL28:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > App:
+//│ >   callee = Ident of "*"
+//│ >   argument = Stack of 
+//│ >     App:
+//│ >       callee = Ident of "*"
+//│ >       argument = Stack of 
+//│ >         App:
+//│ >           callee = Ident of "-"
+//│ >           argument = Literal#Integer of "2"
+//│ >         App:
+//│ >           callee = Ident of "~"
+//│ >           argument = Stack of 
+//│ >             Literal#Integer of "3"
+//│ >             Literal#Integer of "2"
+//│ >     Literal#Integer of "3"
+//│ > «(-2) * 3 ~ 2 * 3»
 
 example of """
 :tree
 let foo = -2 * 3
 2 * 3
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL31:1:70
-//│     at REPL31:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > LetIn:
+//│ >   bindings = Stack of 
+//│ >     Infix:
+//│ >       op = Keyword(`=`, 3, 3)
+//│ >       lhs = Ident of "foo"
+//│ >       rhs = App:
+//│ >         callee = Ident of "*"
+//│ >         argument = Stack of 
+//│ >           App:
+//│ >             callee = Ident of "*"
+//│ >             argument = Stack of 
+//│ >               App:
+//│ >                 callee = Ident of "-"
+//│ >                 argument = Literal#Integer of "2"
+//│ >               App:
+//│ >                 callee = Literal#Integer of "3"
+//│ >                 argument = Literal#Integer of "2"
+//│ >           Literal#Integer of "3"
+//│ >   body = None
+//│ > «let foo = (-2) * 3 2 * 3»
 
 
 
@@ -126,120 +107,58 @@ let foo = -2 * 3
 example of """
 => xx
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL34:1:70
-//│     at REPL34:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «=>xx»
 
 example of """
 :tree
 id fun x -> x
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL37:1:71
-//│     at REPL37:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > Ident of "id"
+//│ > Error of "unexpected token Identifier(\"fun\", false)"
+//│ > Error of "unexpected token Identifier(\"x\", false)"
+//│ > Error of "unexpected token Identifier(\"->\", true)"
+//│ > Error of "unexpected token Identifier(\"x\", false)"
+//│ > «id»
+//│ > «⚠»
+//│ > «⚠»
+//│ > «⚠»
+//│ > «⚠»
 
 example of """
 :tree
 id if true then 1 else 0
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL40:1:71
-//│     at REPL40:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > Ident of "id"
+//│ > Error of "unexpected token Identifier(\"if\", false)"
+//│ > Error of "unexpected token Literal(Boolean, \"true\")"
+//│ > Error of "unexpected token Identifier(\"then\", false)"
+//│ > Error of "unexpected token Literal(Integer, \"1\")"
+//│ > Error of "unexpected token Identifier(\"else\", false)"
+//│ > Error of "unexpected token Literal(Integer, \"0\")"
+//│ > «id»
+//│ > «⚠»
+//│ > «⚠»
+//│ > «⚠»
+//│ > «⚠»
+//│ > «⚠»
+//│ > «⚠»
 
 example of """
 type;;
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL43:1:71
-//│     at REPL43:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «⚠»
 
 example of """
 function;;
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL46:1:71
-//│     at REPL46:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «⚠»
 
 example of """
 let foo_bar = function;;
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL49:1:71
-//│     at REPL49:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «⚠»
 
 example of """
 let let = 0;;
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL52:1:71
-//│     at REPL52:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «⚠»

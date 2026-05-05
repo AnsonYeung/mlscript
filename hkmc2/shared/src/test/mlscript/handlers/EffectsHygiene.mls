@@ -41,7 +41,7 @@ fun foo(h): module M =
 //│       toString() { return runtime.render(this); }
 //│       static [definitionMetadata] = ["class", "A"]; 
 //│     });
-//│     return A2
+//│     return A2;
 //│   }
 //│   globalThis.Object.freeze(class A1 {
 //│     static {

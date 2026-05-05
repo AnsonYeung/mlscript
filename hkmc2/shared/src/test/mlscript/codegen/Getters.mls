@@ -49,7 +49,7 @@ fun test() =
 //│   };
 //│   tmp = whoops();
 //│   tmp1 = whoops();
-//│   return tmp + tmp1
+//│   return tmp + tmp1;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -69,15 +69,18 @@ module T with
   val d = this.p
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let T1;
+//│ let staticInitAwaiter;
 //│ (class T {
 //│   static {
 //│     T1 = this
 //│   }
 //│   static {
-//│     this.a = T.t;
-//│     this.b = T.t;
-//│     this.c = T.p;
-//│     this.d = T.p;
+//│     staticInitAwaiter = (() => {
+//│       this.a = T.t;
+//│       this.b = T.t;
+//│       this.c = T.p;
+//│       this.d = T.p;
+//│     })();
 //│   }
 //│   static t() {
 //│     return 1
@@ -88,6 +91,7 @@ module T with
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "T"]; 
 //│ });
+//│ staticInitAwaiter
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 
@@ -136,7 +140,7 @@ fun test() =
   whoops
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let test1;
-//│ test1 = function test() { let whoops; whoops = function whoops() { return 42 }; return whoops() };
+//│ test1 = function test() { let whoops; whoops = function whoops() { return 42 }; return whoops(); };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 
@@ -159,7 +163,7 @@ fun bar() =
   fun baz() = 42
   baz
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let bar; bar = function bar() { let baz; baz = function baz() { return 42 }; return baz };
+//│ let bar; bar = function bar() { let baz; baz = function baz() { return 42 }; return baz; };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 
@@ -186,7 +190,7 @@ fun baz() =
 //│     tmp3 = z();
 //│     return tmp2 + tmp3
 //│   });
-//│   return lambda
+//│   return lambda;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -214,9 +218,9 @@ fun a() =
 //│     d = function d() { return 2 };
 //│     tmp1 = b();
 //│     tmp2 = d();
-//│     return tmp1 + tmp2
+//│     return tmp1 + tmp2;
 //│   };
-//│   return c
+//│   return c;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -236,8 +240,8 @@ fun b() =
 //│ let b;
 //│ b = function b() {
 //│   let d;
-//│   d = function d() { let c; c = function c() { return 2 }; return c() };
-//│   return d
+//│   d = function d() { let c; c = function c() { return 2 }; return c(); };
+//│   return d;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -265,9 +269,9 @@ fun c() =
 //│     e = function e() { return 1 };
 //│     tmp3 = e();
 //│     tmp4 = f();
-//│     return tmp3 + tmp4
+//│     return tmp3 + tmp4;
 //│   };
-//│   return d()
+//│   return d();
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 

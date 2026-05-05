@@ -73,7 +73,7 @@ fun foo() =
   fun bar() = bar()
   bar()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let foo3; foo3 = function foo() { let bar; bar = function bar() { return bar() }; return bar() };
+//│ let foo3; foo3 = function foo() { let bar; bar = function bar() { return bar() }; return bar(); };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 
@@ -90,7 +90,7 @@ do
 //│   loopLabel: while (true) { continue loopLabel; }
 //│ });
 //│ Predef.print(lambda);
-//│ runtime.Unit
+//│ runtime.Unit;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > fun
 //│ f = 1

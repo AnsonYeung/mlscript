@@ -7,7 +7,9 @@ case x then x
 :sjs
 case { x then x }
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let lambda1; lambda1 = (undefined, function (caseScrut) { let x; x = caseScrut; return x }); lambda1
+//│ let lambda1;
+//│ lambda1 = (undefined, function (caseScrut) { let x; x = caseScrut; return x });
+//│ lambda1;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 
@@ -22,7 +24,7 @@ x => if x is
 //│   }
 //│   throw globalThis.Object.freeze(new globalThis.Error("match error"));
 //│ });
-//│ lambda2
+//│ lambda2;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 
@@ -36,7 +38,7 @@ case 0 then true
 //│   }
 //│   throw globalThis.Object.freeze(new globalThis.Error("match error"));
 //│ });
-//│ lambda3
+//│ lambda3;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 
@@ -51,7 +53,7 @@ case
 //│   if (caseScrut === 0) { Predef.print(1); return runtime.Unit }
 //│   return runtime.Unit;
 //│ });
-//│ lambda4
+//│ lambda4;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 
@@ -74,10 +76,10 @@ case
 :todo // TODO: support this braceless syntax?
 case [x] then x, [] then 0
 //│ ╔══[COMPILATION ERROR] Unexpected infix use of keyword 'then' here
-//│ ║  l.75: 	case [x] then x, [] then 0
+//│ ║  l.77: 	case [x] then x, [] then 0
 //│ ╙──      	                 ^^^^^^^^^
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.75: 	case [x] then x, [] then 0
+//│ ║  l.77: 	case [x] then x, [] then 0
 //│ ╙──      	^^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -91,7 +93,7 @@ case
 //│   if (caseScrut1 === 0) { return true }
 //│   return false;
 //│ });
-//│ lambda11
+//│ lambda11;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 

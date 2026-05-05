@@ -74,7 +74,7 @@ fold(||)(0, false, 42, 123)
 //│   return true;
 //│ });
 //│ tmp2 = runtime.safeCall(Predef.fold(lambda));
-//│ runtime.safeCall(tmp2(0, false, 42, 123))
+//│ runtime.safeCall(tmp2(0, false, 42, 123));
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = true
 

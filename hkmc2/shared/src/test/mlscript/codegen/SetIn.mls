@@ -93,9 +93,9 @@ example()
 //│   }
 //│   Predef.print(x2);
 //│   tmp6 = runtime.safeCall(get_x());
-//│   return Predef.print(tmp6)
+//│   return Predef.print(tmp6);
 //│ };
-//│ example2()
+//│ example2();
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > 1
 //│ > 1
@@ -135,9 +135,9 @@ example()
 //│   Predef.print(x2);
 //│   tmp8 = runtime.safeCall(get_x());
 //│   Predef.print(tmp8);
-//│   return y
+//│   return y;
 //│ };
-//│ example3()
+//│ example3();
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > 1
 //│ > 0

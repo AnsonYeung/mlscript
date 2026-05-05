@@ -305,18 +305,22 @@ module Foo(x) with
 //│ ╙──       	           ^
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Foo5;
+//│ let staticInitAwaiter1;
 //│ (class Foo4 {
 //│   static {
 //│     Foo5 = this
 //│   }
 //│   static #x;
 //│   static {
-//│     Foo4.#x = x;
-//│     Predef.print(Foo4.#x);
+//│     staticInitAwaiter1 = (() => {
+//│       Foo4.#x = x;
+//│       Predef.print(Foo4.#x);
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Foo"]; 
 //│ });
+//│ staticInitAwaiter1
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > 1
 
@@ -325,20 +329,24 @@ module Foo(x) with
 module Foo(val x)
 //│ ╔══[COMPILATION ERROR] No definition found in scope for member 'x'
 //│ ╟── which references the symbol introduced here
-//│ ║  l.325: 	module Foo(val x)
+//│ ║  l.329: 	module Foo(val x)
 //│ ╙──       	               ^
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Foo7;
+//│ let staticInitAwaiter2;
 //│ (class Foo6 {
 //│   static {
 //│     Foo7 = this
 //│   }
 //│   static {
-//│     this.x = x;
+//│     staticInitAwaiter2 = (() => {
+//│       this.x = x;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Foo"]; 
 //│ });
+//│ staticInitAwaiter2
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 // ——— ——— ———
@@ -346,7 +354,7 @@ module Foo(val x)
 // TODO support syntax?
 data class Foo(mut x)
 //│ ╔══[COMPILATION ERROR] Expected a valid parameter, found 'mut'-modified identifier
-//│ ║  l.347: 	data class Foo(mut x)
+//│ ║  l.355: 	data class Foo(mut x)
 //│ ╙──       	                   ^
 
 // ——— ——— ———
@@ -361,7 +369,7 @@ class Foo
 :e
 class Id(name: UnboundName)
 //│ ╔══[COMPILATION ERROR] Name not found: UnboundName
-//│ ║  l.362: 	class Id(name: UnboundName)
+//│ ║  l.370: 	class Id(name: UnboundName)
 //│ ╙──       	               ^^^^^^^^^^^
 //│ ═══[COMPILATION ERROR] Expected a type, got a non-type ‹error›
 //│ ═══[COMPILATION ERROR] Expected a type, got ‹error›

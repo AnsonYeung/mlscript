@@ -9,7 +9,7 @@
 :noModuleCheck
 module M with
   set this."name" = "oops"
-//│ ═══[RUNTIME ERROR] TypeError: Cannot assign to read only property 'name' of function 'class M {   static {     M1 = this   }   static {     M["name"] = "oops";   }   toString() { return runtime.ren...<omitted>... }'
+//│ ═══[RUNTIME ERROR] TypeError: Cannot assign to read only property 'name' of function 'class M {   static {     M1 = this   }   static {     staticInitAwaiter = (() => {       M["name"] = "oops";   ...<omitted>... }'
 
 // * So we use `Object.defineProperty` instead:
 :sjs
@@ -17,16 +17,20 @@ module M with
   val name = "Student"
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let M3;
+//│ let staticInitAwaiter1;
 //│ (class M2 {
 //│   static {
 //│     M3 = this
 //│   }
 //│   static {
-//│     Object.defineProperty(this, "name", { configurable: true, enumerable: true, writable: true, value: "Student" });
+//│     staticInitAwaiter1 = (() => {
+//│       Object.defineProperty(this, "name", { configurable: true, enumerable: true, writable: true, value: "Student" });
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "M"]; 
 //│ });
+//│ staticInitAwaiter1
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

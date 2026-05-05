@@ -3,35 +3,34 @@
 import "../../mlscript-compile/nofib/lastpiece.mls"
 print of
   lastpiece.main()
-//│ > Promise {
-//│ >   'Success!\n' +
-//│ >     '  accchhff\n' +
-//│ >     '  aacnghhf\n' +
-//│ >     '  innnglhf\n' +
-//│ >     '  inmggllf\n' +
-//│ >     '  iimgelkk\n' +
-//│ >     '  dimeelkb\n' +
-//│ >     '  dmmejkkb\n' +
-//│ >     '  ddjjjjbb\n' +
-//│ >     '  \n' +
-//│ >     'Success!\n' +
-//│ >     '  acccjjjj\n' +
-//│ >     '  aacffjgb\n' +
-//│ >     '  hhddfggb\n' +
-//│ >     '  lhhdfgbb\n' +
-//│ >     '  llhdfgnm\n' +
-//│ >     '  lkkennnm\n' +
-//│ >     '  lkeeniim\n' +
-//│ >     '  kkeiiimm\n' +
-//│ >     '  \n' +
-//│ >     'Success!\n' +
-//│ >     '  ammmmccc\n' +
-//│ >     '  aaiimnch\n' +
-//│ >     '  iiinnnhh\n' +
-//│ >     '  gggnlhhj\n' +
-//│ >     '  fkgglljj\n' +
-//│ >     '  fkkklbdj\n' +
-//│ >     '  feeklbdj\n' +
-//│ >     '  ffeebbdd\n' +
-//│ >     '  \n'
-//│ > }
+//│ > Success!
+//│ >   accchhff
+//│ >   aacnghhf
+//│ >   innnglhf
+//│ >   inmggllf
+//│ >   iimgelkk
+//│ >   dimeelkb
+//│ >   dmmejkkb
+//│ >   ddjjjjbb
+//│ >   
+//│ > Success!
+//│ >   acccjjjj
+//│ >   aacffjgb
+//│ >   hhddfggb
+//│ >   lhhdfgbb
+//│ >   llhdfgnm
+//│ >   lkkennnm
+//│ >   lkeeniim
+//│ >   kkeiiimm
+//│ >   
+//│ > Success!
+//│ >   ammmmccc
+//│ >   aaiimnch
+//│ >   iiinnnhh
+//│ >   gggnlhhj
+//│ >   fkgglljj
+//│ >   fkkklbdj
+//│ >   feeklbdj
+//│ >   ffeebbdd
+//│ >   
+//│ > 

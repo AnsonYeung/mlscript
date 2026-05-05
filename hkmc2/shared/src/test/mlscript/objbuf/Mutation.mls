@@ -24,6 +24,7 @@ class A(x) with
     x
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let A3;
+//│ let staticInitAwaiter1;
 //│ A3 = function A(x) {
 //│   return globalThis.Object.freeze(new A.class(x));
 //│ };
@@ -36,7 +37,9 @@ class A(x) with
 //│     this.z = this.#x;
 //│   }
 //│   static {
-//│     this.size = 2;
+//│     staticInitAwaiter1 = (() => {
+//│       this.size = 2;
+//│     })();
 //│   }
 //│   static ctor(buf, idx) {
 //│     return (x) => {
@@ -79,6 +82,7 @@ class A(x) with
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "A", [null]]; 
 //│ });
+//│ staticInitAwaiter1
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

@@ -15,7 +15,7 @@
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let lambda;
 //│ lambda = (undefined, function (self, ...args) { return runtime.safeCall(self.x(...args)) });
-//│ lambda
+//│ lambda;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 
@@ -38,7 +38,7 @@
 //│   return runtime.safeCall(self.x(...args))
 //│ });
 //│ block$res2 = runtime.checkCall(lambda1());
-//│ undefined
+//│ undefined;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ ═══[RUNTIME ERROR] Error: Function expected at least 1 argument but got 0
 

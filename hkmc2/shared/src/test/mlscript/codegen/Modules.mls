@@ -57,36 +57,40 @@ module M with
   val y = x + 1
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let M1;
+//│ let staticInitAwaiter;
 //│ (class M {
 //│   static {
 //│     M1 = this
 //│   }
 //│   static {
-//│     let tmp;
-//│     (class C {
-//│       static {
-//│         M.C = this
-//│       }
-//│       toString() { return runtime.render(this); }
-//│       static [definitionMetadata] = ["class", "C"]; 
-//│     });
-//│     this.D = function D() {
-//│       return globalThis.Object.freeze(new D.class());
-//│     };
-//│     (class D {
-//│       static {
-//│         M.D.class = this
-//│       }
-//│       toString() { return runtime.render(this); }
-//│       static [definitionMetadata] = ["class", "D", []]; 
-//│     });
-//│     this.x = 1;
-//│     tmp = M.x + 1;
-//│     this.y = tmp;
+//│     staticInitAwaiter = (() => {
+//│       let tmp;
+//│       (class C {
+//│         static {
+//│           M.C = this
+//│         }
+//│         toString() { return runtime.render(this); }
+//│         static [definitionMetadata] = ["class", "C"]; 
+//│       });
+//│       this.D = function D() {
+//│         return globalThis.Object.freeze(new D.class());
+//│       };
+//│       (class D {
+//│         static {
+//│           M.D.class = this
+//│         }
+//│         toString() { return runtime.render(this); }
+//│         static [definitionMetadata] = ["class", "D", []]; 
+//│       });
+//│       this.x = 1;
+//│       tmp = M.x + 1;
+//│       this.y = tmp;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "M"]; 
 //│ });
+//│ staticInitAwaiter
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 M.C
@@ -108,7 +112,7 @@ M.y
 :re
 M.oops
 //│ ╔══[COMPILATION ERROR] Module 'M' does not contain member 'oops'
-//│ ║  l.109: 	M.oops
+//│ ║  l.113: 	M.oops
 //│ ╙──       	 ^^^^^
 //│ ═══[RUNTIME ERROR] Error: Access to required field 'oops' yielded 'undefined'
 
@@ -119,16 +123,20 @@ module M with
   val m: module M = M
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let M3;
+//│ let staticInitAwaiter1;
 //│ (class M2 {
 //│   static {
 //│     M3 = this
 //│   }
 //│   static {
-//│     this.m = M3;
+//│     staticInitAwaiter1 = (() => {
+//│       this.m = M3;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "M"]; 
 //│ });
+//│ staticInitAwaiter1
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 :sjs
@@ -151,26 +159,34 @@ module AA with
     [x, y]
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let AA1;
+//│ let staticInitAwaiter2;
 //│ (class AA {
 //│   static {
 //│     AA1 = this
 //│   }
 //│   static {
-//│     this.x = 1;
-//│     (class BB {
-//│       static {
-//│         AA.BB = this
-//│       }
-//│       static {
-//│         this.y = 2;
-//│       }
-//│       toString() { return runtime.render(this); }
-//│       static [definitionMetadata] = ["class", "BB"]; 
-//│     });
+//│     staticInitAwaiter2 = (() => {
+//│       this.x = 1;
+//│       let staticInitAwaiter3;
+//│       (class BB {
+//│         static {
+//│           AA.BB = this
+//│         }
+//│         static {
+//│           staticInitAwaiter3 = (() => {
+//│             this.y = 2;
+//│           })();
+//│         }
+//│         toString() { return runtime.render(this); }
+//│         static [definitionMetadata] = ["class", "BB"]; 
+//│       });
+//│       staticInitAwaiter3;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "AA"]; 
 //│ });
+//│ staticInitAwaiter2
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

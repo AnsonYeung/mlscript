@@ -6,18 +6,6 @@ import "../../../mlscript-compile/Iter.mls"
 import "../../../mlscript-compile/apps/parsing/Test.mls"
 import "../../../mlscript-compile/apps/parsing/Rules.mls"
 import "../../../mlscript-compile/apps/parsing/Keywords.mls"
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] SyntaxError: Private field '#_endChoice' must be declared in an enclosing class
-//│     at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
-//│     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
-//│     at #translate (node:internal/modules/esm/loader:562:20)
-//│     at afterLoad (node:internal/modules/esm/loader:612:29)
-//│     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
-//│     at #createModuleJob (node:internal/modules/esm/loader:641:36)
-//│     at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
-//│     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:318:41)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
 
 open Test { example }
 
@@ -26,51 +14,17 @@ example of """
 #newKeyword ("base", None, None)
 #newKeyword ("incr", None, None)
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL19:1:70
-//│     at REPL19:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > 
 
 print of Keywords.extended |> MutMap.valuesIterator |. Iter.joined("\n")
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'extended')
-//│     at REPL22:1:164
-//│     at REPL22:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > Keyword(`count`, 5, 5)
+//│ > Keyword(`base`, N/A, N/A)
+//│ > Keyword(`incr`, N/A, N/A)
 
 example of """
 #newCategory "counting"
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL25:1:70
-//│     at REPL25:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > 
 
 // <counting> ::= <counting> "incr" | "base"
 example of """
@@ -78,76 +32,31 @@ example of """
 #extendCategory "counting", [ keyword("base") ], zero
 #extendCategory "term", [ keyword("count"), "counting" ], result
 """
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL28:1:70
-//│     at REPL28:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > 
 
 Rules.getRuleByKind("counting").display print()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'getRuleByKind')
-//│     at REPL31:1:128
-//│     at REPL31:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > <counting> ::= 
+//│ >   | <counting> "incr"
+//│ >   | "base"
 
 example of """count base"""
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL34:1:70
-//│     at REPL34:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «result zero»
 
 example of """count base incr incr"""
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'example')
-//│     at REPL37:1:71
-//│     at REPL37:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > «result (succ (succ zero))»
 
 Rules.getRuleByKind("term").display print()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'getRuleByKind')
-//│     at REPL40:1:130
-//│     at REPL40:2:4
-//│     at ContextifyScript.runInThisContext (node:vm:137:12)
-//│     at REPLServer.defaultEval (node:repl:600:22)
-//│     at bound (node:domain:433:15)
-//│     at REPLServer.runBound [as eval] (node:domain:444:12)
-//│     at REPLServer.onLine (node:repl:935:10)
-//│     at REPLServer.emit (node:events:508:28)
-//│     at REPLServer.emit (node:domain:489:12)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ > <prefix rules for expressions> ::= 
+//│ >   | "let" ["rec"] <let-bindings> ["in" <term>]
+//│ >   | "fun" <term> "->" <term>
+//│ >   | "match" <term> "with" ["|"] <term> "->" <term> ["|" <simple-matching>]
+//│ >   | "function" ["|"] <term> "->" <term> ["|" <simple-matching>]
+//│ >   | "if" <term> "then" <term> ["else" <term>]
+//│ >   | "while" <term> "do" <term> "done"
+//│ >   | "for" <term> "=" <term> ("to" | "downto") <term> "do" <term> "done"
+//│ >   | "(" <term> ")"
+//│ >   | "[" <term> "]"
+//│ >   | "{" <term> "}"
+//│ >   | "begin" <term> "end"
+//│ >   | <term> ("," <term> | ";" <term> | "<-" <term> | "==" <term> | "*" <term> | "." ("(" <term> ")" | <term>) | ":" <type> | <term>)
+//│ >   | "count" <counting>

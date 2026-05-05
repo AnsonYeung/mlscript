@@ -16,7 +16,7 @@ f(2, 3)
 //│ y = 3;
 //│ inlinedVal = x + y;
 //│ block$res1 = inlinedVal;
-//│ undefined
+//│ undefined;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 5
 
@@ -32,7 +32,7 @@ f(2, 3)
 //│ };
 //│ f1 = f2;
 //│ block$res2 = runtime.safeCall(f1(2, 3));
-//│ undefined
+//│ undefined;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 5
 //│ f = fun f
@@ -58,7 +58,7 @@ id(f2)(2)
 //│ };
 //│ tmp = Predef.id(f21);
 //│ block$res5 = runtime.safeCall(tmp(2));
-//│ undefined
+//│ undefined;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = NaN
 
@@ -89,7 +89,7 @@ id(f)(3)(4)
 //│ tmp2 = runtime.checkCall(Predef.id(f3));
 //│ tmp3 = runtime.safeCall(tmp2(3));
 //│ block$res7 = runtime.safeCall(tmp3(4));
-//│ undefined
+//│ undefined;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = NaN
 
@@ -162,7 +162,7 @@ id(Cls(1, 2)).f(3, 4)(5)
 //│ tmp9 = runtime.checkCall(Predef.id(tmp8));
 //│ tmp10 = runtime.safeCall(tmp9.f(3, 4));
 //│ block$res12 = runtime.safeCall(tmp10(5));
-//│ undefined
+//│ undefined;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = NaN
 

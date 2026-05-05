@@ -35,7 +35,7 @@ f(1)
 //│ f2 = function f(x) {
 //│   throw runtime.safeCall(globalThis.Error("e"))
 //│ };
-//│ throw runtime.safeCall(globalThis.Error("e"))
+//│ throw runtime.safeCall(globalThis.Error("e"));
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ ═══[RUNTIME ERROR] Error: e
 
@@ -53,7 +53,7 @@ f(false)
 //│   }
 //│   throw runtime.safeCall(globalThis.Error("y"));
 //│ };
-//│ f3(false)
+//│ f3(false);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ ═══[RUNTIME ERROR] Error: y
 

@@ -4,94 +4,46 @@
 
 []
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL36:1:22
-//│     at async node:repl:647:29
+//│ = {}
 
 [0, 1, 2]
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL37:1:22
-//│     at async node:repl:647:29
+//│ = {}
 
 fun makePair(x, y) = [x, y]
 makePair(1, 2).[1]
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL38:1:22
-//│     at async node:repl:647:29
+//│ = 2
 
 class Foo(val x, val y)
 let b = [Foo(0, 1), true, 2]
 if b.[0] is Foo(x, y) then x else 3
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL39:1:22
-//│     at async node:repl:647:29
+//│ = 0
 
 let nums = [1, 2, 3]
 nums.[-1]
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL40:1:22
-//│     at async node:repl:647:29
+//│ = 3
 
 let nums = mut [1, 2, 3]
 set nums.[0] = 0
 nums.[0]
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL41:1:22
-//│     at async node:repl:647:29
+//│ = 0
 
 :re
 let nums = [1, 2, 3]
 set nums.[0] = 0
 nums.[0]
 //│ Wasm result:
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│ ═══[RUNTIME ERROR] RuntimeError: illegal cast
 
 :re
 let nums = [1, 2, 3]
 nums.[3]
 //│ Wasm result:
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│ ═══[RUNTIME ERROR] RuntimeError: array element access out of bounds
 
 
 :wat
@@ -133,12 +85,4 @@ c.[3]
 //│             (i32.const 3))))))
 //│   (elem $entry declare func $entry))
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL44:1:22
-//│     at async node:repl:647:29
+//│ = 40

@@ -15,14 +15,14 @@ module A with
 //│     A1 = this
 //│   }
 //│   static {
-//│     staticInitAwaiter = (async () => {
+//│     staticInitAwaiter = (() => {
 //│       this.x = 3;
 //│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "A"]; 
 //│ });
-//│ await staticInitAwaiter;
+//│ staticInitAwaiter
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

@@ -10,89 +10,45 @@ val step = 2
 let counter = 1
 let unit = ()
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL36:1:22
-//│     at async node:repl:647:29
+//│ = {}
 
 inc(Foo.x)
-//│ FAILURE: Unexpected compilation error
-//│ FAILURE LOCATION: errExpr (WatBuilder.scala:1005)
-//│ FAILURE INFO: Ref(member:inc,Some(term:inc))
-//│ ╔══[COMPILATION ERROR] Expected static function reference in Call(...) expression
-//│ ║  l.23: 	inc(Foo.x)
-//│ ╙──      	^^^
+//│ Wasm result:
+//│ = 2
 
 if C(7) is C(v) then v else 0
-//│ FAILURE: Unexpected compilation error
-//│ FAILURE LOCATION: errExpr (WatBuilder.scala:1005)
-//│ FAILURE INFO: Ref(member:C,Some(term:C/C))
-//│ ╔══[COMPILATION ERROR] Expected static function reference in Call(...) expression
-//│ ║  l.31: 	if C(7) is C(v) then v else 0
-//│ ╙──      	   ^
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: Missing type definition for symbol `member:C`
-//│ 	at: mlscript.utils.package$.lastWords(package.scala:239)
-//│ 	at: hkmc2.codegen.wasm.text.Ctx.getType_$bang$$anonfun$1(Ctx.scala:601)
-//│ 	at: scala.Option.getOrElse(Option.scala:203)
-//│ 	at: hkmc2.codegen.wasm.text.Ctx.getType_$bang(Ctx.scala:601)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.$anonfun$72(WatBuilder.scala:1895)
-//│ 	at: scala.collection.immutable.List.flatMap(List.scala:287)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.$anonfun$71(WatBuilder.scala:1858)
-//│ 	at: hkmc2.codegen.wasm.text.FunctionCtx.withLabel(Ctx.scala:447)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.returningTerm(WatBuilder.scala:1856)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.returningTerm(WatBuilder.scala:1363)
+//│ Wasm result:
+//│ = 7
 
 :wat
 set counter += step
 counter
-//│ FAILURE: Unexpected compilation error
-//│ FAILURE LOCATION: errExpr (WatBuilder.scala:876)
-//│ FAILURE INFO: Locals: List((tmp:tmp,SymIdx(tmp)))
-//│ Globals: List()
-//│ ╔══[COMPILATION ERROR] Cannot find variable `counter` (VarSymbol) in local or global scope.
-//│ ║  l.10: 	let counter = 1
-//│ ╙──      	    ^^^^^^^
-//│ FAILURE: Unexpected compilation error
-//│ FAILURE LOCATION: errExpr (WatBuilder.scala:876)
-//│ FAILURE INFO: Locals: List((tmp:tmp,SymIdx(tmp)))
-//│ Globals: List()
-//│ ╔══[COMPILATION ERROR] Cannot find variable `member:step` (BlockMemberSymbol) in local or global scope.
-//│ ║  l.9: 	val step = 2
-//│ ╙──     	^^^^^^^^^^^^
-//│ FAILURE: Unexpected compilation error
-//│ FAILURE LOCATION: errExpr (WatBuilder.scala:876)
-//│ FAILURE INFO: Locals: List((tmp:tmp,SymIdx(tmp)))
-//│ Globals: List()
-//│ ╔══[COMPILATION ERROR] Cannot find variable `counter` (VarSymbol) in local or global scope.
-//│ ║  l.10: 	let counter = 1
-//│ ╙──      	    ^^^^^^^
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: Expected `global.*` or `local.*` when compiling instruction for `counter`, but got unreachable
-//│ 	at: mlscript.utils.package$.lastWords(package.scala:239)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.returningTerm(WatBuilder.scala:1360)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.returningTerm(WatBuilder.scala:1363)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.block$$anonfun$1(WatBuilder.scala:2209)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.nonNestedScoped(WatBuilder.scala:2205)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.block(WatBuilder.scala:2209)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.$anonfun$79(WatBuilder.scala:2114)
-//│ 	at: hkmc2.codegen.wasm.text.Ctx$package$.genFuncBody(Ctx.scala:471)
-//│ 	at: hkmc2.codegen.wasm.text.WatBuilder.program(WatBuilder.scala:2115)
-//│ 	at: hkmc2.WasmDiffMaker.processIRBlock(WasmDiffMaker.scala:107)
+//│ Wat:
+//│ (module
+//│   (type $Object (sub (struct (field $$tag (mut i32)))))
+//│   (type $plus_impl (func (param $lhs (ref null any)) (param $rhs (ref null any)) (result (ref null any))))
+//│   (type $entry1 (func (result (ref null any))))
+//│   (import "system" "plus_impl" (func $plus_impl (type $plus_impl)))
+//│   (import "repl" "counter" (global $counter (mut (ref null any))))
+//│   (import "repl" "step" (global $step (mut (ref null any))))
+//│   (func $entry (export "entry") (type $entry1) (result (ref null any))
+//│     (local $tmp (ref null any))
+//│     (block (result (ref null any))
+//│       (local.set $tmp
+//│         (call $plus_impl
+//│           (global.get $counter)
+//│           (global.get $step)))
+//│       (block (result (ref null any))
+//│         (global.set $counter
+//│           (local.get $tmp))
+//│         (global.get $counter))))
+//│   (elem $entry declare func $entry))
+//│ Wasm result:
+//│ = 3
 
 unit
-//│ FAILURE: Unexpected compilation error
-//│ FAILURE LOCATION: errExpr (WatBuilder.scala:876)
-//│ FAILURE INFO: Locals: List()
-//│ Globals: List()
-//│ ╔══[COMPILATION ERROR] Cannot find variable `unit` (VarSymbol) in local or global scope.
-//│ ║  l.11: 	let unit = ()
-//│ ╙──      	    ^^^^
+//│ Wasm result:
+//│ = {}
 
 :wat
 ()
@@ -100,50 +56,10 @@ unit
 //│ (module
 //│   (type $Object (sub (struct (field $$tag (mut i32)))))
 //│   (type $Unit (sub $Object (struct (field $$tag (mut i32)))))
-//│   (type $Unit_init (func (param $this (ref null any)) (result (ref null any))))
-//│   (type $Unit_ctor (func (result (ref null any))))
 //│   (type $entry1 (func (result (ref null any))))
-//│   (type $start (func))
-//│   (global $Unit$inst (export "Unit$inst") (mut (ref null $Unit)) (ref.null $Unit))
-//│   (func $Unit_init1 (type $Unit_init) (param $this (ref null any)) (result (ref null any))
-//│     (block (result (ref null any))
-//│       (nop)
-//│       (nop)
-//│       (return
-//│         (local.get $this))))
-//│   (func $Unit_ctor1 (type $Unit_ctor) (result (ref null any))
-//│     (local $this (ref null any))
-//│     (block (result (ref null any))
-//│       (local.set $this
-//│         (struct.new_default $Unit))
-//│       (struct.set $Unit $$tag
-//│         (ref.cast (ref $Unit)
-//│           (local.get $this))
-//│         (i32.const 1))
-//│       (drop
-//│         (call $Unit_init1
-//│           (local.get $this)))
-//│       (return
-//│         (local.get $this))))
-//│   (func $start1 (type $start)
-//│     (block
-//│       (global.set $Unit$inst
-//│         (ref.cast (ref null $Unit)
-//│           (call $Unit_ctor1)))))
+//│   (import "repl" "Unit$inst" (global $Unit (mut (ref null $Unit))))
 //│   (func $entry (export "entry") (type $entry1) (result (ref null any))
-//│     (global.get $Unit$inst))
-//│   (elem $Unit_init1 declare func $Unit_init1)
-//│   (elem $Unit_ctor1 declare func $Unit_ctor1)
-//│   (elem $start1 declare func $start1)
-//│   (elem $entry declare func $entry)
-//│   (start $start1))
+//│     (global.get $Unit))
+//│   (elem $entry declare func $entry))
 //│ Wasm result:
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
-//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
-//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
-//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
-//│     at async REPL37:1:22
-//│     at async node:repl:647:29
+//│ = {}

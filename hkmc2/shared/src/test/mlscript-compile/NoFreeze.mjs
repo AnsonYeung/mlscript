@@ -8,7 +8,7 @@ let staticInitAwaiter;
     NoFreeze1 = this
   }
   static {
-    staticInitAwaiter = (async () => {
+    staticInitAwaiter = (() => {
       this.Foo = function Foo(x) {
         return (new Foo.class(x));
       };
@@ -24,11 +24,11 @@ let staticInitAwaiter;
       });
     })();
   }
-  static async foo() {
+  static foo() {
     return (new NoFreeze.Foo.class(0))
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "NoFreeze"]; 
 });
-await staticInitAwaiter;
+staticInitAwaiter
 let NoFreeze = NoFreeze1; export default NoFreeze;

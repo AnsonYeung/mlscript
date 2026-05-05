@@ -227,7 +227,7 @@ _ - _ of 1, 2
 :sjs
 1 \ (_ - 2)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let lambda39; lambda39 = (undefined, function (_05) { return _05 - 2 }); Predef.passTo(1, lambda39)
+//│ let lambda39; lambda39 = (undefined, function (_05) { return _05 - 2 }); Predef.passTo(1, lambda39);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 
@@ -239,7 +239,7 @@ _ - _ of 1, 2
 //│   return _05 - 2
 //│ });
 //│ tmp22 = Predef.passTo(1, lambda40);
-//│ runtime.safeCall(tmp22())
+//│ runtime.safeCall(tmp22());
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = -1
 

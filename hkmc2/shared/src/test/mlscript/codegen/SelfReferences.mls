@@ -6,16 +6,20 @@ module Foo with
   val self: module Foo = Foo
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Foo1;
+//│ let staticInitAwaiter;
 //│ (class Foo {
 //│   static {
 //│     Foo1 = this
 //│   }
 //│   static {
-//│     this.self = Foo1;
+//│     staticInitAwaiter = (() => {
+//│       this.self = Foo1;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Foo"]; 
 //│ });
+//│ staticInitAwaiter
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 Foo.self
@@ -33,7 +37,7 @@ Foo.self
 module Foo with
   val self = this
 //│ ╔══[COMPILATION ERROR] Unexpected moduleful reference of type Foo.
-//│ ║  l.34: 	  val self = this
+//│ ║  l.38: 	  val self = this
 //│ ║        	             ^^^^
 //│ ╙── Value must be marked as returning a 'module' in order to return a module.
 

@@ -40,14 +40,17 @@ module Test with
   fun bar() = foo()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Test1;
+//│ let staticInitAwaiter1;
 //│ (class Test {
 //│   static {
 //│     Test1 = this
 //│   }
 //│   static #s;
 //│   static {
-//│     Test.#s = 1;
-//│     Predef.print(Test.#s);
+//│     staticInitAwaiter1 = (() => {
+//│       Test.#s = 1;
+//│       Predef.print(Test.#s);
+//│     })();
 //│   }
 //│   static foo() {
 //│     return Predef.print(Test.#s)
@@ -58,6 +61,7 @@ module Test with
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Test"]; 
 //│ });
+//│ staticInitAwaiter1
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > 1
 

@@ -17,368 +17,116 @@ fun example(input) =
   print of "Pretty-printed: " + expr BasicExpr.prettyPrint()
 
 example of "1 + 2 * 3"
-//│ > Promise {
-//│ >   'Tokens: ┃1│␠│+│␠│2│␠│*│␠│3┃',
-//│ >   Symbol(async_id_symbol): 1912,
-//│ >   Symbol(trigger_async_id_symbol): 1910
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Lit(1), Mul(Lit(2), Lit(3)))',
-//│ >   Symbol(async_id_symbol): 2576,
-//│ >   Symbol(trigger_async_id_symbol): 2574
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 1 + 2 * 3',
-//│ >   Symbol(async_id_symbol): 2631,
-//│ >   Symbol(trigger_async_id_symbol): 2629
-//│ > }
+//│ > Tokens: ┃1│␠│+│␠│2│␠│*│␠│3┃
+//│ > Parsed: Add(Lit(1), Mul(Lit(2), Lit(3)))
+//│ > Pretty-printed: 1 + 2 * 3
 
 example of "3 * x + 1"
-//│ > Promise {
-//│ >   'Tokens: ┃3│␠│*│␠│x│␠│+│␠│1┃',
-//│ >   Symbol(async_id_symbol): 3206,
-//│ >   Symbol(trigger_async_id_symbol): 3204
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Mul(Lit(3), Var("x")), Lit(1))',
-//│ >   Symbol(async_id_symbol): 3866,
-//│ >   Symbol(trigger_async_id_symbol): 3864
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 3 * x + 1',
-//│ >   Symbol(async_id_symbol): 3919,
-//│ >   Symbol(trigger_async_id_symbol): 3917
-//│ > }
+//│ > Tokens: ┃3│␠│*│␠│x│␠│+│␠│1┃
+//│ > Parsed: Add(Mul(Lit(3), Var("x")), Lit(1))
+//│ > Pretty-printed: 3 * x + 1
 
 example of "1 + (1 + 1)"
-//│ > Promise {
-//│ >   'Tokens: ┃1│␠│+│␠│(│1│␠│+│␠│1│)┃',
-//│ >   Symbol(async_id_symbol): 4553,
-//│ >   Symbol(trigger_async_id_symbol): 4551
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Lit(1), Add(Lit(1), Lit(1)))',
-//│ >   Symbol(async_id_symbol): 5319,
-//│ >   Symbol(trigger_async_id_symbol): 5317
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 1 + 1 + 1',
-//│ >   Symbol(async_id_symbol): 5364,
-//│ >   Symbol(trigger_async_id_symbol): 5362
-//│ > }
+//│ > Tokens: ┃1│␠│+│␠│(│1│␠│+│␠│1│)┃
+//│ > Parsed: Add(Lit(1), Add(Lit(1), Lit(1)))
+//│ > Pretty-printed: 1 + 1 + 1
 
 example of "1 + (1 + 1"
-//│ > Promise {
-//│ >   'Tokens: ┃1│␠│+│␠│(│1│␠│+│␠│1┃',
-//│ >   Symbol(async_id_symbol): 5960,
-//│ >   Symbol(trigger_async_id_symbol): 5958
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Lit(1), Err(Some(Add(Lit(1), Lit(1))), "Expected token ), but found end of input"))',
-//│ >   Symbol(async_id_symbol): 6946,
-//│ >   Symbol(trigger_async_id_symbol): 6944
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 1 + { 1 + 1 | "Expected token ), but found end of input" }',
-//│ >   Symbol(async_id_symbol): 6995,
-//│ >   Symbol(trigger_async_id_symbol): 6993
-//│ > }
+//│ > Tokens: ┃1│␠│+│␠│(│1│␠│+│␠│1┃
+//│ > Parsed: Add(Lit(1), Err(Some(Add(Lit(1), Lit(1))), "Expected token ), but found end of input"))
+//│ > Pretty-printed: 1 + { 1 + 1 | "Expected token ), but found end of input" }
 
 example of "1 + 1 +"
-//│ > Promise {
-//│ >   'Tokens: ┃1│␠│+│␠│1│␠│+┃',
-//│ >   Symbol(async_id_symbol): 7468,
-//│ >   Symbol(trigger_async_id_symbol): 7466
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Add(Lit(1), Lit(1)), Err(None, "Unexpected end of input"))',
-//│ >   Symbol(async_id_symbol): 8232,
-//│ >   Symbol(trigger_async_id_symbol): 8230
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 1 + 1 + { "Unexpected end of input" }',
-//│ >   Symbol(async_id_symbol): 8277,
-//│ >   Symbol(trigger_async_id_symbol): 8275
-//│ > }
+//│ > Tokens: ┃1│␠│+│␠│1│␠│+┃
+//│ > Parsed: Add(Add(Lit(1), Lit(1)), Err(None, "Unexpected end of input"))
+//│ > Pretty-printed: 1 + 1 + { "Unexpected end of input" }
 
 example of "x + 5"
-//│ > Promise {
-//│ >   'Tokens: ┃x│␠│+│␠│5┃',
-//│ >   Symbol(async_id_symbol): 8671,
-//│ >   Symbol(trigger_async_id_symbol): 8669
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Var("x"), Lit(5))',
-//│ >   Symbol(async_id_symbol): 9111,
-//│ >   Symbol(trigger_async_id_symbol): 9109
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x + 5',
-//│ >   Symbol(async_id_symbol): 9148,
-//│ >   Symbol(trigger_async_id_symbol): 9146
-//│ > }
+//│ > Tokens: ┃x│␠│+│␠│5┃
+//│ > Parsed: Add(Var("x"), Lit(5))
+//│ > Pretty-printed: x + 5
 
 example of "3 * x + 2"
-//│ > Promise {
-//│ >   'Tokens: ┃3│␠│*│␠│x│␠│+│␠│2┃',
-//│ >   Symbol(async_id_symbol): 9723,
-//│ >   Symbol(trigger_async_id_symbol): 9721
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Mul(Lit(3), Var("x")), Lit(2))',
-//│ >   Symbol(async_id_symbol): 10383,
-//│ >   Symbol(trigger_async_id_symbol): 10381
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 3 * x + 2',
-//│ >   Symbol(async_id_symbol): 10436,
-//│ >   Symbol(trigger_async_id_symbol): 10434
-//│ > }
+//│ > Tokens: ┃3│␠│*│␠│x│␠│+│␠│2┃
+//│ > Parsed: Add(Mul(Lit(3), Var("x")), Lit(2))
+//│ > Pretty-printed: 3 * x + 2
 
 example of "(x + 1) * (y + 4)"
-//│ > Promise {
-//│ >   'Tokens: ┃(│x│␠│+│␠│1│)│␠│*│␠│(│y│␠│+│␠│4│)┃',
-//│ >   Symbol(async_id_symbol): 11321,
-//│ >   Symbol(trigger_async_id_symbol): 11319
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Mul(Add(Var("x"), Lit(1)), Add(Var("y"), Lit(4)))',
-//│ >   Symbol(async_id_symbol): 12373,
-//│ >   Symbol(trigger_async_id_symbol): 12371
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: (x + 1) * (y + 4)',
-//│ >   Symbol(async_id_symbol): 12430,
-//│ >   Symbol(trigger_async_id_symbol): 12428
-//│ > }
+//│ > Tokens: ┃(│x│␠│+│␠│1│)│␠│*│␠│(│y│␠│+│␠│4│)┃
+//│ > Parsed: Mul(Add(Var("x"), Lit(1)), Add(Var("y"), Lit(4)))
+//│ > Pretty-printed: (x + 1) * (y + 4)
 
 example of "2 + (3 * y)"
-//│ > Promise {
-//│ >   'Tokens: ┃2│␠│+│␠│(│3│␠│*│␠│y│)┃',
-//│ >   Symbol(async_id_symbol): 13071,
-//│ >   Symbol(trigger_async_id_symbol): 13069
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Lit(2), Mul(Lit(3), Var("y")))',
-//│ >   Symbol(async_id_symbol): 13805,
-//│ >   Symbol(trigger_async_id_symbol): 13803
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 2 + 3 * y',
-//│ >   Symbol(async_id_symbol): 13858,
-//│ >   Symbol(trigger_async_id_symbol): 13856
-//│ > }
+//│ > Tokens: ┃2│␠│+│␠│(│3│␠│*│␠│y│)┃
+//│ > Parsed: Add(Lit(2), Mul(Lit(3), Var("y")))
+//│ > Pretty-printed: 2 + 3 * y
 
 example of "(x + 2) + (3 * y)"
-//│ > Promise {
-//│ >   'Tokens: ┃(│x│␠│+│␠│2│)│␠│+│␠│(│3│␠│*│␠│y│)┃',
-//│ >   Symbol(async_id_symbol): 14743,
-//│ >   Symbol(trigger_async_id_symbol): 14741
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Add(Var("x"), Lit(2)), Mul(Lit(3), Var("y")))',
-//│ >   Symbol(async_id_symbol): 15795,
-//│ >   Symbol(trigger_async_id_symbol): 15793
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x + 2 + 3 * y',
-//│ >   Symbol(async_id_symbol): 15852,
-//│ >   Symbol(trigger_async_id_symbol): 15850
-//│ > }
+//│ > Tokens: ┃(│x│␠│+│␠│2│)│␠│+│␠│(│3│␠│*│␠│y│)┃
+//│ > Parsed: Add(Add(Var("x"), Lit(2)), Mul(Lit(3), Var("y")))
+//│ > Pretty-printed: x + 2 + 3 * y
 
 example of "3 * (x + y) + 7"
-//│ > Promise {
-//│ >   'Tokens: ┃3│␠│*│␠│(│x│␠│+│␠│y│)│␠│+│␠│7┃',
-//│ >   Symbol(async_id_symbol): 16671,
-//│ >   Symbol(trigger_async_id_symbol): 16669
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Mul(Lit(3), Add(Var("x"), Var("y"))), Lit(7))',
-//│ >   Symbol(async_id_symbol): 17649,
-//│ >   Symbol(trigger_async_id_symbol): 17647
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 3 * (x + y) + 7',
-//│ >   Symbol(async_id_symbol): 17706,
-//│ >   Symbol(trigger_async_id_symbol): 17704
-//│ > }
+//│ > Tokens: ┃3│␠│*│␠│(│x│␠│+│␠│y│)│␠│+│␠│7┃
+//│ > Parsed: Add(Mul(Lit(3), Add(Var("x"), Var("y"))), Lit(7))
+//│ > Pretty-printed: 3 * (x + y) + 7
 
 // Unbalanced parentheses
 example of "((x + y)"
-//│ > Promise {
-//│ >   'Tokens: ┃(│(│x│␠│+│␠│y│)┃',
-//│ >   Symbol(async_id_symbol): 18201,
-//│ >   Symbol(trigger_async_id_symbol): 18199
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Err(Some(Add(Var("x"), Var("y"))), "Expected token ), but found end of input")',
-//│ >   Symbol(async_id_symbol): 19005,
-//│ >   Symbol(trigger_async_id_symbol): 19003
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: { x + y | "Expected token ), but found end of input" }',
-//│ >   Symbol(async_id_symbol): 19044,
-//│ >   Symbol(trigger_async_id_symbol): 19042
-//│ > }
+//│ > Tokens: ┃(│(│x│␠│+│␠│y│)┃
+//│ > Parsed: Err(Some(Add(Var("x"), Var("y"))), "Expected token ), but found end of input")
+//│ > Pretty-printed: { x + y | "Expected token ), but found end of input" }
 
 // Missing operand between '+' and '*'
 example of "x + * y"
-//│ > Promise {
-//│ >   'Tokens: ┃x│␠│+│␠│*│␠│y┃',
-//│ >   Symbol(async_id_symbol): 19519,
-//│ >   Symbol(trigger_async_id_symbol): 19517
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Var("x"), Mul(Err(None, "Unexpected token *"), Var("y")))',
-//│ >   Symbol(async_id_symbol): 20249,
-//│ >   Symbol(trigger_async_id_symbol): 20247
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x + { "Unexpected token *" } * y',
-//│ >   Symbol(async_id_symbol): 20300,
-//│ >   Symbol(trigger_async_id_symbol): 20298
-//│ > }
+//│ > Tokens: ┃x│␠│+│␠│*│␠│y┃
+//│ > Parsed: Add(Var("x"), Mul(Err(None, "Unexpected token *"), Var("y")))
+//│ > Pretty-printed: x + { "Unexpected token *" } * y
 
 // Another unbalanced parenthesis
 example of "3 + (y"
-//│ > Promise {
-//│ >   'Tokens: ┃3│␠│+│␠│(│y┃',
-//│ >   Symbol(async_id_symbol): 20714,
-//│ >   Symbol(trigger_async_id_symbol): 20712
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Lit(3), Err(Some(Var("y")), "Expected token ), but found end of input"))',
-//│ >   Symbol(async_id_symbol): 21448,
-//│ >   Symbol(trigger_async_id_symbol): 21446
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 3 + { y | "Expected token ), but found end of input" }',
-//│ >   Symbol(async_id_symbol): 21489,
-//│ >   Symbol(trigger_async_id_symbol): 21487
-//│ > }
+//│ > Tokens: ┃3│␠│+│␠│(│y┃
+//│ > Parsed: Add(Lit(3), Err(Some(Var("y")), "Expected token ), but found end of input"))
+//│ > Pretty-printed: 3 + { y | "Expected token ), but found end of input" }
 
 // Unbalanced parenthesis
 example of "3 + 7)"
-//│ > Promise {
-//│ >   'Tokens: ┃3│␠│+│␠│7│)┃',
-//│ >   Symbol(async_id_symbol): 21914,
-//│ >   Symbol(trigger_async_id_symbol): 21912
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Err(Some(Add(Lit(3), Lit(7))), "Expect end of input, but found )")',
-//│ >   Symbol(async_id_symbol): 22550,
-//│ >   Symbol(trigger_async_id_symbol): 22548
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: { 3 + 7 | "Expect end of input, but found )" }',
-//│ >   Symbol(async_id_symbol): 22593,
-//│ >   Symbol(trigger_async_id_symbol): 22591
-//│ > }
+//│ > Tokens: ┃3│␠│+│␠│7│)┃
+//│ > Parsed: Err(Some(Add(Lit(3), Lit(7))), "Expect end of input, but found )")
+//│ > Pretty-printed: { 3 + 7 | "Expect end of input, but found )" }
 
 // Operator '+' missing a second operand
 example of "(x +) + y"
-//│ > Promise {
-//│ >   'Tokens: ┃(│x│␠│+│)│␠│+│␠│y┃',
-//│ >   Symbol(async_id_symbol): 23124,
-//│ >   Symbol(trigger_async_id_symbol): 23122
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Add(Var("x"), Err(None, "Unexpected token )")), Var("y"))',
-//│ >   Symbol(async_id_symbol): 23956,
-//│ >   Symbol(trigger_async_id_symbol): 23954
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x + { "Unexpected token )" } + y',
-//│ >   Symbol(async_id_symbol): 23997,
-//│ >   Symbol(trigger_async_id_symbol): 23995
-//│ > }
+//│ > Tokens: ┃(│x│␠│+│)│␠│+│␠│y┃
+//│ > Parsed: Add(Add(Var("x"), Err(None, "Unexpected token )")), Var("y"))
+//│ > Pretty-printed: x + { "Unexpected token )" } + y
 
 // Expression starting with an operator '*'
 example of "* x + 5"
-//│ > Promise {
-//│ >   'Tokens: ┃*│␠│x│␠│+│␠│5┃',
-//│ >   Symbol(async_id_symbol): 24473,
-//│ >   Symbol(trigger_async_id_symbol): 24471
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Mul(Err(None, "Unexpected token *"), Var("x")), Lit(5))',
-//│ >   Symbol(async_id_symbol): 25207,
-//│ >   Symbol(trigger_async_id_symbol): 25205
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: { "Unexpected token *" } * x + 5',
-//│ >   Symbol(async_id_symbol): 25260,
-//│ >   Symbol(trigger_async_id_symbol): 25258
-//│ > }
+//│ > Tokens: ┃*│␠│x│␠│+│␠│5┃
+//│ > Parsed: Add(Mul(Err(None, "Unexpected token *"), Var("x")), Lit(5))
+//│ > Pretty-printed: { "Unexpected token *" } * x + 5
 
 // Double operator '+' without an operand in between
 example of "x + + 5"
-//│ > Promise {
-//│ >   'Tokens: ┃x│␠│+│␠│+│␠│5┃',
-//│ >   Symbol(async_id_symbol): 25736,
-//│ >   Symbol(trigger_async_id_symbol): 25734
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Add(Var("x"), Err(None, "Unexpected token +")), Lit(5))',
-//│ >   Symbol(async_id_symbol): 26498,
-//│ >   Symbol(trigger_async_id_symbol): 26496
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x + { "Unexpected token +" } + 5',
-//│ >   Symbol(async_id_symbol): 26541,
-//│ >   Symbol(trigger_async_id_symbol): 26539
-//│ > }
+//│ > Tokens: ┃x│␠│+│␠│+│␠│5┃
+//│ > Parsed: Add(Add(Var("x"), Err(None, "Unexpected token +")), Lit(5))
+//│ > Pretty-printed: x + { "Unexpected token +" } + 5
 
 // Missing operator between 'x' and 'y'
 example of "x y"
-//│ > Promise {
-//│ >   'Tokens: ┃x│␠│y┃',
-//│ >   Symbol(async_id_symbol): 26852,
-//│ >   Symbol(trigger_async_id_symbol): 26850
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Err(Some(Var("x")), "Expect end of input, but found y")',
-//│ >   Symbol(async_id_symbol): 27238,
-//│ >   Symbol(trigger_async_id_symbol): 27236
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: { x | "Expect end of input, but found y" }',
-//│ >   Symbol(async_id_symbol): 27273,
-//│ >   Symbol(trigger_async_id_symbol): 27271
-//│ > }
+//│ > Tokens: ┃x│␠│y┃
+//│ > Parsed: Err(Some(Var("x")), "Expect end of input, but found y")
+//│ > Pretty-printed: { x | "Expect end of input, but found y" }
 
 // Empty parentheses with no expression
 example of "()"
-//│ > Promise {
-//│ >   'Tokens: ┃(│)┃',
-//│ >   Symbol(async_id_symbol): 27488,
-//│ >   Symbol(trigger_async_id_symbol): 27486
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Err(None, "Unexpected token )")',
-//│ >   Symbol(async_id_symbol): 27834,
-//│ >   Symbol(trigger_async_id_symbol): 27832
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: { "Unexpected token )" }',
-//│ >   Symbol(async_id_symbol): 27867,
-//│ >   Symbol(trigger_async_id_symbol): 27865
-//│ > }
+//│ > Tokens: ┃(│)┃
+//│ > Parsed: Err(None, "Unexpected token )")
+//│ > Pretty-printed: { "Unexpected token )" }
 
 // Operator '*' at the end with no following operand
 example of "3 + x *"
-//│ > Promise {
-//│ >   'Tokens: ┃3│␠│+│␠│x│␠│*┃',
-//│ >   Symbol(async_id_symbol): 28347,
-//│ >   Symbol(trigger_async_id_symbol): 28345
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Add(Lit(3), Mul(Var("x"), Err(None, "Unexpected end of input")))',
-//│ >   Symbol(async_id_symbol): 29079,
-//│ >   Symbol(trigger_async_id_symbol): 29077
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 3 + x * { "Unexpected end of input" }',
-//│ >   Symbol(async_id_symbol): 29132,
-//│ >   Symbol(trigger_async_id_symbol): 29130
-//│ > }
+//│ > Tokens: ┃3│␠│+│␠│x│␠│*┃
+//│ > Parsed: Add(Lit(3), Mul(Var("x"), Err(None, "Unexpected end of input")))
+//│ > Pretty-printed: 3 + x * { "Unexpected end of input" }

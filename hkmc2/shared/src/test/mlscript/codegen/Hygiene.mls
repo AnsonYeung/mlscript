@@ -64,7 +64,7 @@ let f = () => x
 let x = 2
 f()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let x, f, x1, f1; x = 1; f1 = function f() { return x }; f = f1; x1 = 2; runtime.safeCall(f())
+//│ let x, f, x1, f1; x = 1; f1 = function f() { return x }; f = f1; x1 = 2; runtime.safeCall(f());
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 1
 //│ f = fun f
@@ -84,17 +84,21 @@ module Test with
 //│ ╙──      	  ^^^^^^^^^
 //│ —————————————| JS (sanitized) |—————————————————————————————————————————————————————————————————————
 //│ let Test4;
+//│ let staticInitAwaiter;
 //│ globalThis.Object.freeze(class Test3 {
 //│   static {
 //│     Test4 = this
 //│   }
 //│   static #x;
 //│   static {
-//│     this.x = 1;
+//│     staticInitAwaiter = (() => {
+//│       this.x = 1;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Test"]; 
 //│ });
+//│ staticInitAwaiter
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 Test.x
@@ -183,25 +187,32 @@ module Whoops with
     fun g() = f()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Whoops2;
+//│ let staticInitAwaiter2;
 //│ (class Whoops {
 //│   static {
 //│     Whoops2 = this
 //│   }
 //│   static {
-//│     this.v = Whoops;
-//│     (class Whoops1 {
-//│       static {
-//│         Whoops.Whoops = this
-//│       }
-//│       static {
-//│         this.w = Whoops1;
-//│       }
-//│       static g() {
-//│         return Whoops.f()
-//│       }
-//│       toString() { return runtime.render(this); }
-//│       static [definitionMetadata] = ["class", "Whoops"]; 
-//│     });
+//│     staticInitAwaiter2 = (() => {
+//│       this.v = Whoops;
+//│       let staticInitAwaiter3;
+//│       (class Whoops1 {
+//│         static {
+//│           Whoops.Whoops = this
+//│         }
+//│         static {
+//│           staticInitAwaiter3 = (() => {
+//│             this.w = Whoops1;
+//│           })();
+//│         }
+//│         static g() {
+//│           return Whoops.f()
+//│         }
+//│         toString() { return runtime.render(this); }
+//│         static [definitionMetadata] = ["class", "Whoops"]; 
+//│       });
+//│       staticInitAwaiter3;
+//│     })();
 //│   }
 //│   static f() {
 //│     return "Hello"
@@ -209,6 +220,7 @@ module Whoops with
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Whoops"]; 
 //│ });
+//│ staticInitAwaiter2
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 Whoops.f()
@@ -224,7 +236,7 @@ Whoops.Whoops.g()
 :e
 Runtime
 //│ ╔══[COMPILATION ERROR] Name not found: Runtime
-//│ ║  l.225: 	Runtime
+//│ ║  l.237: 	Runtime
 //│ ╙──       	^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -238,28 +250,36 @@ module AA with
       y
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let AA1;
+//│ let staticInitAwaiter3;
 //│ (class AA {
 //│   static {
 //│     AA1 = this
 //│   }
 //│   static {
-//│     (class BB {
-//│       static {
-//│         AA.BB = this
-//│       }
-//│       static {
-//│         this.y = 2;
-//│       }
-//│       static get test() {
-//│         return BB.y;
-//│       }
-//│       toString() { return runtime.render(this); }
-//│       static [definitionMetadata] = ["class", "BB"]; 
-//│     });
+//│     staticInitAwaiter3 = (() => {
+//│       let staticInitAwaiter4;
+//│       (class BB {
+//│         static {
+//│           AA.BB = this
+//│         }
+//│         static {
+//│           staticInitAwaiter4 = (() => {
+//│             this.y = 2;
+//│           })();
+//│         }
+//│         static get test() {
+//│           return BB.y;
+//│         }
+//│         toString() { return runtime.render(this); }
+//│         static [definitionMetadata] = ["class", "BB"]; 
+//│       });
+//│       staticInitAwaiter4;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "AA"]; 
 //│ });
+//│ staticInitAwaiter3
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

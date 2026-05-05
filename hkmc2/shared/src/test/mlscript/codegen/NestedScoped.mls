@@ -218,7 +218,7 @@ fun f(x) =
 //│       return 3
 //│     };
 //│     z2 = z3;
-//│     return z2
+//│     return z2;
 //│   }
 //│   throw globalThis.Object.freeze(new globalThis.Error("match error"));
 //│ };
@@ -254,7 +254,7 @@ fun f(x) =
 //│     lambda1 = (undefined, function () {
 //│       return 4
 //│     });
-//│     return lambda1
+//│     return lambda1;
 //│   }
 //│   throw globalThis.Object.freeze(new globalThis.Error("match error"));
 //│ };

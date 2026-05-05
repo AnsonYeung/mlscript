@@ -50,7 +50,7 @@
 :sjs
 +
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let lambda; lambda = (undefined, function (arg1, arg2) { return arg1 + arg2 }); lambda
+//│ let lambda; lambda = (undefined, function (arg1, arg2) { return arg1 + arg2 }); lambda;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 

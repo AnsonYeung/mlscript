@@ -95,7 +95,7 @@ t.01
 :sjs
 (!)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let lambda; lambda = (undefined, function (arg) { return ! arg }); lambda
+//│ let lambda; lambda = (undefined, function (arg) { return ! arg }); lambda;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 

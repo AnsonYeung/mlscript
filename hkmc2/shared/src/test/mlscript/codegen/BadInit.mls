@@ -21,17 +21,21 @@ object Bar with
 //│   constructor() {
 //│     Bar1 = this;
 //│     this.x = 1;
+//│     let staticInitAwaiter;
 //│     const this$Bar = this;
 //│     (class Baz {
 //│       static {
 //│         this$Bar.Baz = this
 //│       }
 //│       static {
-//│         this.a = Bar1.x;
+//│         staticInitAwaiter = (() => {
+//│           this.a = Bar1.x;
+//│         })();
 //│       }
 //│       toString() { return runtime.render(this); }
 //│       static [definitionMetadata] = ["class", "Baz"]; 
 //│     });
+//│     staticInitAwaiter;
 //│     Object.defineProperty(this, "class", {
 //│       value: Bar
 //│     });
@@ -53,26 +57,34 @@ module Bar with
     val a = Bar.x
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Bar3;
+//│ let staticInitAwaiter;
 //│ (class Bar2 {
 //│   static {
 //│     Bar3 = this
 //│   }
 //│   static {
-//│     this.x = 1;
-//│     (class Baz1 {
-//│       static {
-//│         Bar2.Baz = this
-//│       }
-//│       static {
-//│         this.a = Bar3.x;
-//│       }
-//│       toString() { return runtime.render(this); }
-//│       static [definitionMetadata] = ["class", "Baz"]; 
-//│     });
+//│     staticInitAwaiter = (() => {
+//│       this.x = 1;
+//│       let staticInitAwaiter1;
+//│       (class Baz1 {
+//│         static {
+//│           Bar2.Baz = this
+//│         }
+//│         static {
+//│           staticInitAwaiter1 = (() => {
+//│             this.a = Bar3.x;
+//│           })();
+//│         }
+//│         toString() { return runtime.render(this); }
+//│         static [definitionMetadata] = ["class", "Baz"]; 
+//│       });
+//│       staticInitAwaiter1;
+//│     })();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Bar"]; 
 //│ });
+//│ staticInitAwaiter
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

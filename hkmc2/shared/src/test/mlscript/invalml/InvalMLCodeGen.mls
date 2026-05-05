@@ -58,7 +58,7 @@ false
 :sjs
 (x => x) as [T] -> T -> T
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let lambda1; lambda1 = (undefined, function (x1) { return x1 }); lambda1
+//│ let lambda1; lambda1 = (undefined, function (x1) { return x1 }); lambda1;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun
 //│ Type: ['T] -> ('T) ->{⊥} 'T
@@ -172,7 +172,7 @@ fun pow(x) = case
 //│     tmp2 = runtime.safeCall(tmp(tmp1));
 //│     return x1 * tmp2;
 //│   });
-//│   return lambda2
+//│   return lambda2;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -194,7 +194,7 @@ fun nott = case
 //│     }
 //│     throw globalThis.Object.freeze(new globalThis.Error.class("match error"))
 //│   });
-//│   return lambda2
+//│   return lambda2;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -228,7 +228,7 @@ fun fact = case
 //│     tmp3 = tmp1(tmp2);
 //│     return n * tmp3;
 //│   });
-//│   return lambda2
+//│   return lambda2;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 

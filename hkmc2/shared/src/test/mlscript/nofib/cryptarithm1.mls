@@ -3,5 +3,4 @@
 :re
 import "../../mlscript-compile/nofib/cryptarithm1.mls"
 cryptarithm1.main()
-//│ = [object Promise]
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded

@@ -57,7 +57,7 @@ xs \
 //│ let lambda5, tmp4;
 //│ lambda5 = (undefined, function (x) { return x * 2 });
 //│ tmp4 = map(lambda5);
-//│ Predef.passTo(xs1, tmp4)
+//│ Predef.passTo(xs1, tmp4);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ ═══[RUNTIME ERROR] Error: Function 'map' expected 2 arguments but got 1
 

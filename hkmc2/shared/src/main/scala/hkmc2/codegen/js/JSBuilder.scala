@@ -32,6 +32,9 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
   def checkMLsCalls: Bool = false
   def checkSelections: Bool = false
   def freezeDefinitions: Bool = false
+  val doAsyncAwait = false
+  val asyncKw = if doAsyncAwait then "async " else ""
+  val awaitKw = if doAsyncAwait then "await " else ""
   
   val builtinOpsBase: Ls[Str] = Ls(
     "+", "-", "*", "/", "%",
@@ -141,7 +144,7 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
     case c @ Call(fun, args) =>
       val base = subexpression(fun)
       val argsDoc = args.map(argument).mkDocument(", ")
-      val aw = if scope.emitAwait then "await " else ""
+      val aw = if scope.emitAwait then awaitKw else ""
       if c.isMlsFun
       then if checkMLsCalls
         then doc"${aw}$runtimeVar.checkCall(${aw}${base}(${argsDoc}))"
@@ -150,7 +153,7 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
     case Lambda(ps, bod) => scope.nest givenIn:
       scope.emitAwait = true
       val (params, bodyDoc) = setupFunction(none, ps, bod, isLambda = true)
-      doc"async ($params) => ${ braced(bodyDoc) }"
+      doc"$asyncKw($params) => ${ braced(bodyDoc) }"
     case s @ Select(qual, id) => 
       val dotClass = s.symbol match
         case S(ds) if ds.shouldBeLifted => doc".class"
@@ -339,14 +342,14 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
                 val externalName = scope.allocateName(otherSym, prefix = "proxy$", shadow = true)
                 val (params, bodyDoc) = setupFunction(displayName, ps, result, isLambda = false)
                 doc"const $externalName = $symName; ${
-                  varName} = async function $symName($params) ${ braced(bodyDoc) };"
+                  varName} = ${asyncKw}function $symName($params) ${ braced(bodyDoc) };"
               case _ =>
-                doc"${varName} = async function ${sym.nme}($params) ${ braced(bodyDoc) };"
+                doc"${varName} = ${asyncKw}function ${sym.nme}($params) ${ braced(bodyDoc) };"
             else
               // * In JS, `let x = (0, function (args) {...})` makes the function anonymous;
               // * otherwise, using `let x = function (args) {...}` would name the function `x`,
               // * which is not meaningful, here.
-              doc"${getVar(sym, dSym.toLoc)} = (undefined, async function ($params) ${ braced(bodyDoc) });"
+              doc"${getVar(sym, dSym.toLoc)} = (undefined, ${asyncKw}function ($params) ${ braced(bodyDoc) });"
             
           case ClsLikeDefn(ownr, isym, sym, ctorSym, kind, paramsOpt, auxParams, par, mtds,
               privFlds, pubFlds, preCtor, ctor, modo, bufferable)
@@ -364,7 +367,7 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
                   val (params, bodyDoc) = scope.nest.givenIn:
                     scope.emitAwait = true
                     setupFunction(S(td.sym.nme), ps, result, isLambda = false)
-                  doc" # $mtdPrefix${"async "}${td.sym.nme}($params) ${ braced(bodyDoc) }"
+                  doc" # $mtdPrefix${asyncKw}${td.sym.nme}($params) ${ braced(bodyDoc) }"
                 case td @ FunDefn(params = Nil, body = bod) =>
                   scope.nest.givenIn:
                     scope.emitAwait = false
@@ -398,7 +401,7 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
                   val mtdPrefix = "static "
                   val privs = mkPrivs(mod.publicFields, mod.privateFields, mtdPrefix, mod.isym)
                   val ctorCode = if mod.ctor.isEmpty then doc"" else doc" # static " :: braced:
-                    doc" # $staticInitBlocker = (async () => ${braced(body(mod.ctor, endSemi = true))})();"
+                    doc" # $staticInitBlocker = (${asyncKw}() => ${braced(body(mod.ctor, endSemi = true))})();"
                   privs :: ctorCode :: {
                     mkMethods(mod.methods, mtdPrefix)
                   }
@@ -555,10 +558,10 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
         val withThisProxy = thisProxy match
           case S(proxy) if !scope.thisProxyDefined =>
             scope.thisProxyDefined = true
-            doc"const $proxy = this; # $res${returningTerm(rst, endSemi)}"
-          case _ => doc"$res${returningTerm(rst, endSemi)}"
+            doc"const $proxy = this; # $res${returningTerm(rst, true)}"
+          case _ => doc"$res${returningTerm(rst, true)}"
         if staticInitUsed then
-          doc"let $staticInitBlocker; # $withThisProxy" :: doc" # await $staticInitBlocker;"
+          doc"let $staticInitBlocker; # $withThisProxy" :: doc" # $awaitKw$staticInitBlocker$mkSemi"
         else
           withThisProxy
       

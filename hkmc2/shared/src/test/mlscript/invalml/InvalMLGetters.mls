@@ -101,9 +101,9 @@ fun test2() =
 //│       tmp3 = tmp1(tmp2);
 //│       return tmp3 + 1
 //│     });
-//│     return lambda1
+//│     return lambda1;
 //│   };
-//│   return funny()
+//│   return funny();
 //│ };
 //│ ╔══[WARNING] Pure expression in statement position
 //│ ║  l.84: 	    case 0 then 0

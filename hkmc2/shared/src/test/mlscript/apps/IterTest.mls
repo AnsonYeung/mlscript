@@ -11,14 +11,7 @@ open Stack { Cons, Nil }
   filtering of x => x % 2 is 0
   mapping of x => x * 2
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL16:1:729
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [4, 8, 12, 16, 20]
 
 ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   filtering of x => x % 2 is 0
@@ -44,39 +37,18 @@ open Stack { Cons, Nil }
   leaving(2)
   taking(5)
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL31:1:373
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [3, 4, 5, 6, 7]
 
 ["foo", "bar", "baz"]
   zippingWithIndex()
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL34:1:267
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [["foo", 0], ["bar", 1], ["baz", 2]]
 
 ["foo", "bar", "baz"]
   zippingWithIndex()
   mapping of case [x, y] then [y, x]
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL37:1:941
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [[0, "foo"], [1, "bar"], [2, "baz"]]
 
 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] joined(" <> ")
 //│ = "1 <> 2 <> 3 <> 4 <> 5 <> 6 <> 7 <> 8 <> 9 <> 10"
@@ -84,93 +56,44 @@ open Stack { Cons, Nil }
 ["foo", "bar", "", "", "baz"]
   flattening()
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL43:1:274
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = ["f", "o", "o", "b", "a", "r", "b", "a", "z"]
 
 ["", "foo", "", "bar", "", "", "baz"]
   mapping of str => Array.from(str).reverse()
   flattening()
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL46:1:629
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = ["o", "o", "f", "r", "a", "b", "z", "a", "b"]
 
 ["", "", "", "", ""]
   flattening()
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL49:1:265
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = []
 
 ["foo", "bar", [], ["qax"], "", "baz"]
   flattening()
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL52:1:423
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = ["f", "o", "o", "b", "a", "r", "qax", "b", "a", "z"]
 
 [1, 3, 5, 7, 9]
   mapping of x => x * 2
   appended of [2, 4, 6, 8, 10]
   mapping of x => x / 2
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL55:1:841
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [1, 3, 5, 7, 9, 1, 2, 3, 4, 5]
 
 [7, 8, 9, 10]
   filtering of x => x % 2 is 0
   mapping of x => x * 2
   appended of []
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL58:1:885
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [16, 20]
 
 [["foo", 1]]
   MutMap.toMap()
   mapping of case [k, v] then [k + "!", v * 2]
   appended of MutMap.toMap([["bar", 2]])
   toArray()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
-//│ ═══[RUNTIME ERROR] TypeError: undefined is not a function
-//│     at Array.from (<anonymous>)
-//│     at Iter.toArray (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:648:35)
-//│     at REPL61:1:1389
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-//│     at async node:repl:647:29
+//│ = [["foo!", 2], ["bar", 2]]
 
 [1, 2, 3, 4, 5, 6]
   Iter.some of x => x % 3 == 0
@@ -192,44 +115,16 @@ open Stack { Cons, Nil }
 [1, 2, -3, 4, 5, 6]
   Iter.mapping of x => () => print(x + " was accessed"); x
   Iter.some of get => get() < 0
-//│ > Promise {
-//│ >   '1 was accessed',
-//│ >   Symbol(async_id_symbol): 4637,
-//│ >   Symbol(trigger_async_id_symbol): 4635
-//│ > }
-//│ > Promise {
-//│ >   '2 was accessed',
-//│ >   Symbol(async_id_symbol): 4688,
-//│ >   Symbol(trigger_async_id_symbol): 4686
-//│ > }
-//│ > Promise {
-//│ >   '-3 was accessed',
-//│ >   Symbol(async_id_symbol): 4738,
-//│ >   Symbol(trigger_async_id_symbol): 4736
-//│ > }
+//│ > 1 was accessed
+//│ > 2 was accessed
+//│ > -3 was accessed
 //│ = true
 
 [1, 2, 3, -4, 5, 6]
   Iter.mapping of x => () => print(x + " was accessed"); x
   Iter.every of get => get() > 0
-//│ > Promise {
-//│ >   '1 was accessed',
-//│ >   Symbol(async_id_symbol): 4883,
-//│ >   Symbol(trigger_async_id_symbol): 4881
-//│ > }
-//│ > Promise {
-//│ >   '2 was accessed',
-//│ >   Symbol(async_id_symbol): 4934,
-//│ >   Symbol(trigger_async_id_symbol): 4932
-//│ > }
-//│ > Promise {
-//│ >   '3 was accessed',
-//│ >   Symbol(async_id_symbol): 4984,
-//│ >   Symbol(trigger_async_id_symbol): 4982
-//│ > }
-//│ > Promise {
-//│ >   '-4 was accessed',
-//│ >   Symbol(async_id_symbol): 5034,
-//│ >   Symbol(trigger_async_id_symbol): 5032
-//│ > }
+//│ > 1 was accessed
+//│ > 2 was accessed
+//│ > 3 was accessed
+//│ > -4 was accessed
 //│ = false

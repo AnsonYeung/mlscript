@@ -16,205 +16,61 @@ fun example(input) =
   print of "Pretty-printed: " + expr Expr.prettyPrint()
 
 example of "x + y - 3 * (a / b) ** 2"
-//│ > Promise {
-//│ >   'Tokens: ┃x│␠│+│␠│y│␠│-│␠│3│␠│*│␠│(│a│␠│/│␠│b│)│␠│**│␠│2┃',
-//│ >   Symbol(async_id_symbol): 2455,
-//│ >   Symbol(trigger_async_id_symbol): 2453
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("-", Inf("+", Var("x"), Var("y")), Inf("*", Lit(3), Inf("**", Inf("/", Var("a"), Var("b")), Lit(2))))',
-//│ >   Symbol(async_id_symbol): 3827,
-//│ >   Symbol(trigger_async_id_symbol): 3825
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x + y - 3 * (a / b) ** 2',
-//│ >   Symbol(async_id_symbol): 4031,
-//│ >   Symbol(trigger_async_id_symbol): 4029
-//│ > }
+//│ > Tokens: ┃x│␠│+│␠│y│␠│-│␠│3│␠│*│␠│(│a│␠│/│␠│b│)│␠│**│␠│2┃
+//│ > Parsed: Inf("-", Inf("+", Var("x"), Var("y")), Inf("*", Lit(3), Inf("**", Inf("/", Var("a"), Var("b")), Lit(2))))
+//│ > Pretty-printed: x + y - 3 * (a / b) ** 2
 
 example of "((m - 2) / n) ** 3 + 5 * x"
-//│ > Promise {
-//│ >   'Tokens: ┃(│(│m│␠│-│␠│2│)│␠│/│␠│n│)│␠│**│␠│3│␠│+│␠│5│␠│*│␠│x┃',
-//│ >   Symbol(async_id_symbol): 5279,
-//│ >   Symbol(trigger_async_id_symbol): 5277
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("+", Inf("**", Inf("/", Inf("-", Var("m"), Lit(2)), Var("n")), Lit(3)), Inf("*", Lit(5), Var("x")))',
-//│ >   Symbol(async_id_symbol): 6675,
-//│ >   Symbol(trigger_async_id_symbol): 6673
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: ((m - 2) / n) ** 3 + 5 * x',
-//│ >   Symbol(async_id_symbol): 6881,
-//│ >   Symbol(trigger_async_id_symbol): 6879
-//│ > }
+//│ > Tokens: ┃(│(│m│␠│-│␠│2│)│␠│/│␠│n│)│␠│**│␠│3│␠│+│␠│5│␠│*│␠│x┃
+//│ > Parsed: Inf("+", Inf("**", Inf("/", Inf("-", Var("m"), Lit(2)), Var("n")), Lit(3)), Inf("*", Lit(5), Var("x")))
+//│ > Pretty-printed: ((m - 2) / n) ** 3 + 5 * x
 
 example of "(a ** 2) - (b / 3) * (c + d)"
-//│ > Promise {
-//│ >   'Tokens: ┃(│a│␠│**│␠│2│)│␠│-│␠│(│b│␠│/│␠│3│)│␠│*│␠│(│c│␠│+│␠│d│)┃',
-//│ >   Symbol(async_id_symbol): 8210,
-//│ >   Symbol(trigger_async_id_symbol): 8208
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("-", Inf("**", Var("a"), Lit(2)), Inf("*", Inf("/", Var("b"), Lit(3)), Inf("+", Var("c"), Var("d"))))',
-//│ >   Symbol(async_id_symbol): 9611,
-//│ >   Symbol(trigger_async_id_symbol): 9609
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: a ** 2 - b / 3 * (c + d)',
-//│ >   Symbol(async_id_symbol): 9815,
-//│ >   Symbol(trigger_async_id_symbol): 9813
-//│ > }
+//│ > Tokens: ┃(│a│␠│**│␠│2│)│␠│-│␠│(│b│␠│/│␠│3│)│␠│*│␠│(│c│␠│+│␠│d│)┃
+//│ > Parsed: Inf("-", Inf("**", Var("a"), Lit(2)), Inf("*", Inf("/", Var("b"), Lit(3)), Inf("+", Var("c"), Var("d"))))
+//│ > Pretty-printed: a ** 2 - b / 3 * (c + d)
 
 example of "x * y / (a - b) + c ** 4"
-//│ > Promise {
-//│ >   'Tokens: ┃x│␠│*│␠│y│␠│/│␠│(│a│␠│-│␠│b│)│␠│+│␠│c│␠│**│␠│4┃',
-//│ >   Symbol(async_id_symbol): 11029,
-//│ >   Symbol(trigger_async_id_symbol): 11027
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("+", Inf("/", Inf("*", Var("x"), Var("y")), Inf("-", Var("a"), Var("b"))), Inf("**", Var("c"), Lit(4)))',
-//│ >   Symbol(async_id_symbol): 12408,
-//│ >   Symbol(trigger_async_id_symbol): 12406
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: x * y / (a - b) + c ** 4',
-//│ >   Symbol(async_id_symbol): 12610,
-//│ >   Symbol(trigger_async_id_symbol): 12608
-//│ > }
+//│ > Tokens: ┃x│␠│*│␠│y│␠│/│␠│(│a│␠│-│␠│b│)│␠│+│␠│c│␠│**│␠│4┃
+//│ > Parsed: Inf("+", Inf("/", Inf("*", Var("x"), Var("y")), Inf("-", Var("a"), Var("b"))), Inf("**", Var("c"), Lit(4)))
+//│ > Pretty-printed: x * y / (a - b) + c ** 4
 
 example of "2 + 3 - 4 * 5 / (x ** 2)"
-//│ > Promise {
-//│ >   'Tokens: ┃2│␠│+│␠│3│␠│-│␠│4│␠│*│␠│5│␠│/│␠│(│x│␠│**│␠│2│)┃',
-//│ >   Symbol(async_id_symbol): 13806,
-//│ >   Symbol(trigger_async_id_symbol): 13804
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("-", Inf("+", Lit(2), Lit(3)), Inf("/", Inf("*", Lit(4), Lit(5)), Inf("**", Var("x"), Lit(2))))',
-//│ >   Symbol(async_id_symbol): 15201,
-//│ >   Symbol(trigger_async_id_symbol): 15199
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 2 + 3 - 4 * 5 / x ** 2',
-//│ >   Symbol(async_id_symbol): 15411,
-//│ >   Symbol(trigger_async_id_symbol): 15409
-//│ > }
+//│ > Tokens: ┃2│␠│+│␠│3│␠│-│␠│4│␠│*│␠│5│␠│/│␠│(│x│␠│**│␠│2│)┃
+//│ > Parsed: Inf("-", Inf("+", Lit(2), Lit(3)), Inf("/", Inf("*", Lit(4), Lit(5)), Inf("**", Var("x"), Lit(2))))
+//│ > Pretty-printed: 2 + 3 - 4 * 5 / x ** 2
 
 example of "(x - y) ** (z + 3 / w) * 2"
-//│ > Promise {
-//│ >   'Tokens: ┃(│x│␠│-│␠│y│)│␠│**│␠│(│z│␠│+│␠│3│␠│/│␠│w│)│␠│*│␠│2┃',
-//│ >   Symbol(async_id_symbol): 16674,
-//│ >   Symbol(trigger_async_id_symbol): 16672
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("*", Inf("**", Inf("-", Var("x"), Var("y")), Inf("+", Var("z"), Inf("/", Lit(3), Var("w")))), Lit(2))',
-//│ >   Symbol(async_id_symbol): 18066,
-//│ >   Symbol(trigger_async_id_symbol): 18064
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: (x - y) ** (z + 3 / w) * 2',
-//│ >   Symbol(async_id_symbol): 18270,
-//│ >   Symbol(trigger_async_id_symbol): 18268
-//│ > }
+//│ > Tokens: ┃(│x│␠│-│␠│y│)│␠│**│␠│(│z│␠│+│␠│3│␠│/│␠│w│)│␠│*│␠│2┃
+//│ > Parsed: Inf("*", Inf("**", Inf("-", Var("x"), Var("y")), Inf("+", Var("z"), Inf("/", Lit(3), Var("w")))), Lit(2))
+//│ > Pretty-printed: (x - y) ** (z + 3 / w) * 2
 
 example of "((a + b) ** 2) / (c - d) * e - f"
-//│ > Promise {
-//│ >   'Tokens: ┃(│(│a│␠│+│␠│b│)│␠│**│␠│2│)│␠│/│␠│(│c│␠│-│␠│d│)│␠│*│␠│e│␠│-│␠│f┃',
-//│ >   Symbol(async_id_symbol): 19776,
-//│ >   Symbol(trigger_async_id_symbol): 19774
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("-", Inf("*", Inf("/", Inf("**", Inf("+", Var("a"), Var("b")), Lit(2)), Inf("-", Var("c"), Var("d"))), Var("e")), Var("f"))',
-//│ >   Symbol(async_id_symbol): 21434,
-//│ >   Symbol(trigger_async_id_symbol): 21432
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: (a + b) ** 2 / (c - d) * e - f',
-//│ >   Symbol(async_id_symbol): 21672,
-//│ >   Symbol(trigger_async_id_symbol): 21670
-//│ > }
+//│ > Tokens: ┃(│(│a│␠│+│␠│b│)│␠│**│␠│2│)│␠│/│␠│(│c│␠│-│␠│d│)│␠│*│␠│e│␠│-│␠│f┃
+//│ > Parsed: Inf("-", Inf("*", Inf("/", Inf("**", Inf("+", Var("a"), Var("b")), Lit(2)), Inf("-", Var("c"), Var("d"))), Var("e")), Var("f"))
+//│ > Pretty-printed: (a + b) ** 2 / (c - d) * e - f
 
 example of "8 / (2 + (3 * x) - y) ** 2"
-//│ > Promise {
-//│ >   'Tokens: ┃8│␠│/│␠│(│2│␠│+│␠│(│3│␠│*│␠│x│)│␠│-│␠│y│)│␠│**│␠│2┃',
-//│ >   Symbol(async_id_symbol): 22921,
-//│ >   Symbol(trigger_async_id_symbol): 22919
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("/", Lit(8), Inf("**", Inf("-", Inf("+", Lit(2), Inf("*", Lit(3), Var("x"))), Var("y")), Lit(2)))',
-//│ >   Symbol(async_id_symbol): 24321,
-//│ >   Symbol(trigger_async_id_symbol): 24319
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 8 / (2 + 3 * x - y) ** 2',
-//│ >   Symbol(async_id_symbol): 24529,
-//│ >   Symbol(trigger_async_id_symbol): 24527
-//│ > }
+//│ > Tokens: ┃8│␠│/│␠│(│2│␠│+│␠│(│3│␠│*│␠│x│)│␠│-│␠│y│)│␠│**│␠│2┃
+//│ > Parsed: Inf("/", Lit(8), Inf("**", Inf("-", Inf("+", Lit(2), Inf("*", Lit(3), Var("x"))), Var("y")), Lit(2)))
+//│ > Pretty-printed: 8 / (2 + 3 * x - y) ** 2
 
 example of "((p - q) * (r + s)) / (t ** (u - 1))"
-//│ > Promise {
-//│ >   'Tokens: ┃(│(│p│␠│-│␠│q│)│␠│*│␠│(│r│␠│+│␠│s│)│)│␠│/│␠│(│t│␠│**│␠│(│u│␠│-│␠│1│)│)┃',
-//│ >   Symbol(async_id_symbol): 26165,
-//│ >   Symbol(trigger_async_id_symbol): 26163
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("/", Inf("*", Inf("-", Var("p"), Var("q")), Inf("+", Var("r"), Var("s"))), Inf("**", Var("t"), Inf("-", Var("u"), Lit(1))))',
-//│ >   Symbol(async_id_symbol): 27841,
-//│ >   Symbol(trigger_async_id_symbol): 27839
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: (p - q) * (r + s) / t ** (u - 1)',
-//│ >   Symbol(async_id_symbol): 28079,
-//│ >   Symbol(trigger_async_id_symbol): 28077
-//│ > }
+//│ > Tokens: ┃(│(│p│␠│-│␠│q│)│␠│*│␠│(│r│␠│+│␠│s│)│)│␠│/│␠│(│t│␠│**│␠│(│u│␠│-│␠│1│)│)┃
+//│ > Parsed: Inf("/", Inf("*", Inf("-", Var("p"), Var("q")), Inf("+", Var("r"), Var("s"))), Inf("**", Var("t"), Inf("-", Var("u"), Lit(1))))
+//│ > Pretty-printed: (p - q) * (r + s) / t ** (u - 1)
 
 example of "1 + 2 * 3 - 4 / (5 ** (6 - x))"
-//│ > Promise {
-//│ >   'Tokens: ┃1│␠│+│␠│2│␠│*│␠│3│␠│-│␠│4│␠│/│␠│(│5│␠│**│␠│(│6│␠│-│␠│x│)│)┃',
-//│ >   Symbol(async_id_symbol): 29512,
-//│ >   Symbol(trigger_async_id_symbol): 29510
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("-", Inf("+", Lit(1), Inf("*", Lit(2), Lit(3))), Inf("/", Lit(4), Inf("**", Lit(5), Inf("-", Lit(6), Var("x")))))',
-//│ >   Symbol(async_id_symbol): 31170,
-//│ >   Symbol(trigger_async_id_symbol): 31168
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 1 + 2 * 3 - 4 / 5 ** (6 - x)',
-//│ >   Symbol(async_id_symbol): 31418,
-//│ >   Symbol(trigger_async_id_symbol): 31416
-//│ > }
+//│ > Tokens: ┃1│␠│+│␠│2│␠│*│␠│3│␠│-│␠│4│␠│/│␠│(│5│␠│**│␠│(│6│␠│-│␠│x│)│)┃
+//│ > Parsed: Inf("-", Inf("+", Lit(1), Inf("*", Lit(2), Lit(3))), Inf("/", Lit(4), Inf("**", Lit(5), Inf("-", Lit(6), Var("x")))))
+//│ > Pretty-printed: 1 + 2 * 3 - 4 / 5 ** (6 - x)
 
 example of "5 ** 6 ** 7 ** 8"
-//│ > Promise {
-//│ >   'Tokens: ┃5│␠│**│␠│6│␠│**│␠│7│␠│**│␠│8┃',
-//│ >   Symbol(async_id_symbol): 32191,
-//│ >   Symbol(trigger_async_id_symbol): 32189
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("**", Lit(5), Inf("**", Lit(6), Inf("**", Lit(7), Lit(8))))',
-//│ >   Symbol(async_id_symbol): 33062,
-//│ >   Symbol(trigger_async_id_symbol): 33060
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: 5 ** 6 ** 7 ** 8',
-//│ >   Symbol(async_id_symbol): 33198,
-//│ >   Symbol(trigger_async_id_symbol): 33196
-//│ > }
+//│ > Tokens: ┃5│␠│**│␠│6│␠│**│␠│7│␠│**│␠│8┃
+//│ > Parsed: Inf("**", Lit(5), Inf("**", Lit(6), Inf("**", Lit(7), Lit(8))))
+//│ > Pretty-printed: 5 ** 6 ** 7 ** 8
 
 example of "(a ** 2) ** 5 ** e"
-//│ > Promise {
-//│ >   'Tokens: ┃(│a│␠│**│␠│2│)│␠│**│␠│5│␠│**│␠│e┃',
-//│ >   Symbol(async_id_symbol): 34033,
-//│ >   Symbol(trigger_async_id_symbol): 34031
-//│ > }
-//│ > Promise {
-//│ >   'Parsed: Inf("**", Inf("**", Var("a"), Lit(2)), Inf("**", Lit(5), Var("e")))',
-//│ >   Symbol(async_id_symbol): 34916,
-//│ >   Symbol(trigger_async_id_symbol): 34914
-//│ > }
-//│ > Promise {
-//│ >   'Pretty-printed: (a ** 2) ** 5 ** e',
-//│ >   Symbol(async_id_symbol): 35048,
-//│ >   Symbol(trigger_async_id_symbol): 35046
-//│ > }
+//│ > Tokens: ┃(│a│␠│**│␠│2│)│␠│**│␠│5│␠│**│␠│e┃
+//│ > Parsed: Inf("**", Inf("**", Var("a"), Lit(2)), Inf("**", Lit(5), Var("e")))
+//│ > Pretty-printed: (a ** 2) ** 5 ** e

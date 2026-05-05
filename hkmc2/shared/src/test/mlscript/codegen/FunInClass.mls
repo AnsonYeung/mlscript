@@ -54,7 +54,7 @@ fun test(a) =
 //│     toString() { return runtime.render(this); }
 //│     static [definitionMetadata] = ["class", "Inner", ["b"]]; 
 //│   });
-//│   return Inner1(42)
+//│   return Inner1(42);
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -120,7 +120,7 @@ fun test(a) =
 //│   });
 //│   tmp = C11(1);
 //│   tmp1 = C21(2);
-//│   return globalThis.Object.freeze([ tmp, tmp1 ])
+//│   return globalThis.Object.freeze([ tmp, tmp1 ]);
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -164,12 +164,12 @@ Foo(123)
 //│       return this$Foo.a
 //│     };
 //│     bar();
-//│     return baz()
+//│     return baz();
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Foo", ["a"]]; 
 //│ });
-//│ Foo1(123)
+//│ Foo1(123);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = Foo(123)
 
@@ -206,6 +206,6 @@ Bar(1)
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Bar", ["x"]]; 
 //│ });
-//│ Bar1(1)
+//│ Bar1(1);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = Bar(1)
