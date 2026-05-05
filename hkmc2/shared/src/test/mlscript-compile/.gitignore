@@ -4,3 +4,4 @@
 !/RuntimeJS.mjs
 !/apps/parsing/vendors/railroad/railroad.mjs
 !/NoFreeze.mjs
+!BenchmarkWriter.mjs
