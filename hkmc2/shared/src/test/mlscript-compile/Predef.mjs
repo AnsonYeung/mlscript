@@ -6,147 +6,150 @@ import Runtime from "./Runtime.mjs";
 import Rendering from "./Rendering.mjs";
 import Term from "./Term.mjs";
 let Predef1;
+let staticInitAwaiter;
 (class Predef {
   static {
     Predef1 = this
   }
   static {
-    (class Symbols {
-      static {
-        new this
-      }
-      constructor() {
-        Predef.Symbols = this;
-        this.prettyPrint = RuntimeJS.symbols.prettyPrint;
-        this.definitionMetadata = RuntimeJS.symbols.definitionMetadata;
-        Object.defineProperty(this, "class", {
-          value: Symbols
-        });
-        globalThis.Object.freeze(this);
-      }
-      toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["object", "Symbols"]; 
-    });
-    (class Sub {
-      static {
-        Predef.Sub = this
-      }
-      toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["class", "Sub"]; 
-    });
-    (class Eq extends Predef.Sub {
-      static {
-        Predef.Eq = this
-      }
-      constructor() {
-        super();
-      }
-      toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["class", "Eq"]; 
-    });
-    (class Refl extends Predef.Eq {
-      static {
-        new this
-      }
-      constructor() {
-        super();
-        Predef.Refl = this;
-        Object.defineProperty(this, "class", {
-          value: Refl
-        });
-        globalThis.Object.freeze(this);
-      }
-      apply(x) {
-        return x
-      }
-      toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["object", "Refl"]; 
-    });
-    this.pass1 = Rendering.pass1;
-    this.pass2 = Rendering.pass2;
-    this.pass3 = Rendering.pass3;
-    this.passing = Rendering.passing;
-    this.map = Rendering.map;
-    this.fold = Rendering.fold;
-    this.interleave = Rendering.interleave;
-    this.render = Rendering.render;
-    this.js_assert = globalThis.console["assert"];
-    this.foldl = Predef.fold;
-    (class meta {
-      static {
-        Predef.meta = this
-      }
-      static codegen(t, file) {
-        return runtime.safeCall(Term.codegen(t, file))
-      } 
-      static print(t) {
-        return runtime.safeCall(Term.print(t))
-      }
-      toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["class", "meta"]; 
-    });
+    staticInitAwaiter = (async () => {
+      (class Symbols {
+        static {
+          new this
+        }
+        constructor() {
+          Predef.Symbols = this;
+          this.prettyPrint = RuntimeJS.symbols.prettyPrint;
+          this.definitionMetadata = RuntimeJS.symbols.definitionMetadata;
+          Object.defineProperty(this, "class", {
+            value: Symbols
+          });
+          globalThis.Object.freeze(this);
+        }
+        toString() { return runtime.render(this); }
+        static [definitionMetadata] = ["object", "Symbols"]; 
+      });
+      (class Sub {
+        static {
+          Predef.Sub = this
+        }
+        toString() { return runtime.render(this); }
+        static [definitionMetadata] = ["class", "Sub"]; 
+      });
+      (class Eq extends Predef.Sub {
+        static {
+          Predef.Eq = this
+        }
+        constructor() {
+          super();
+        }
+        toString() { return runtime.render(this); }
+        static [definitionMetadata] = ["class", "Eq"]; 
+      });
+      (class Refl extends Predef.Eq {
+        static {
+          new this
+        }
+        constructor() {
+          super();
+          Predef.Refl = this;
+          Object.defineProperty(this, "class", {
+            value: Refl
+          });
+          globalThis.Object.freeze(this);
+        }
+        async apply(x) {
+          return x
+        }
+        toString() { return runtime.render(this); }
+        static [definitionMetadata] = ["object", "Refl"]; 
+      });
+      this.pass1 = Rendering.pass1;
+      this.pass2 = Rendering.pass2;
+      this.pass3 = Rendering.pass3;
+      this.passing = Rendering.passing;
+      this.map = Rendering.map;
+      this.fold = Rendering.fold;
+      this.interleave = Rendering.interleave;
+      this.render = Rendering.render;
+      this.js_assert = globalThis.console["assert"];
+      this.foldl = Predef.fold;
+      (class meta {
+        static {
+          Predef.meta = this
+        }
+        static async codegen(t, file) {
+          return await Term.codegen(t, file)
+        } 
+        static async print(t) {
+          return await Term.print(t)
+        }
+        toString() { return runtime.render(this); }
+        static [definitionMetadata] = ["class", "meta"]; 
+      });
+    })();
   }
-  static id(x) {
+  static async id(x) {
     return x
   } 
-  static apply(f, ...args) {
-    return runtime.safeCall(f(...args))
+  static async apply(f, ...args) {
+    return await f(...args)
   } 
-  static pipeInto(x, f) {
-    return runtime.safeCall(f(x))
+  static async pipeInto(x, f) {
+    return await f(x)
   } 
-  static pipeFrom(f, x) {
-    return runtime.safeCall(f(x))
+  static async pipeFrom(f, x) {
+    return await f(x)
   } 
-  static pipeIntoHi(x, f) {
-    return runtime.safeCall(f(x))
+  static async pipeIntoHi(x, f) {
+    return await f(x)
   } 
-  static pipeFromHi(f, x) {
-    return runtime.safeCall(f(x))
+  static async pipeFromHi(f, x) {
+    return await f(x)
   } 
-  static tap(x, f) {
+  static async tap(x, f) {
     let tmp;
-    tmp = runtime.safeCall(f(x));
+    tmp = await f(x);
     return (tmp , x)
   } 
-  static pat(f, x) {
+  static async pat(f, x) {
     let tmp;
-    tmp = runtime.safeCall(f(x));
+    tmp = await f(x);
     return (tmp , x)
   } 
-  static alsoDo(x, eff) {
+  static async alsoDo(x, eff) {
     return x
   } 
-  static andThen(f, g) {
-    return (x) => {
+  static async andThen(f, g) {
+    return async (x) => {
       let tmp;
-      tmp = runtime.safeCall(f(x));
-      return runtime.safeCall(g(tmp))
+      tmp = await f(x);
+      return await g(tmp)
     }
   } 
-  static compose(f, g) {
-    return (x) => {
+  static async compose(f, g) {
+    return async (x) => {
       let tmp;
-      tmp = runtime.safeCall(g(x));
-      return runtime.safeCall(f(tmp))
+      tmp = await g(x);
+      return await f(tmp)
     }
   } 
-  static passTo(receiver, f) {
-    return (...args) => {
-      return runtime.safeCall(f(receiver, ...args))
+  static async passTo(receiver, f) {
+    return async (...args) => {
+      return await f(receiver, ...args)
     }
   } 
-  static passToLo(receiver, f) {
-    return (...args) => {
-      return runtime.safeCall(f(receiver, ...args))
+  static async passToLo(receiver, f) {
+    return async (...args) => {
+      return await f(receiver, ...args)
     }
   } 
-  static call(receiver, f) {
-    return (...args) => {
-      return runtime.safeCall(f.call(receiver, ...args))
+  static async call(receiver, f) {
+    return async (...args) => {
+      return await f.call(receiver, ...args)
     }
   } 
-  static equals(a, b) {
+  static async equals(a, b) {
     let scrut, scrut1, scrut2, ac, scrut3, md, scrut4, scrut5, scrut6, scrut7, scrut8, scrut9, scrut10, scrut11, lambda, lambda1, tmp, tmp1, tmp2;
     scrut = a === b;
     if (scrut === true) {
@@ -156,12 +159,12 @@ let Predef1;
       if (b instanceof globalThis.Array) {
         scrut1 = a.length === b.length;
         if (scrut1 === true) {
-          lambda = (undefined, function (a1, i) {
+          lambda = (undefined, async function (a1, i) {
             let tmp3;
-            tmp3 = runtime.safeCall(b.at(i));
-            return Predef.equals(a1, tmp3)
+            tmp3 = await b.at(i);
+            return await Predef.equals(a1, tmp3)
           });
-          return runtime.safeCall(a.every(lambda))
+          return await a.every(lambda)
         }
       }
     }
@@ -181,11 +184,11 @@ let Predef1;
                 md = ac[Predef.Symbols.definitionMetadata];
                 scrut4 = md !== undefined;
                 if (scrut4 === true) {
-                  lambda1 = (undefined, function (field) {
+                  lambda1 = (undefined, async function (field) {
                     let scrut12, scrut13;
                     scrut12 = field !== null;
                     if (scrut12 === true) {
-                      scrut13 = Predef.equals(a[field], b[field]);
+                      scrut13 = await Predef.equals(a[field], b[field]);
                       if (scrut13 === true) {
                         return true
                       }
@@ -193,7 +196,7 @@ let Predef1;
                     }
                     return false;
                   });
-                  scrut5 = runtime.safeCall(md[2].every(lambda1));
+                  scrut5 = await md[2].every(lambda1);
                   if (scrut5 === true) {
                     tmp = true;
                   } else {
@@ -234,42 +237,42 @@ let Predef1;
     tmp2 = false;
     return tmp2;
   } 
-  static nequals(a, b) {
+  static async nequals(a, b) {
     let tmp;
-    tmp = Predef.equals(a, b);
+    tmp = await Predef.equals(a, b);
     return ! tmp
   } 
-  static print(...xs) {
+  static async print(...xs) {
     let tmp, tmp1;
-    tmp = runtime.safeCall(Predef.map(Predef.renderAsStr));
-    tmp1 = runtime.safeCall(tmp(...xs));
-    return runtime.safeCall(globalThis.console.log(...tmp1))
+    tmp = await Predef.map(Predef.renderAsStr);
+    tmp1 = await tmp(...xs);
+    return await globalThis.console.log(...tmp1)
   } 
-  static renderAsStr(arg) {
+  static async renderAsStr(arg) {
     if (typeof arg === 'string') {
       return arg
     }
-    return runtime.safeCall(Predef.render(arg));
+    return await Predef.render(arg);
   } 
-  static check(...args) {
-    return runtime.safeCall(Predef.js_assert(...args))
+  static async check(...args) {
+    return await Predef.js_assert(...args)
   } 
-  static notImplemented(msg) {
+  static async notImplemented(msg) {
     let tmp;
     tmp = "Not implemented: " + msg;
-    throw runtime.safeCall(globalThis.Error(tmp))
+    throw await globalThis.Error(tmp)
   } 
   static get notImplementedError() {
-    throw runtime.safeCall(globalThis.Error("Not implemented"));
+    throw globalThis.Error("Not implemented");
   } 
-  static tuple(...xs) {
+  static async tuple(...xs) {
     return xs
   } 
-  static mkSet(...xs) {
+  static async mkSet(...xs) {
     return globalThis.Object.freeze(new globalThis.Set(xs))
   } 
-  static foldr(f) {
-    return (first, ...rest) => {
+  static async foldr(f) {
+    return async (first, ...rest) => {
       let len, scrut, i, init;
       len = rest.length;
       scrut = len === 0;
@@ -277,49 +280,50 @@ let Predef1;
         return first
       }
       i = len - 1;
-      init = runtime.safeCall(rest.at(i));
+      init = await rest.at(i);
       lbl: while (true) {
         let scrut1, tmp, tmp1, tmp2;
         scrut1 = i > 0;
         if (scrut1 === true) {
           tmp = i - 1;
           i = tmp;
-          tmp1 = runtime.safeCall(rest.at(i));
-          tmp2 = runtime.safeCall(f(tmp1, init));
+          tmp1 = await rest.at(i);
+          tmp2 = await f(tmp1, init);
           init = tmp2;
           continue lbl
         }
         break;
       }
-      return runtime.safeCall(f(first, init));
+      return await f(first, init);
     }
   } 
-  static mkStr(...xs) {
+  static async mkStr(...xs) {
     let lambda, tmp;
-    lambda = (undefined, function (acc, x) {
+    lambda = (undefined, async function (acc, x) {
       let tmp1, tmp2, tmp3;
       if (typeof x === 'string') {
         tmp1 = true;
       } else {
         tmp1 = false;
       }
-      tmp2 = Predef.check(tmp1);
+      tmp2 = await Predef.check(tmp1);
       tmp3 = acc + x;
       return (tmp2 , tmp3)
     });
-    tmp = runtime.safeCall(Predef.fold(lambda));
-    return runtime.safeCall(tmp(...xs))
+    tmp = await Predef.fold(lambda);
+    return await tmp(...xs)
   } 
-  static use(instance) {
+  static async use(instance) {
     return instance
   } 
-  static enterHandleBlock(handler, body) {
-    return runtime.safeCall(Runtime.enterHandleBlock(handler, body))
+  static async enterHandleBlock(handler, body) {
+    return await Runtime.enterHandleBlock(handler, body)
   } 
-  static raiseUnhandledEffect() {
-    return runtime.safeCall(Runtime.mkEffect(Runtime.FatalEffect, null))
+  static async raiseUnhandledEffect() {
+    return await Runtime.mkEffect(Runtime.FatalEffect, null)
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "Predef"]; 
 });
+await staticInitAwaiter;
 let Predef = Predef1; export default Predef;

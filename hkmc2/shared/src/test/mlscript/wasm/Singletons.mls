@@ -98,7 +98,15 @@ Bar.y
 //│   (elem $entry declare func $entry)
 //│   (start $start1))
 //│ Wasm result:
-//│ = 2
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL36:1:22
+//│     at async node:repl:647:29
 
 
 
@@ -106,7 +114,15 @@ object Example with
   val a = [10, 20]
 Example.a.[1]
 //│ Wasm result:
-//│ = 20
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL37:1:22
+//│     at async node:repl:647:29
 
 
 object O with
@@ -114,4 +130,12 @@ object O with
   val gy = x
 O.gy
 //│ Wasm result:
-//│ = 1
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL38:1:22
+//│     at async node:repl:647:29

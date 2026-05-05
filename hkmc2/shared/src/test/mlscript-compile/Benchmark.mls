@@ -12,9 +12,13 @@ fun mkSuite() = new! mut bm.Suite()
 fun setPrefixPath(path) = set prefixPath = path
 
 fun runSuite(suite) =
-  let settings = { async: false }
-  suite.run(settings)
+  new! mut Promise((resolve, reject) =>
+    let settings = { async: true }
+    suite.on("complete", () => resolve(null)).run(settings)
+    null
+  )
 
 fun writeResults(suite, path) =
   let jsonStr = JSON.stringify(suite.map((res, _, _) => res), null, 2)
   fs.writeFileSync(prefixPath + path, jsonStr)
+  null

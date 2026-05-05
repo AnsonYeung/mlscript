@@ -1,24 +1,70 @@
 :js
 
 import "../../mlscript-compile/apps/Accounting.mls"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] SyntaxError: Unexpected reserved word
+//│     at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
+//│     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
+//│     at #translate (node:internal/modules/esm/loader:562:20)
+//│     at afterLoad (node:internal/modules/esm/loader:612:29)
+//│     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+//│     at #createModuleJob (node:internal/modules/esm/loader:641:36)
+//│     at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+//│     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:318:41)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:683:25)
 
 
 val acc = new Accounting
-//│ acc = Accounting {
-//│   warnings: [],
-//│   Project: fun Project { class: class Project },
-//│   Line: fun Line { class: class Line },
-//│   lines: [],
-//│   Report: fun Report { class: class Report }
-//│ }
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] TypeError: Accounting is not a constructor
+//│     at REPL13:1:51
+//│     at ContextifyScript.runInThisContext (node:vm:137:12)
+//│     at REPLServer.defaultEval (node:repl:600:22)
+//│     at bound (node:domain:433:15)
+//│     at REPLServer.runBound [as eval] (node:domain:444:12)
+//│     at REPLServer.onLine (node:repl:935:10)
+//│     at REPLServer.emit (node:events:508:28)
+//│     at REPLServer.emit (node:domain:489:12)
+//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│     at [_normalWrite] [as _normalWrite] (node:internal/readline/interface:647:22)
+//│ acc = undefined
 
 val proj = acc.Project("P1")
-//│ proj = Project("P1")
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'Project')
+//│     at REPL17:1:98
+//│     at REPL17:2:4
+//│     at ContextifyScript.runInThisContext (node:vm:137:12)
+//│     at REPLServer.defaultEval (node:repl:600:22)
+//│     at bound (node:domain:433:15)
+//│     at REPLServer.runBound [as eval] (node:domain:444:12)
+//│     at REPLServer.onLine (node:repl:935:10)
+//│     at REPLServer.emit (node:events:508:28)
+//│     at REPLServer.emit (node:domain:489:12)
+//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ proj = undefined
 
 val l1 = acc.mkLine("L1", proj, 200_000, true)
 val l2 = acc.mkLine("L2", proj, 1_000_000, true)
-//│ l1 = Line("L1", Project("P1"), 200000, true)
-//│ l2 = Line("L2", Project("P1"), 1000000, true)
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'mkLine')
+//│     at REPL21:1:138
+//│     at REPL21:2:4
+//│     at ContextifyScript.runInThisContext (node:vm:137:12)
+//│     at REPLServer.defaultEval (node:repl:600:22)
+//│     at bound (node:domain:433:15)
+//│     at REPLServer.runBound [as eval] (node:domain:444:12)
+//│     at REPLServer.onLine (node:repl:935:10)
+//│     at REPLServer.emit (node:events:508:28)
+//│     at REPLServer.emit (node:domain:489:12)
+//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│ l1 = undefined
+//│ l2 = undefined
 
 
 :...
@@ -50,7 +96,19 @@ l1.mustBeEmpty()
 l2.mustBeEmpty()
 
 
-//│ > Report written to out/apps/AccountingTest.md
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'process')
+//│     at REPL26:1:539
+//│     at REPL26:2:4
+//│     at ContextifyScript.runInThisContext (node:vm:137:12)
+//│     at REPLServer.defaultEval (node:repl:600:22)
+//│     at bound (node:domain:433:15)
+//│     at REPLServer.runBound [as eval] (node:domain:444:12)
+//│     at REPLServer.onLine (node:repl:935:10)
+//│     at REPLServer.emit (node:events:508:28)
+//│     at REPLServer.emit (node:domain:489:12)
+//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
 //│ ————————————————————————————————————————————————————————————————————————————————
 
 

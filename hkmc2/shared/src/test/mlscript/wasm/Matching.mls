@@ -4,26 +4,66 @@
 
 if true then 0 else 2
 //│ Wasm result:
-//│ = 0
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL36:1:22
+//│     at async node:repl:647:29
 
 if false then 1 else 0
 //│ Wasm result:
-//│ = 0
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL37:1:22
+//│     at async node:repl:647:29
 
 class Foo(val x)
 if Foo(42) is Foo(a) then 0 else 1
 //│ Wasm result:
-//│ = 0
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL38:1:22
+//│     at async node:repl:647:29
 
 class Foo(val x)
 if Foo(42) is Foo(a) then a else 1
 //│ Wasm result:
-//│ = 42
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL39:1:22
+//│     at async node:repl:647:29
 
 class Foo(val x)
 if 1 is Foo(a) then a else 1
 //│ Wasm result:
-//│ = 1
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL40:1:22
+//│     at async node:repl:647:29
 
 class Bar(val y)
 class Baz(val z)
@@ -32,7 +72,15 @@ if Baz(10) is
   Baz(b) then 1
   else 0
 //│ Wasm result:
-//│ = 1
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL41:1:22
+//│     at async node:repl:647:29
 
 :wat
 class Bar(val y)
@@ -199,7 +247,15 @@ if Bar(true) is
 //│   (elem $Baz_ctor declare func $Baz_ctor)
 //│   (elem $entry declare func $entry))
 //│ Wasm result:
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL42:1:22
+//│     at async node:repl:647:29
 
 :re
 class Bar(val y)
@@ -207,20 +263,36 @@ class Baz(val z)
 if Baz(10) is
   Bar(a) then 0
 //│ Wasm result:
-//│ ═══[RUNTIME ERROR] match error
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
 
 :re
 if false then 1
 //│ Wasm result:
-//│ ═══[RUNTIME ERROR] match error
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
 
 class Foo(val x, val y)
 if Foo(1,2) is Foo(a,b) then 0
 //│ Wasm result:
-//│ = 0
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL52:1:22
+//│     at async node:repl:647:29
 
 class Foo(val x)
 fun getXor(f) = if f is Foo(a) then a else false
 getXor(Foo(42))
 //│ Wasm result:
-//│ = 42
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL53:1:22
+//│     at async node:repl:647:29

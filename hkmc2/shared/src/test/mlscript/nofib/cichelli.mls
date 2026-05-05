@@ -2,5 +2,17 @@
 
 import "../../mlscript-compile/nofib/cichelli.mls"
 cichelli.main()
-//│ = "YesIts(113994, [[\"w\", 16],[\"r\", 17],[\"o\", 11],[\"m\", 17],[\"l\", 11],[\"x\", 2],[\"n\", 11],[\"i\", 4],[\"f\", 10],[\"h\", 3],[\"g\", 0],[\"t\", 5],[\"d\", 0],[\"a\", 0],[\"s\", 2],[\"c\", 0],[\"e\", 1]])"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] SyntaxError: Unexpected reserved word
+//│     at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
+//│     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
+//│     at #translate (node:internal/modules/esm/loader:562:20)
+//│     at afterLoad (node:internal/modules/esm/loader:612:29)
+//│     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+//│     at #createModuleJob (node:internal/modules/esm/loader:641:36)
+//│     at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+//│     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:318:41)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:683:25)
 

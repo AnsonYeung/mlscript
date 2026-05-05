@@ -146,7 +146,9 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
       then if checkMLsCalls
         then doc"${aw}$runtimeVar.checkCall(${aw}${base}(${argsDoc}))"
         else doc"${aw}${base}(${argsDoc})"
-      else doc"${aw}$runtimeVar.safeCall(${aw}${base}(${argsDoc}))"
+      else if false
+        then doc"${aw}$runtimeVar.safeCall(${aw}${base}(${argsDoc}))"
+        else doc"${aw}${base}(${argsDoc})"
     case Lambda(ps, bod) => scope.nest givenIn:
       scope.emitAwait = true
       val (params, bodyDoc) = setupFunction(none, ps, bod, isLambda = true)

@@ -3,22 +3,16 @@
 
 import "../../mlscript-compile/nofib/mate.mls"
 print(mate.main())
-//│ >  - - - - - - - -
-//│ >  - - - - - - - -
-//│ >  - - - - - - - -
-//│ >  - - - - P - - -
-//│ >  - - - - p - k b
-//│ >  - P n - K - - -
-//│ >  - P - - - - - -
-//│ >  - q - - - - - -
-//│ > 
-//│ > White to move and mate in 3
-//│ > 
-//│ > 1. N/QB3-QR2,
-//│ >  if K-Q5; 2. B/KR4-KB2, K-QB5; 3. Q/QN1-KB1++
-//│ >  if K-Q7; 2. K-KB3, P/QN6xN/QR7; 3. B/KR4-K1++
-//│ >  if K-K7; 2. N/QR2-QN4,
-//│ >   if K-Q7; 3. Q/QN1-K1++
-//│ >   if K-K6; 3. Q/QN1-Q3++
-//│ >  if P/QN6xN/QR7; 2. Q/QN1-QB2, ...; 3. B/KR4-KB2++
-//│ > 
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:243)
+//│ ═══[RUNTIME ERROR] SyntaxError: Unexpected reserved word
+//│     at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
+//│     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
+//│     at #translate (node:internal/modules/esm/loader:562:20)
+//│     at afterLoad (node:internal/modules/esm/loader:612:29)
+//│     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+//│     at #createModuleJob (node:internal/modules/esm/loader:641:36)
+//│     at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+//│     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:318:41)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:683:25)

@@ -5,7 +5,15 @@
 
 if 1 === 2 do 2 + 2
 //│ Wasm result:
-//│ = {}
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL36:1:22
+//│     at async node:repl:647:29
 
 
 :wat
@@ -107,7 +115,15 @@ let i = 0 in
 //│   (elem $entry declare func $entry)
 //│   (start $start1))
 //│ Wasm result:
-//│ = 10
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL37:1:22
+//│     at async node:repl:647:29
 
 
 fun f() =
@@ -115,13 +131,29 @@ fun f() =
     return 42
 f()
 //│ Wasm result:
-//│ = 42
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL38:1:22
+//│     at async node:repl:647:29
 
 
 let x = true
 while x do set x = false
 //│ Wasm result:
-//│ = {}
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL39:1:22
+//│     at async node:repl:647:29
 
 
 fun foo() =
@@ -129,7 +161,15 @@ fun foo() =
     while false do set x = 0
 foo()
 //│ Wasm result:
-//│ = {}
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL40:1:22
+//│     at async node:repl:647:29
 
 
 let c = 0
@@ -142,7 +182,15 @@ while x < 5 do
   set x += 1
 c
 //│ Wasm result:
-//│ = 25
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL41:1:22
+//│     at async node:repl:647:29
 
 
 fun nonTailMatchReturn(x) =
@@ -153,7 +201,15 @@ fun nonTailMatchReturn(x) =
   x + 1
 nonTailMatchReturn(0)
 //│ Wasm result:
-//│ = 100
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL42:1:22
+//│     at async node:repl:647:29
 
 
 fun tailMatchReturn(x) =
@@ -163,7 +219,15 @@ fun tailMatchReturn(x) =
     else 99
 tailMatchReturn(0)
 //│ Wasm result:
-//│ = 7
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL43:1:22
+//│     at async node:repl:647:29
 
 
 fun loopMatchReturn() =
@@ -174,7 +238,15 @@ fun loopMatchReturn() =
         else set i += 1
 loopMatchReturn()
 //│ Wasm result:
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL44:1:22
+//│     at async node:repl:647:29
 
 
 :wat
@@ -233,7 +305,15 @@ tailMatchAllValue(1)
 //│   (elem $tailMatchAllValue declare func $tailMatchAllValue)
 //│   (elem $entry declare func $entry))
 //│ Wasm result:
-//│ = 20
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL45:1:22
+//│     at async node:repl:647:29
 
 
 fun tailMatchStmtBranch(x) =
@@ -244,7 +324,15 @@ fun tailMatchStmtBranch(x) =
       else 42
 tailMatchStmtBranch(0)
 //│ Wasm result:
-//│ = {}
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL46:1:22
+//│     at async node:repl:647:29
 
 
 fun tailMatchStmtDefault(x) =
@@ -255,7 +343,15 @@ fun tailMatchStmtDefault(x) =
         set y += 1
 tailMatchStmtDefault(2)
 //│ Wasm result:
-//│ = {}
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL47:1:22
+//│     at async node:repl:647:29
 
 
 fun nonTailStmtMatch(x) =
@@ -267,4 +363,12 @@ fun nonTailStmtMatch(x) =
     y
 nonTailStmtMatch(0)
 //│ Wasm result:
-//│ = 1
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (WasmDiffMaker.scala:165)
+//│ ═══[RUNTIME ERROR] TypeError: tmp3.then is not a function
+//│     at Wasm.binaryenCompileToModule (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:57:46)
+//│     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+//│     at async Wasm.binaryenRunFunc (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:92:11)
+//│     at async Wasm.binaryenPrintFuncRes (file:///Users/attempt0/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/wasm/Wasm.mjs:108:11)
+//│     at async REPL48:1:22
+//│     at async node:repl:647:29

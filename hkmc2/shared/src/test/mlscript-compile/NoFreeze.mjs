@@ -2,29 +2,33 @@ const definitionMetadata = globalThis.Symbol.for("mlscript.definitionMetadata");
 const prettyPrint = globalThis.Symbol.for("mlscript.prettyPrint");
 import runtime from "./Runtime.mjs";
 let NoFreeze1;
+let staticInitAwaiter;
 (class NoFreeze {
   static {
     NoFreeze1 = this
   }
   static {
-    this.Foo = function Foo(x) {
-      return (new Foo.class(x));
-    };
-    (class Foo {
-      static {
-        NoFreeze.Foo.class = this
-      }
-      constructor(x) {
-        this.x = x;
-      }
-      toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["class", "Foo", ["x"]]; 
-    });
+    staticInitAwaiter = (async () => {
+      this.Foo = function Foo(x) {
+        return (new Foo.class(x));
+      };
+      (class Foo {
+        static {
+          NoFreeze.Foo.class = this
+        }
+        constructor(x) {
+          this.x = x;
+        }
+        toString() { return runtime.render(this); }
+        static [definitionMetadata] = ["class", "Foo", ["x"]]; 
+      });
+    })();
   }
-  static foo() {
+  static async foo() {
     return (new NoFreeze.Foo.class(0))
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "NoFreeze"]; 
 });
+await staticInitAwaiter;
 let NoFreeze = NoFreeze1; export default NoFreeze;
