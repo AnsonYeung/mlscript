@@ -7,7 +7,7 @@ const BenchmarkWriter = {
     let prefixPath = "hkmc2Benchmarks/src/test/logs/";
     let jsonStr = JSON.stringify(suite.map((res, i, j) => res), null, 2);
     // console.log(jsonStr);
-    writeFile(prefixPath + path, jsonStr);
+    await writeFile(prefixPath + path, jsonStr);
   }
 }
 
