@@ -62,17 +62,19 @@ object HandlerLowering:
   // currentFun: path to the current function for resumption
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
   private case class FunctionCtx(currentFun: Path, thisPath: Option[Path], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool):
-    def doUnwind(loc: Value, stateId: BigInt, restoreList: List[Local])(using paths: HandlerPaths) =
-      Return(Call(paths.unwindPath, (
+    def unwindCall(loc: Value, state: Path, restoreList: List[Local])(using paths: HandlerPaths) =
+      Call(paths.unwindPath, (
         currentFun ::
-        intLit(stateId) ::
+        state ::
         loc ::
         debugInfo.debugInfoPath ::
         thisPath.getOrElse(unit) ::
         resumeInfo.argLists ++:
         (intLit(restoreList.length) ::
         restoreList.map(_.asPath))
-      ).map(_.asArg) ne_:: Nil)(true, true, false), false)
+      ).map(_.asArg) ne_:: Nil)(true, true, false)
+    def doUnwind(loc: Value, stateId: BigInt, restoreList: List[Local])(using paths: HandlerPaths) =
+      Return(unwindCall(loc, intLit(stateId), restoreList)(using paths), false)
   
   // argLists: length-encoded argument list used for resumption.
   // currentLocals: All locals to be saved and reloaded, this cannot include any variables in outer scopes
@@ -612,12 +614,13 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             case S(r) =>
               pc
                 .assignFieldN(paths.runtimePath, paths.resumeValueIdent, r)
-                .ifthen(
-                  paths.curEffect,
-                  Case.Lit(Tree.UnitLit(true)),
-                  End(),
-                  S(ctx.doUnwind(r.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
-                )
+                .staticif(!exceptionToggle, _
+                  .ifthen(
+                    paths.curEffect,
+                    Case.Lit(Tree.UnitLit(true)),
+                    End(),
+                    S(ctx.doUnwind(r.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
+                  ))
           pre.continue(mainLoopLbl)
         case _ => super.applyBlock(b)
 
@@ -638,12 +641,13 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
               blockBuilder
                 .assign(pcVar, Value.Lit(Tree.IntLit(uid)))
                 .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-                .ifthen(
-                  paths.curEffect,
-                  Case.Lit(Tree.UnitLit(true)),
-                  End(),
-                  S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
-                )
+                .staticif(!exceptionToggle, _
+                  .ifthen(
+                    paths.curEffect,
+                    Case.Lit(Tree.UnitLit(true)),
+                    End(),
+                    S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
+                  ))
                 .break(lblSym)
             case _ => super.applyBlock(b)
         val transformed = transform.applyBlock(blk.blk)
@@ -703,6 +707,11 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
         .assign(getSavedTmp, if idx == 0 then paths.resumeIdx else Call(plus, (getSavedTmp.asPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(false, false, false))
         .assign(local, resumeArrIndexed)
 
+    val withTryCatch = if !exceptionToggle then mainLoop else
+      val err = freshTmp("err")
+      TryCatch(mainLoop, err,
+        Throw(ctx.unwindCall(unit, pcVar.asPath, vars)(using paths)), End())
+
     Scoped(
       scopedVars ++ Set(pcVar),
       Match(
@@ -711,7 +720,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
           Assign(pcVar, intLit(parts.entry), End()) :: Nil,
         S(restoreVars
             .assignFieldN(paths.runtimePath, new Tree.Ident("resumePc"), Value.Lit(Tree.IntLit(-1))).end),
-        mainLoop))
+        withTryCatch))
   
   private def translateCtorLike(b: Block, thisPath: Path, isModCtor: Bool)(using h: HandlerCtx): Block =
     translateBlock(b, if isModCtor then HandlerCtx.ModCtor(h.innerDefIsTrulyNested) else HandlerCtx.Ctor, Set.empty)

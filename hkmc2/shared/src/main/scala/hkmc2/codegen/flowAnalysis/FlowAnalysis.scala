@@ -527,6 +527,11 @@ class FlowPreAnalyzer(val pgrm: Program)(using
       applyBlock(sub)
       applyBlock(finallyDo)
       applyBlock(rest)
+    case TryCatch(sub, catchVar, catchBody, rest) =>
+      applyBlock(sub)
+      applyLocal(catchVar)
+      applyBlock(catchBody)
+      applyBlock(rest)
     case AssignField(lhs, nme, rhs, rest) =>
       applyPath(lhs)
       applyResult(rhs)
@@ -907,6 +912,11 @@ class FlowConstraintsCollector(
       case TryBlock(sub, finallyDo, rest) =>
         processBlock(sub)
         processBlock(finallyDo)
+        processBlock(rest)
+      case TryCatch(sub, catchVar, catchBody, rest) =>
+        processBlock(sub)
+        cc.constrain(UnknownProd, generatedProdVars(catchVar).asConsStrat)
+        processBlock(catchBody)
         processBlock(rest)
       case AssignField(lhs, nme, rhs, rest) =>
         constrainOpaqueResult(lhs)

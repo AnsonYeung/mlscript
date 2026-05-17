@@ -79,6 +79,14 @@ class BlockTransformer(subst: SymbolSubst):
       val fin2 = applySub(fin)
       val rst2 = applySubBlock(rst)
       if (sub2 is sub) && (fin2 is fin) && (rst2 is rst) then b else TryBlock(sub2, fin2, rst2)
+    case TryCatch(sub, catchVar, catchBody, rst) =>
+      def applySub(b: Block) = if rst.isEmpty then applySubBlock(b) else applySubBlockNonTail(b)
+      val sub2 = applySub(sub)
+      val catchVar2 = catchVar.subst
+      val catchBody2 = applySub(catchBody)
+      val rst2 = applySubBlock(rst)
+      if (sub2 is sub) && (catchVar2 is catchVar) && (catchBody2 is catchBody) && (rst2 is rst)
+        then b else TryCatch(sub2, catchVar2, catchBody2, rst2)
     case Assign(l, r, rst) =>
       applyResult(r): r2 =>
         val l2 = applyLocal(l)

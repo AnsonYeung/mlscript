@@ -125,6 +125,7 @@ sealed abstract class Block extends Product:
     case TryBlock(sub, fin, rst) => 1 + sub.size + fin.size + rst.size
     case Label(_, _, bod, rst) => 1 + bod.size + rst.size
     case Scoped(_, body) => body.size
+    case TryCatch(sub, _, catchBody, rst) => 1 + sub.size + catchBody.size + rst.size
   
   
   // TODO: make patmat use unreach
@@ -148,6 +149,7 @@ sealed abstract class Block extends Product:
     case Continue(label) => Set.single(label)
     case Begin(sub, rest) => sub.freeVars ++ rest.freeVars
     case TryBlock(sub, finallyDo, rest) => sub.freeVars ++ finallyDo.freeVars ++ rest.freeVars
+    case TryCatch(sub, catchVar, catchBody, rest) => sub.freeVars ++ catchBody.freeVars - catchVar ++ rest.freeVars
     case Assign(lhs, rhs, rest) => Set.single(lhs) ++ rhs.freeVars ++ rest.freeVars
     case AssignField(lhs, nme, rhs, rest) => lhs.freeVars ++ rhs.freeVars ++ rest.freeVars
     case AssignDynField(lhs, fld, arrayIdx, rhs, rest) => lhs.freeVars ++ fld.freeVars ++ rhs.freeVars ++ rest.freeVars
@@ -168,6 +170,7 @@ sealed abstract class Block extends Product:
     case Continue(label) => Set.empty
     case Begin(sub, rest) => sub.freeVarsLLIR ++ rest.freeVarsLLIR
     case TryBlock(sub, finallyDo, rest) => sub.freeVarsLLIR ++ finallyDo.freeVarsLLIR ++ rest.freeVarsLLIR
+    case TryCatch(sub, catchVar, catchBody, rest) => sub.freeVarsLLIR ++ catchBody.freeVarsLLIR - catchVar ++ rest.freeVarsLLIR
     case Assign(lhs, rhs, rest) => rhs.freeVarsLLIR ++ (rest.freeVarsLLIR - lhs)
     case AssignField(lhs, nme, rhs, rest) => lhs.freeVarsLLIR ++ rhs.freeVarsLLIR ++ rest.freeVarsLLIR
     case AssignDynField(lhs, fld, arrayIdx, rhs, rest) => lhs.freeVarsLLIR ++ fld.freeVarsLLIR ++ rhs.freeVarsLLIR ++ rest.freeVarsLLIR
@@ -180,6 +183,7 @@ sealed abstract class Block extends Product:
     case Match(p, arms, dflt, rest) => p.subBlocks ++ arms.map(_._2) ++ dflt.toList :+ rest
     case Begin(sub, rest) => sub :: rest :: Nil
     case TryBlock(sub, finallyDo, rest) => sub :: finallyDo :: rest :: Nil
+    case TryCatch(sub, catchVar, catchBody, rest) => sub :: catchBody :: rest :: Nil
     case Assign(_, rhs, rest) => rhs.subBlocks ::: rest :: Nil
     case AssignField(_, _, rhs, rest) => rhs.subBlocks ::: rest :: Nil
     case AssignDynField(_, _, _, rhs, rest) => rhs.subBlocks ::: rest :: Nil
@@ -254,6 +258,14 @@ sealed abstract class Block extends Product:
       if (newSub is sub) && (newFinallyDo is finallyDo) && (newRest is rest)
       then this
       else TryBlock(newSub, newFinallyDo, newRest)
+      
+    case TryCatch(sub, catchVar, catchBody, rest) =>
+      val newSub = sub.flattened
+      val newCatchBody = catchBody.flattened
+      val newRest = rest.flatten(k)
+      if (newSub is sub) && (newCatchBody is catchBody) && (newRest is rest)
+      then this
+      else TryCatch(newSub, catchVar, newCatchBody, newRest)
       
     case Assign(lhs, rhs, rest) =>
       val newRest = rest.flatten(k)

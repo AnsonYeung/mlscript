@@ -53,7 +53,10 @@ handle h = Effect with
     k(arg)
 (() => h.perform("Hello") + " World!")()
 //│ > Hello
-//│ = "Hello World!"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '"Hello World!"', got: '"Hello"'
+//│ = "Hello"
 
 :expect "54321"
 :sjs
@@ -86,20 +89,21 @@ result
 //│     pc = runtime.resumePc;
 //│     runtime.resumePc = -1;
 //│   }
-//│   switch (pc) {
-//│     case 0:
-//│       pc = 1;
-//│       runtime.resumeValue = runtime.safeCall(k(arg));
-//│       if (runtime.curEffect === null) {
+//│   try {
+//│     switch (pc) {
+//│       case 0:
 //│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(Handler$h$perform7, 1, "Effects.mls:63:13", null, null, 1, 2, arg, k, 0)
-//│       }
-//│     case 1:
-//│       v = runtime.resumeValue;
-//│       result = result + arg;
-//│       return v;
+//│         runtime.resumeValue = runtime.safeCall(k(arg));
+//│         pc = 1;
+//│       case 1:
+//│         v = runtime.resumeValue;
+//│         result = result + arg;
+//│         return v;
+//│     }
+//│   } catch (err) {
+//│     throw runtime.unwind(Handler$h$perform7, pc, null, null, null, 1, 2, arg, k, 0)
 //│   }
+//│   
 //│ };
 //│ result = "";
 //│ (class Handler$h$14 extends Effect1 {
@@ -133,52 +137,44 @@ result
 //│     pc = runtime.resumePc;
 //│     runtime.resumePc = -1;
 //│   }
-//│   switch (pc) {
-//│     case 0:
-//│       pc = 4;
-//│       runtime.resumeValue = runtime.safeCall(h7.perform("1"));
-//│       if (runtime.curEffect === null) {
+//│   try {
+//│     switch (pc) {
+//│       case 0:
 //│         pc = 4;
-//│       } else {
-//│         return runtime.unwind(handleBlock$7, 4, "Effects.mls:67:3", null, null, 1, 0, 0)
-//│       }
-//│     case 4:
-//│       runtime.resumeValue;
-//│       pc = 3;
-//│       runtime.resumeValue = runtime.safeCall(h7.perform("2"));
-//│       if (runtime.curEffect === null) {
+//│         runtime.resumeValue = runtime.safeCall(h7.perform("1"));
+//│         pc = 4;
+//│       case 4:
+//│         runtime.resumeValue;
 //│         pc = 3;
-//│       } else {
-//│         return runtime.unwind(handleBlock$7, 3, "Effects.mls:68:3", null, null, 1, 0, 0)
-//│       }
-//│     case 3:
-//│       runtime.resumeValue;
-//│       pc = 2;
-//│       runtime.resumeValue = runtime.safeCall(h7.perform("3"));
-//│       if (runtime.curEffect === null) {
+//│         runtime.resumeValue = runtime.safeCall(h7.perform("2"));
+//│         pc = 3;
+//│       case 3:
+//│         runtime.resumeValue;
 //│         pc = 2;
-//│       } else {
-//│         return runtime.unwind(handleBlock$7, 2, "Effects.mls:69:3", null, null, 1, 0, 0)
-//│       }
-//│     case 2:
-//│       runtime.resumeValue;
-//│       pc = 1;
-//│       runtime.resumeValue = runtime.safeCall(h7.perform("4"));
-//│       if (runtime.curEffect === null) {
+//│         runtime.resumeValue = runtime.safeCall(h7.perform("3"));
+//│         pc = 2;
+//│       case 2:
+//│         runtime.resumeValue;
 //│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(handleBlock$7, 1, "Effects.mls:70:3", null, null, 1, 0, 0)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return runtime.safeCall(h7.perform("5"));
+//│         runtime.resumeValue = runtime.safeCall(h7.perform("4"));
+//│         pc = 1;
+//│       case 1:
+//│         runtime.resumeValue;
+//│         return runtime.safeCall(h7.perform("5"));
+//│     }
+//│   } catch (err) {
+//│     throw runtime.unwind(handleBlock$7, pc, null, null, null, 1, 0, 0)
 //│   }
+//│   
 //│ });
 //│ runtime.enterHandleBlock(h7, handleBlock$7);
 //│ if (runtime.curEffect === null) { result } else { runtime.topLevelEffect(false); result }
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-//│ = "54321"
-//│ result = "54321"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '"54321"', got: '"5"'
+//│ = "5"
+//│ result = "5"
 
 :expect "b"
 handle h = Effect with
@@ -220,37 +216,30 @@ else
 //│     r = runtime.resumeArr.at(saveOffset);
 //│     runtime.resumePc = -1;
 //│   }
-//│   switch (pc) {
-//│     case 0:
-//│       pc = 3;
-//│       runtime.resumeValue = Predef.print(arg);
-//│       if (runtime.curEffect === null) {
+//│   try {
+//│     switch (pc) {
+//│       case 0:
 //│         pc = 3;
-//│       } else {
-//│         return runtime.unwind(Handler$h$perform9, 3, "Effects.mls:196:5", null, null, 1, 2, arg, k, 1, r)
-//│       }
-//│     case 3:
-//│       runtime.resumeValue;
-//│       pc = 2;
-//│       runtime.resumeValue = runtime.safeCall(k(true));
-//│       if (runtime.curEffect === null) {
+//│         runtime.resumeValue = Predef.print(arg);
+//│         pc = 3;
+//│       case 3:
+//│         runtime.resumeValue;
 //│         pc = 2;
-//│       } else {
-//│         return runtime.unwind(Handler$h$perform9, 2, "Effects.mls:197:13", null, null, 1, 2, arg, k, 1, r)
-//│       }
-//│     case 2:
-//│       r = runtime.resumeValue;
-//│       pc = 1;
-//│       runtime.resumeValue = Predef.print(arg);
-//│       if (runtime.curEffect === null) {
+//│         runtime.resumeValue = runtime.safeCall(k(true));
+//│         pc = 2;
+//│       case 2:
+//│         r = runtime.resumeValue;
 //│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(Handler$h$perform9, 1, "Effects.mls:198:5", null, null, 1, 2, arg, k, 1, r)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return r;
+//│         runtime.resumeValue = Predef.print(arg);
+//│         pc = 1;
+//│       case 1:
+//│         runtime.resumeValue;
+//│         return r;
+//│     }
+//│   } catch (err) {
+//│     throw runtime.unwind(Handler$h$perform9, pc, null, null, null, 1, 2, arg, k, 1, r)
 //│   }
+//│   
 //│ };
 //│ (class Handler$h$18 extends Effect1 {
 //│   static {
@@ -283,38 +272,43 @@ else
 //│     pc = runtime.resumePc;
 //│     runtime.resumePc = -1;
 //│   }
-//│   main: while (true) {
-//│     switch (pc) {
-//│       case 2:
-//│         tmp9 = runtime.resumeValue;
-//│         pc = 1;
-//│       case 1:
-//│         if (tmp9 === true) {
-//│           return 3
-//│         }
-//│         return 0;
-//│       case 0:
-//│         if (false === false) {
-//│           pc = 2;
-//│           runtime.resumeValue = runtime.safeCall(h9.perform("hello"));
-//│           if (runtime.curEffect === null) {
+//│   try {
+//│     main: while (true) {
+//│       switch (pc) {
+//│         case 2:
+//│           tmp9 = runtime.resumeValue;
+//│           pc = 1;
+//│         case 1:
+//│           if (tmp9 === true) {
+//│             return 3
+//│           }
+//│           return 0;
+//│         case 0:
+//│           if (false === false) {
+//│             pc = 2;
+//│             runtime.resumeValue = runtime.safeCall(h9.perform("hello"));
 //│             continue main
 //│           }
-//│           return runtime.unwind(handleBlock$9, 2, "Effects.mls:200:13", null, null, 1, 0, 0);
-//│         }
-//│         tmp9 = true;
-//│         pc = 1;
-//│         continue main;
+//│           tmp9 = true;
+//│           pc = 1;
+//│           continue main;
+//│       }
+//│       break;
 //│     }
-//│     break;
+//│   } catch (err) {
+//│     throw runtime.unwind(handleBlock$9, pc, null, null, null, 1, 0, 0)
 //│   }
+//│   
 //│ });
 //│ tmp8 = runtime.enterHandleBlock(h9, handleBlock$9);
 //│ if (runtime.curEffect === null) { tmp8 } else { tmp8 = runtime.topLevelEffect(false); tmp8 }
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > hello
 //│ > hello
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '3', got: 'true'
+//│ = true
 
 :expect "Hello World!"
 fun foo(h) =
@@ -335,13 +329,14 @@ print("mainbody end")
 result
 //│ > mainbody start
 //│ > Entering foo
-//│ > handler called
-//│ > handler called
 //│ > Exiting foo
 //│ > mainbody end
+//│ > handler called
 //│ > handler finished
-//│ > handler finished
-//│ = "Hello World!"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '"Hello World!"', got: '"?"'
+//│ = "?"
 
 :expect "Hello World!"
 fun foo(h) =
@@ -374,15 +369,16 @@ result
 //│ > Entering foobar
 //│ > Entering bar
 //│ > Entering foo
-//│ > handler called
-//│ > handler called
 //│ > Exiting foo
 //│ > Exiting bar
 //│ > Exiting foobar
 //│ > mainbody end
+//│ > handler called
 //│ > handler finished
-//│ > handler finished
-//│ = "Hello World!"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '"Hello World!"', got: '"Oops!"'
+//│ = "Oops!"
 
 // Float out definitions
 handle h = Effect with
@@ -422,9 +418,10 @@ handle h = Cell with
 print(h.getVal())
 h.setVal(1)
 print(h.getVal())
-//│ > 0
-//│ > 1
-//│ x = 1
+//│ > ()
+//│ > ()
+//│ = 0
+//│ x = 0
 
 
 abstract class Eff with
@@ -438,7 +435,10 @@ fun fact(e, factvalue) =
 handle h = Eff with
   fun get()(k) = k(1)
 fact(h, 5)
-//│ = 120
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '120', got: '1'
+//│ = 1
 
 abstract class StackDelay with
   fun raise(): ()
@@ -459,7 +459,10 @@ fun sum(depth, x) =
     x + sum(new_depth, x - 1)
   else 0
 sum(0, 100)
-//│ = 5050
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '5050', got: '10'
+//│ = 10
 
 // stack safe recursion
 :expect 450015000
@@ -472,7 +475,12 @@ fun sum(depth, x) =
     x + sum(new_depth, x - 1)
   else 0
 sum(0, 30000)
-//│ = 450015000
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:258)
+//│ ═══[RUNTIME ERROR] ()
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '450015000', got: 'undefined'
 
 :re
 fun sum(x) =
@@ -480,7 +488,7 @@ fun sum(x) =
     x + sum(x - 1)
   else 0
 sum(10000)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
+//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of null (reading 'contTrace')
 
 :expect 2
 fun foo(h) =
@@ -494,7 +502,9 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
-//│ = 2
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '2', got: '()'
 
 :expect 3
 fun foo(h) =
@@ -508,7 +518,9 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '3', got: '()'
 
 :expect 123
 fun foo(h) =
@@ -534,7 +546,9 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h) 
-//│ = 123
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
+//│ ═══[RUNTIME ERROR] Expected: '123', got: '()'
 
 :fixme
 :expect 123
@@ -562,30 +576,30 @@ handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.557: 	    module A with
+//│ ║  l.571: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.553: 	    module A with
+//│ ║  l.567: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.549: 	    module A with
+//│ ║  l.563: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.545: 	    module A with
+//│ ║  l.559: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.545: 	    module A with
+//│ ║  l.559: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.549: 	    module A with
+//│ ║  l.563: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.553: 	    module A with
+//│ ║  l.567: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.557: 	    module A with
+//│ ║  l.571: 	    module A with
 //│ ╙──       	           ^
-//│ = 123
+//│ ═══[RUNTIME ERROR] Expected: '123', got: '()'
 
 // Access superclass fields
 handle h1 = Object with
