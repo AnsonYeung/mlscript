@@ -622,6 +622,10 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
                     S(ctx.doUnwind(r.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
                   ))
           pre.continue(mainLoopLbl)
+        case Return(c @ Call(fun, args), false) if c.mayRaiseEffects =>
+          blockBuilder
+            .assign(pcVar, Value.Lit(Tree.IntLit(-1)))
+            .rest(b)
         case _ => super.applyBlock(b)
 
     // Note: `line` has the last state as the head, and the first state at the end
@@ -649,6 +653,10 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
                     S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
                   ))
                 .break(lblSym)
+            case Return(c @ Call(fun, args), false) if c.mayRaiseEffects =>
+              blockBuilder
+                .assign(pcVar, Value.Lit(Tree.IntLit(-1)))
+                .rest(b)
             case _ => super.applyBlock(b)
         val transformed = transform.applyBlock(blk.blk)
         Label(

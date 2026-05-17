@@ -166,7 +166,7 @@ data class FunctionContFrame(next, saved) with
     let argListLength = saved.[currentArgList]
     set
       resumeIdx = currentArgList + argListLength + 2
-    f.apply(saved.[4], saved.slice(currentArgList + 1, currentArgList + 1 + argListLength))
+    try_catch(() => f.apply(saved.[4], saved.slice(currentArgList + 1, currentArgList + 1 + argListLength)), _ => ())
   fun getLocals =
     let debugInfo = saved.[3]
     let i = 0
@@ -328,6 +328,7 @@ fun debugEff(eff) =
 
 // runtime implementations
 fun unwind(...saved) =
+  if saved.[1] === -1 then return
   set
     curEffect.contTrace.last.next = new mut FunctionContFrame(null, saved)
     curEffect.contTrace.last = curEffect.contTrace.last.next
@@ -338,6 +339,7 @@ fun mkEffect(handler, handlerFun) =
     res.contTrace.last = res.contTrace
     res.contTrace.lastHandler = res.contTrace
     curEffect = res
+  throw ()
 
 fun handleBlockImpl(cur, handler) =
   let handlerFrame = new mut HandlerContFrame(null, null, handler)
@@ -348,7 +350,7 @@ fun handleBlockImpl(cur, handler) =
   handleEffects(cur)
 
 fun enterHandleBlock(handler, body) =
-  let tmp = body()
+  let tmp = try_catch(body, _ => ())
   if curEffect === null then
     tmp
   else
@@ -360,7 +362,8 @@ fun handleEffects(cur) =
       let nxt = handleEffect(cur)
       if cur === nxt then
         set curEffect = cur
-        return null
+        throw ()
+        // return null
       else
         set cur = nxt
     else
@@ -397,7 +400,8 @@ fun handleEffect(cur) =
 
   // handle the effect
   set curEffect = null
-  let tmp = set stackDepth += 2 in cur.handlerFun(resume(cur.contTrace))
+  let tmp = set stackDepth += 2 in
+    try_catch(() => cur.handlerFun(resume(cur.contTrace)), _ => ())
   if curEffect !== null then
     set cur = curEffect
     // relink the saved frames
