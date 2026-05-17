@@ -362,7 +362,8 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       new BlockTraverserShallow():
         applyBlock(blk)
         override def applyBlock(b: Block): Unit = b match
-          case StateTransition(_, uid) =>
+          case StateTransition(r, uid) =>
+            r.foreach(applyResult)
             outgoing += uid
           case Match(scrut, arms, dflt, rest) =>
             applyPath(scrut)

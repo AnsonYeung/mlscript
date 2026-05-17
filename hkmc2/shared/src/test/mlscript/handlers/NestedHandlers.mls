@@ -9,7 +9,6 @@ let id = 0
 class MaybeStop with
   fun f(x: Bool): ()
 
-:sjs
 fun handleEffects(g) =
   handle h1 = MaybeStop with
     fun f(x)(k) =
@@ -34,270 +33,6 @@ fun handleEffects(g) =
         print("h2 end " + String(cur))
         result
   g(h1, h2)
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let handleEffects, Handler$h2$f, Handler$h2$1, handleBlock$, Handler$h1$f, Handler$h1$1, handleBlock$$, handleBlock$$1, Handler$h2$f$, Handler$h1$f$;
-//│ runtime.resetEffects();
-//│ Handler$h1$f$ = function Handler$h1$f$(x) {
-//│   return (k) => {
-//│     return Handler$h1$f(x, k)
-//│   }
-//│ };
-//│ Handler$h1$f = function Handler$h1$f(x, k) {
-//│   let cur, result, tmp, tmp1, tmp2, tmp3, tmp4, pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     let saveOffset;
-//│     pc = runtime.resumePc;
-//│     saveOffset = runtime.resumeIdx;
-//│     result = runtime.resumeArr.at(saveOffset);
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       if (x === true) {
-//│         return Predef.print("h1 stop")
-//│       }
-//│       tmp = id + 1;
-//│       id = tmp;
-//│       cur = id;
-//│       pc = 7;
-//│       runtime.resumeValue = runtime.safeCall(globalThis.String(cur));
-//│       if (runtime.curEffect === null) {
-//│         pc = 7;
-//│       } else {
-//│         return runtime.unwind(Handler$h1$f, 7, "NestedHandlers.mls:21:29", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 7:
-//│       tmp1 = runtime.resumeValue;
-//│       tmp2 = "h1 start " + tmp1;
-//│       pc = 6;
-//│     case 6:
-//│       pc = 5;
-//│       runtime.resumeValue = Predef.print(tmp2);
-//│       if (runtime.curEffect === null) {
-//│         pc = 5;
-//│       } else {
-//│         return runtime.unwind(Handler$h1$f, 5, "NestedHandlers.mls:21:9", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 5:
-//│       runtime.resumeValue;
-//│       pc = 4;
-//│       runtime.resumeValue = runtime.safeCall(k(x));
-//│       if (runtime.curEffect === null) {
-//│         pc = 4;
-//│       } else {
-//│         return runtime.unwind(Handler$h1$f, 4, "NestedHandlers.mls:22:22", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 4:
-//│       result = runtime.resumeValue;
-//│       pc = 3;
-//│       runtime.resumeValue = runtime.safeCall(globalThis.String(cur));
-//│       if (runtime.curEffect === null) {
-//│         pc = 3;
-//│       } else {
-//│         return runtime.unwind(Handler$h1$f, 3, "NestedHandlers.mls:23:27", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 3:
-//│       tmp3 = runtime.resumeValue;
-//│       tmp4 = "h1 end " + tmp3;
-//│       pc = 2;
-//│     case 2:
-//│       pc = 1;
-//│       runtime.resumeValue = Predef.print(tmp4);
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(Handler$h1$f, 1, "NestedHandlers.mls:23:9", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return result;
-//│   }
-//│ };
-//│ Handler$h2$f$ = function Handler$h2$f$(x) {
-//│   return (k) => {
-//│     return Handler$h2$f(x, k)
-//│   }
-//│ };
-//│ Handler$h2$f = function Handler$h2$f(x, k) {
-//│   let cur, result, tmp, tmp1, tmp2, tmp3, tmp4, pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     let saveOffset;
-//│     pc = runtime.resumePc;
-//│     saveOffset = runtime.resumeIdx;
-//│     result = runtime.resumeArr.at(saveOffset);
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       if (x === true) {
-//│         return Predef.print("h2 stop")
-//│       }
-//│       tmp = id + 1;
-//│       id = tmp;
-//│       cur = id;
-//│       pc = 7;
-//│       runtime.resumeValue = runtime.safeCall(globalThis.String(cur));
-//│       if (runtime.curEffect === null) {
-//│         pc = 7;
-//│       } else {
-//│         return runtime.unwind(Handler$h2$f, 7, "NestedHandlers.mls:32:29", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 7:
-//│       tmp1 = runtime.resumeValue;
-//│       tmp2 = "h2 start " + tmp1;
-//│       pc = 6;
-//│     case 6:
-//│       pc = 5;
-//│       runtime.resumeValue = Predef.print(tmp2);
-//│       if (runtime.curEffect === null) {
-//│         pc = 5;
-//│       } else {
-//│         return runtime.unwind(Handler$h2$f, 5, "NestedHandlers.mls:32:9", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 5:
-//│       runtime.resumeValue;
-//│       pc = 4;
-//│       runtime.resumeValue = runtime.safeCall(k(x));
-//│       if (runtime.curEffect === null) {
-//│         pc = 4;
-//│       } else {
-//│         return runtime.unwind(Handler$h2$f, 4, "NestedHandlers.mls:33:22", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 4:
-//│       result = runtime.resumeValue;
-//│       pc = 3;
-//│       runtime.resumeValue = runtime.safeCall(globalThis.String(cur));
-//│       if (runtime.curEffect === null) {
-//│         pc = 3;
-//│       } else {
-//│         return runtime.unwind(Handler$h2$f, 3, "NestedHandlers.mls:34:27", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 3:
-//│       tmp3 = runtime.resumeValue;
-//│       tmp4 = "h2 end " + tmp3;
-//│       pc = 2;
-//│     case 2:
-//│       pc = 1;
-//│       runtime.resumeValue = Predef.print(tmp4);
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(Handler$h2$f, 1, "NestedHandlers.mls:34:9", null, null, 1, 2, x, k, 1, result)
-//│       }
-//│     case 1:
-//│       runtime.resumeValue;
-//│       return result;
-//│   }
-//│ };
-//│ handleBlock$$1 = (undefined, function (g, h1, h2) {
-//│   return () => {
-//│     let inlinedVal;
-//│     inlinedVal = runtime.safeCall(g(h1, h2));
-//│     return inlinedVal
-//│   }
-//│ });
-//│ (class Handler$h2$ extends MaybeStop1 {
-//│   static {
-//│     Handler$h2$1 = this
-//│   }
-//│   constructor() {
-//│     let tmp;
-//│     tmp = super();
-//│     if (runtime.curEffect === null) {
-//│       tmp
-//│     } else {
-//│       tmp = runtime.illegalEffect("in a constructor");
-//│       tmp
-//│     }
-//│   }
-//│   f(x) {
-//│     let Handler$h2$f$here;
-//│     Handler$h2$f$here = Handler$h2$f$(x);
-//│     return runtime.mkEffect(this, Handler$h2$f$here)
-//│   }
-//│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Handler$h2$"]; 
-//│ });
-//│ handleBlock$$ = (undefined, function (g, h1) {
-//│   return () => {
-//│     return handleBlock$(g, h1)
-//│   }
-//│ });
-//│ (class Handler$h1$ extends MaybeStop1 {
-//│   static {
-//│     Handler$h1$1 = this
-//│   }
-//│   constructor() {
-//│     let tmp;
-//│     tmp = super();
-//│     if (runtime.curEffect === null) {
-//│       tmp
-//│     } else {
-//│       tmp = runtime.illegalEffect("in a constructor");
-//│       tmp
-//│     }
-//│   }
-//│   f(x) {
-//│     let Handler$h1$f$here;
-//│     Handler$h1$f$here = Handler$h1$f$(x);
-//│     return runtime.mkEffect(this, Handler$h1$f$here)
-//│   }
-//│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Handler$h1$"]; 
-//│ });
-//│ handleBlock$ = (undefined, function (g, h1) {
-//│   let h2, tmp, handleBlock$$here, pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       h2 = new Handler$h2$1();
-//│       handleBlock$$here = handleBlock$$1(g, h1, h2);
-//│       pc = 1;
-//│       runtime.resumeValue = runtime.enterHandleBlock(h2, handleBlock$$here);
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(handleBlock$, 1, null, null, null, 1, 2, g, h1, 0)
-//│       }
-//│     case 1:
-//│       tmp = runtime.resumeValue;
-//│       return tmp;
-//│   }
-//│ });
-//│ handleEffects = function handleEffects(g) {
-//│   let h1, tmp, handleBlock$$here, pc;
-//│   if (runtime.resumePc === -1) {
-//│     pc = 0;
-//│   } else {
-//│     pc = runtime.resumePc;
-//│     runtime.resumePc = -1;
-//│   }
-//│   switch (pc) {
-//│     case 0:
-//│       h1 = new Handler$h1$1();
-//│       handleBlock$$here = handleBlock$$(g, h1);
-//│       pc = 1;
-//│       runtime.resumeValue = runtime.enterHandleBlock(h1, handleBlock$$here);
-//│       if (runtime.curEffect === null) {
-//│         pc = 1;
-//│       } else {
-//│         return runtime.unwind(handleEffects, 1, null, null, null, 1, 1, g, 0)
-//│       }
-//│     case 1:
-//│       tmp = runtime.resumeValue;
-//│       return tmp;
-//│   }
-//│ };
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 
 fun f(h1, h2) =
@@ -315,8 +50,8 @@ handleEffects(f)
 //│ > h1 start 5
 //│ > h2 start 6
 //│ > h2 end 6
-//│ > h2 end undefined
-//│ > h2 end undefined
+//│ > h2 end 4
+//│ > h2 end 2
 //│ > h1 end 5
 //│ > h1 end 3
 //│ > h1 end 1
@@ -335,7 +70,7 @@ handleEffects(f)
 //│ > h2 start 8
 //│ > h1 start 9
 //│ > h2 stop
-//│ > h2 end undefined
+//│ > h2 end 8
 //│ > h1 end 9
 //│ > h1 end 7
 
@@ -452,22 +187,7 @@ while i < 10 do
   h2.perform()
   set i = i + 1
 d
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:258)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'i$0')
-//│     at while1 (REPL46:1:2541)
-//│     at handleBlock$10 (REPL46:1:4768)
-//│     at FunctionContFrame.resume (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:333:35)
-//│     at Runtime.resumeContTrace (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:1040:40)
-//│     at Runtime.handleEffects_handleEffect_resume (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:617:27)
-//│     at file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:1025:22
-//│     at EffectSig.Handler$h1$perform [as handlerFun] (REPL46:1:3360)
-//│     at Runtime.handleEffects_handleEffect_resume (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:586:46)
-//│     at Runtime.handleEffect (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:1021:20)
-//│     at Runtime.handleEffects_handleEffect_resume (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:543:29)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:297)
-//│ ═══[RUNTIME ERROR] Expected: '11', got: 'undefined'
+//│ = 11
 
 abstract class Eff2 with
   fun f1(): ()
