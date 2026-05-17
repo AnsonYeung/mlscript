@@ -121,9 +121,9 @@ fun f(x) =
 //│         return runtime.Unit;
 //│       case 0:
 //│         if (x === true) {
+//│           pc = 2;
 //│           runtime.resumeValue = 3;
 //│           if (runtime.curEffect === null) {
-//│             pc = 2;
 //│             continue main
 //│           }
 //│           return runtime.unwind(f4, 2, "ScopedBlocksAndHandlers.mls:103:7", null, null, 1, 1, x, 0);

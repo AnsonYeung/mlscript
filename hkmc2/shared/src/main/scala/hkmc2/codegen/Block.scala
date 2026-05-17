@@ -356,6 +356,8 @@ extends Block with NonBlockTail:
 // TODO: remove this form?
 case class Begin(sub: Block, rest: Block) extends Block with ProductWithTail with NonBlockTail
 
+case class TryCatch(sub: Block, catchVar: Local, catchBody: Block, rest: Block) extends Block with ProductWithTail with NonBlockTail
+
 case class TryBlock(sub: Block, finallyDo: Block, rest: Block) extends Block with ProductWithTail with NonBlockTail
 
 case class Assign(lhs: Local, rhs: Result, rest: Block) extends Block with ProductWithTail with NonBlockTail

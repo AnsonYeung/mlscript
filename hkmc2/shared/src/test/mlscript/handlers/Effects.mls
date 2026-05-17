@@ -88,6 +88,7 @@ result
 //│   }
 //│   switch (pc) {
 //│     case 0:
+//│       pc = 1;
 //│       runtime.resumeValue = runtime.safeCall(k(arg));
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
@@ -134,6 +135,7 @@ result
 //│   }
 //│   switch (pc) {
 //│     case 0:
+//│       pc = 4;
 //│       runtime.resumeValue = runtime.safeCall(h7.perform("1"));
 //│       if (runtime.curEffect === null) {
 //│         pc = 4;
@@ -142,6 +144,7 @@ result
 //│       }
 //│     case 4:
 //│       runtime.resumeValue;
+//│       pc = 3;
 //│       runtime.resumeValue = runtime.safeCall(h7.perform("2"));
 //│       if (runtime.curEffect === null) {
 //│         pc = 3;
@@ -150,6 +153,7 @@ result
 //│       }
 //│     case 3:
 //│       runtime.resumeValue;
+//│       pc = 2;
 //│       runtime.resumeValue = runtime.safeCall(h7.perform("3"));
 //│       if (runtime.curEffect === null) {
 //│         pc = 2;
@@ -158,6 +162,7 @@ result
 //│       }
 //│     case 2:
 //│       runtime.resumeValue;
+//│       pc = 1;
 //│       runtime.resumeValue = runtime.safeCall(h7.perform("4"));
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
@@ -185,6 +190,7 @@ h.perform("t")
 //│ = "b"
 
 :expect 3
+:sjs
 handle h = Effect with
   fun perform(arg)(k) =
     print(arg)
@@ -195,6 +201,117 @@ if false || h.perform("hello") then
   3
 else
   0
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ let h9, tmp8, handleBlock$9, Handler$h$perform9, Handler$h$19, Handler$h$perform$6;
+//│ runtime.resetEffects();
+//│ Handler$h$perform$6 = function Handler$h$perform$(arg) {
+//│   return (k) => {
+//│     return Handler$h$perform9(arg, k)
+//│   }
+//│ };
+//│ Handler$h$perform9 = function Handler$h$perform(arg, k) {
+//│   let r, pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     let saveOffset;
+//│     pc = runtime.resumePc;
+//│     saveOffset = runtime.resumeIdx;
+//│     r = runtime.resumeArr.at(saveOffset);
+//│     runtime.resumePc = -1;
+//│   }
+//│   switch (pc) {
+//│     case 0:
+//│       pc = 3;
+//│       runtime.resumeValue = Predef.print(arg);
+//│       if (runtime.curEffect === null) {
+//│         pc = 3;
+//│       } else {
+//│         return runtime.unwind(Handler$h$perform9, 3, "Effects.mls:196:5", null, null, 1, 2, arg, k, 1, r)
+//│       }
+//│     case 3:
+//│       runtime.resumeValue;
+//│       pc = 2;
+//│       runtime.resumeValue = runtime.safeCall(k(true));
+//│       if (runtime.curEffect === null) {
+//│         pc = 2;
+//│       } else {
+//│         return runtime.unwind(Handler$h$perform9, 2, "Effects.mls:197:13", null, null, 1, 2, arg, k, 1, r)
+//│       }
+//│     case 2:
+//│       r = runtime.resumeValue;
+//│       pc = 1;
+//│       runtime.resumeValue = Predef.print(arg);
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(Handler$h$perform9, 1, "Effects.mls:198:5", null, null, 1, 2, arg, k, 1, r)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return r;
+//│   }
+//│ };
+//│ (class Handler$h$18 extends Effect1 {
+//│   static {
+//│     Handler$h$19 = this
+//│   }
+//│   constructor() {
+//│     let tmp9;
+//│     tmp9 = super();
+//│     if (runtime.curEffect === null) {
+//│       tmp9
+//│     } else {
+//│       tmp9 = runtime.illegalEffect("in a constructor");
+//│       tmp9
+//│     }
+//│   }
+//│   perform(arg) {
+//│     let Handler$h$perform$here;
+//│     Handler$h$perform$here = Handler$h$perform$6(arg);
+//│     return runtime.mkEffect(this, Handler$h$perform$here)
+//│   }
+//│   toString() { return runtime.render(this); }
+//│   static [definitionMetadata] = ["class", "Handler$h$"]; 
+//│ });
+//│ h9 = new Handler$h$19();
+//│ handleBlock$9 = (undefined, function () {
+//│   let tmp9, pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
+//│   }
+//│   main: while (true) {
+//│     switch (pc) {
+//│       case 2:
+//│         tmp9 = runtime.resumeValue;
+//│         pc = 1;
+//│       case 1:
+//│         if (tmp9 === true) {
+//│           return 3
+//│         }
+//│         return 0;
+//│       case 0:
+//│         if (false === false) {
+//│           pc = 2;
+//│           runtime.resumeValue = runtime.safeCall(h9.perform("hello"));
+//│           if (runtime.curEffect === null) {
+//│             continue main
+//│           }
+//│           return runtime.unwind(handleBlock$9, 2, "Effects.mls:200:13", null, null, 1, 0, 0);
+//│         }
+//│         tmp9 = true;
+//│         pc = 1;
+//│         continue main;
+//│     }
+//│     break;
+//│   }
+//│ });
+//│ tmp8 = runtime.enterHandleBlock(h9, handleBlock$9);
+//│ if (runtime.curEffect === null) { tmp8 } else { tmp8 = runtime.topLevelEffect(false); tmp8 }
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > hello
 //│ > hello
 //│ = 3
@@ -445,28 +562,28 @@ handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.440: 	    module A with
+//│ ║  l.557: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.436: 	    module A with
+//│ ║  l.553: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.432: 	    module A with
+//│ ║  l.549: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.428: 	    module A with
+//│ ║  l.545: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.428: 	    module A with
+//│ ║  l.545: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.432: 	    module A with
+//│ ║  l.549: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.436: 	    module A with
+//│ ║  l.553: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.440: 	    module A with
+//│ ║  l.557: 	    module A with
 //│ ╙──       	           ^
 //│ = 123
 

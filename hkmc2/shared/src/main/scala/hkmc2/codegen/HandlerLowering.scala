@@ -17,6 +17,7 @@ import semantics.Elaborator.ctx
 import semantics.Elaborator.State
 import hkmc2.Config.EffectHandlers
 
+val exceptionToggle = true
 
 object HandlerLowering:
 
@@ -137,26 +138,23 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
   
   object StateTransition:
     private val transitionSymbol = freshTmp("transition")
-    def apply(uid: StateId) =
-      Return(PureCall(Value.Ref(transitionSymbol), List(Value.Lit(Tree.IntLit(uid)))), false)
+    private val resultSymbol = freshTmp("result")
+    def apply(res: Opt[Result], uid: StateId) =
+      val pre = res match
+        case N => blockBuilder.assign(transitionSymbol, unit)
+        case S(r) => blockBuilder.assign(resultSymbol, r)
+      pre.ret(Value.Lit(Tree.IntLit(uid)))
     def unapply(blk: Block) = blk match
-      case Return(PureCall(Value.Ref(`transitionSymbol`, _), List(Value.Lit(Tree.IntLit(uid)))), false) =>
-        S(uid)
-      case _ => N
-
-  object Unwind:
-    private val unwindSymbol = freshTmp("unwind")
-    def apply(uid: StateId, loc: Value) =
-      Return(PureCall(Value.Ref(unwindSymbol), List(Value.Lit(Tree.IntLit(uid)), loc)), false)
-    def unapply(blk: Block) = blk match
-      case Return(PureCall(Value.Ref(`unwindSymbol`, _), List(Value.Lit(Tree.IntLit(uid)), loc: Value)), false) =>
-        S(uid, loc)
+      case Assign(`transitionSymbol`, _, Return(Value.Lit(Tree.IntLit(uid)), false)) =>
+        S((N, uid))
+      case Assign(`resultSymbol`, res, Return(Value.Lit(Tree.IntLit(uid)), false)) =>
+        S((S(res), uid))
       case _ => N
 
   abstract class LazyId extends Lazy[StateId]:
     def isUsed: Bool = !isEmpty
     def transitionOrBlk(blk: => Block) =
-      if isEmpty then blk else StateTransition(force_!)
+      if isEmpty then blk else StateTransition(N, force_!)
   
   private class IdAllocator:
     var id: Int = 0
@@ -199,7 +197,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       // First check if the current block contain any non trivial call, if so we need a partition
 
       def forceId(blk: Block, resumable: Bool): StateId = blk match
-        case StateTransition(uid) =>
+        case StateTransition(N, uid) =>
           if !result(uid).resumable && resumable then
             result(uid) = BlockPartition(result(uid).blk, true)
           uid
@@ -210,16 +208,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
 
       def doNewEffectPartition(res: Result, rst: Block) =
         val stateId = forceId(go(rst)(using partitioned = true), true)
-        val newBlock = blockBuilder
-          .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-          .ifthen(
-            paths.curEffect,
-            Case.Lit(Tree.UnitLit(true)),
-            End(),
-            S(Unwind(stateId, res.toLoc.fold(unit)(locToStr(_))))
-          )
-          .rest(StateTransition(stateId))
-        boundary.break(newBlock)
+        boundary.break(StateTransition(S(res), stateId))
       class RestLazyId(rst: Block) extends LazyId:
         def compute: StateId = forceId(go(rst)(using partitioned = true), false)
         def transitionSoft: Block = transitionOrBlk(go(rst))
@@ -256,8 +245,8 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
         val newBody = go(body)(using S(restId))
         if startId.isUsed then
           // We break down the label, and force the usage of rest so that all Break will be rewritten later
-          result(startId.force_!) = BlockPartition(Begin(newBody, StateTransition(restId.force_!)), false)
-          StateTransition(startId.force_!)
+          result(startId.force_!) = BlockPartition(Begin(newBody, StateTransition(N, restId.force_!)), false)
+          StateTransition(N, startId.force_!)
         else
           Label(label, loop, newBody, restId.transitionSoft)
 
@@ -270,7 +259,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             return blk
           case S(value) => value
         if partitioned then
-          StateTransition(end.force_!)
+          StateTransition(N, end.force_!)
         else
           // We might still need to do a StateTransition if the label is broken down.
           // This is done afterwards in a replacement pass.
@@ -285,7 +274,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             return blk
           case S(value) => value
         if partitioned then
-          StateTransition(start.force_!)
+          StateTransition(N, start.force_!)
         else
           // Same as above.
           Continue(label)
@@ -299,7 +288,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       
       case End(_) =>
         if partitioned then
-          afterEnd.fold(blk)(id => StateTransition(id.force_!))
+          afterEnd.fold(blk)(id => StateTransition(N, id.force_!))
         else
           blk
 
@@ -335,8 +324,8 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
 
     val replaceStaleLabels = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block): Block = b match
-        case Break(label) if labelIds(label)._2.isUsed => StateTransition(labelIds(label)._2.force_!)
-        case Continue(label) if labelIds(label)._1.isUsed => StateTransition(labelIds(label)._2.force_!)
+        case Break(label) if labelIds(label)._2.isUsed => StateTransition(N, labelIds(label)._2.force_!)
+        case Continue(label) if labelIds(label)._1.isUsed => StateTransition(N, labelIds(label)._2.force_!)
         case _ => super.applyBlock(b)
     val newMap = Map.from(result.map: (id, part) =>
       id -> BlockPartition(replaceStaleLabels.applyBlock(part.blk), part.resumable))
@@ -373,22 +362,21 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       new BlockTraverserShallow():
         applyBlock(blk)
         override def applyBlock(b: Block): Unit = b match
-          case Unwind(uid, loc) => ()
-          case StateTransition(uid) =>
+          case StateTransition(_, uid) =>
             outgoing += uid
           case Match(scrut, arms, dflt, rest) =>
             applyPath(scrut)
             val restId = createState(rest)
             arms.foreach: arm =>
-              val newId = createState(Begin(arm._2, StateTransition(restId)))
+              val newId = createState(Begin(arm._2, StateTransition(N, restId)))
               outgoing += newId
             dflt match
               case N => outgoing += restId
               case S(blk) =>
-                outgoing += createState(Begin(blk, StateTransition(restId)))
+                outgoing += createState(Begin(blk, StateTransition(N, restId)))
           case Label(label, loop, body, rest) =>
             val restId = createState(rest)
-            val bodyId = createState(Begin(body, StateTransition(restId)))
+            val bodyId = createState(Begin(body, StateTransition(N, restId)))
             labelMap(label) = (bodyId, restId)
             outgoing += bodyId
           case Break(label) =>
@@ -459,7 +447,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
     def findEdges(uid: StateId, b: Block) =
       new BlockTraverser:
         override def applyBlock(b: Block): Unit = b match
-          case StateTransition(uid2) => edges.addOne((uid, uid2))
+          case StateTransition(_, uid2) => edges.addOne((uid, uid2))
           case _ => super.applyBlock(b)
         applyBlock(b)
     for (uid, blk) <- parts.states do
@@ -469,17 +457,6 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
           case (a, b) => b
         .toList
         .distinct
-  
-  // Denotes whether a block transitions to another state only on the outer level,
-  // i.e. should return false iff there is a state transition within an if, label, etc.
-  // A precondition is that the state corresponding to the input block has an out-degree
-  // of 1. This means if a state transition cannot be found on the outer level, there
-  // must be a state transition within another construct and should return false.
-  @tailrec
-  private def isSimpleTransition(b: Block): Bool = b match
-    case StateTransition(uid) => true
-    case b: NonBlockTail => isSimpleTransition(b.rest)
-    case _: BlockTail => false
 
   // Given a directed graph, computes the "straight line" segments of the graph, i.e. partitions it
   // into segments such that the out-degree of all elements in each segment is 1, except
@@ -627,38 +604,52 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
 
     val segmentTailTransform = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block) = b match
-        case StateTransition(uid) =>
-          Assign(pcVar, Value.Lit(Tree.IntLit(uid)), Continue(mainLoopLbl))
-        case Unwind(uid, loc) =>
-          ctx.doUnwind(loc, uid, vars)(using paths)
+        case StateTransition(res, uid) =>
+          val pc = blockBuilder.assign(pcVar, Value.Lit(Tree.IntLit(uid)))
+          val pre = res match
+            case N => pc
+            case S(r) =>
+              pc
+                .assignFieldN(paths.runtimePath, paths.resumeValueIdent, r)
+                .ifthen(
+                  paths.curEffect,
+                  Case.Lit(Tree.UnitLit(true)),
+                  End(),
+                  S(ctx.doUnwind(r.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
+                )
+          pre.continue(mainLoopLbl)
         case _ => super.applyBlock(b)
 
     // Note: `line` has the last state as the head, and the first state at the end
     def straightLineToArms(line: List[StateId]): Block => Block =
       def transformState(state: StateId) =
         val blk = parts.states(state)
-        // If the state transition does not appear in tail position on the outer level,
-        // we must wrap the transformed state in a label, and jump to that label when
-        // encountering a state transition
-        val isSimple = isSimpleTransition(blk.blk)
-        lazy val lblSym = LabelSymbol(N, "brk" + state.toString())
+        val lblSym = LabelSymbol(N, "brk" + state.toString())
         val nextState = edges(state).head
         val transform = new BlockTransformerShallow(SymbolSubst.Id):
           override def applyBlock(b: Block) = b match
-            case StateTransition(uid) =>
+            case StateTransition(N, uid) =>
               assert(uid === nextState)
-              if isSimple then
-                Assign(pcVar, Value.Lit(Tree.IntLit(uid)), End())
-              else
-                Break(lblSym)
-            case Unwind(uid, loc) =>
-              ctx.doUnwind(loc, uid, vars)(using paths)
+              // Assign(pcVar, intLit(nextState), Break(lblSym))
+              Break(lblSym)
+            case StateTransition(S(res), uid) =>
+              assert(uid === nextState)
+              blockBuilder
+                .assign(pcVar, Value.Lit(Tree.IntLit(uid)))
+                .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
+                .ifthen(
+                  paths.curEffect,
+                  Case.Lit(Tree.UnitLit(true)),
+                  End(),
+                  S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
+                )
+                .break(lblSym)
             case _ => super.applyBlock(b)
         val transformed = transform.applyBlock(blk.blk)
-        if isSimple then transformed
-        else Label(
+        Label(
           lblSym, false, transformed,
           Assign(pcVar, Value.Lit(Tree.IntLit(nextState)), End())
+          // End()
         )
       line match
         case head :: next =>

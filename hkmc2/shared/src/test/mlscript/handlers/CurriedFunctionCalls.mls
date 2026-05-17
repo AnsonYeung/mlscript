@@ -48,6 +48,7 @@ fun g(a)(b) = f(a)(b) + f(b)(a)
 //│       end
 //│   match pc
 //│     0 =>
+//│       set pc = 2;
 //│       set runtime⁰.resumeValue = f¹(a)(b);
 //│       match runtime⁰.curEffect﹖
 //│         null =>
@@ -59,6 +60,7 @@ fun g(a)(b) = f(a)(b) + f(b)(a)
 //│   match pc
 //│     2 =>
 //│       set tmp = runtime⁰.resumeValue﹖;
+//│       set pc = 1;
 //│       set runtime⁰.resumeValue = f¹(b)(a);
 //│       match runtime⁰.curEffect﹖
 //│         null =>
