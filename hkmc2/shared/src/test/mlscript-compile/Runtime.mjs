@@ -249,6 +249,20 @@ let Runtime1;
     this.resumeArr = null;
     this.resumeIdx = null;
     this.resumePc = -1;
+    (class EffectException {
+      static {
+        new this
+      }
+      constructor() {
+        Runtime.EffectException = this;
+        Object.defineProperty(this, "class", {
+          value: EffectException
+        });
+        globalThis.Object.freeze(this);
+      }
+      toString() { return runtime.render(this); }
+      static [definitionMetadata] = ["object", "EffectException"]; 
+    });
     (class FatalEffect {
       static {
         new this
@@ -289,7 +303,7 @@ let Runtime1;
         this.saved = saved;
       }
       resume(value) {
-        let i, f, argListsLength, currentArgList, scrut, argListLength, tmp, tmp1, lambda, lambda1;
+        let i, f, argListsLength, currentArgList, scrut, argListLength, tmp, tmp1, lambda;
         i = 0;
         f = this.saved.at(0);
         argListsLength = this.saved.at(5);
@@ -335,10 +349,7 @@ let Runtime1;
           tmp5 = runtime.safeCall(this$FunctionContFrame.saved.slice(tmp2, tmp4));
           return runtime.safeCall(f.apply(this$FunctionContFrame.saved.at(4), tmp5))
         });
-        lambda1 = (undefined, function (_) {
-          return runtime.Unit
-        });
-        return runtime.safeCall(Runtime.try_catch(lambda, lambda1))
+        return runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow))
       } 
       get getLocals() {
         let debugInfo, i, cur, res, i1;
@@ -900,12 +911,15 @@ let Runtime1;
     return runtime.safeCall(globalThis.console.log(eff));
   } 
   static unwind(...saved) {
-    let scrut;
+    let scrut, tmp;
     scrut = saved.at(1) === -1;
     if (scrut === true) {
-      return runtime.Unit
+      return Runtime.EffectException
     }
-    throw globalThis.Object.freeze(new globalThis.Error("match error"));
+    tmp = new Runtime.FunctionContFrame.class(null, saved);
+    Runtime.curEffect.contTrace.last.next = tmp;
+    Runtime.curEffect.contTrace.last = Runtime.curEffect.contTrace.last.next;
+    return Runtime.EffectException;
   } 
   static mkEffect(handler, handlerFun) {
     let res, tmp;
@@ -914,7 +928,7 @@ let Runtime1;
     res.contTrace.last = res.contTrace;
     res.contTrace.lastHandler = res.contTrace;
     Runtime.curEffect = res;
-    throw runtime.Unit
+    throw Runtime.EffectException
   } 
   static handleBlockImpl(cur, handler) {
     let handlerFrame;
@@ -924,12 +938,17 @@ let Runtime1;
     cur.contTrace.last = handlerFrame;
     return Runtime.handleEffects(cur)
   } 
+  static effectRethrow(e) {
+    let scrut;
+    scrut = e !== Runtime.EffectException;
+    if (scrut === true) {
+      throw e
+    }
+    return runtime.Unit;
+  } 
   static enterHandleBlock(handler, body) {
-    let tmp, scrut, lambda;
-    lambda = (undefined, function (_) {
-      return runtime.Unit
-    });
-    tmp = runtime.safeCall(Runtime.try_catch(body, lambda));
+    let tmp, scrut;
+    tmp = runtime.safeCall(Runtime.try_catch(body, Runtime.effectRethrow));
     scrut = Runtime.curEffect === null;
     if (scrut === true) {
       return tmp
@@ -944,7 +963,7 @@ let Runtime1;
         scrut = cur === nxt;
         if (scrut === true) {
           Runtime.curEffect = cur;
-          throw runtime.Unit
+          throw Runtime.EffectException
         }
         cur = nxt;
         continue lbl;
@@ -953,7 +972,7 @@ let Runtime1;
     }
   } 
   static handleEffect(cur) {
-    let prevHandlerFrame, scrut, handlerFrame, saved, old, scrut1, scrut2, scrut3, tmp, tmp1, lambda, lambda1, tmp2;
+    let prevHandlerFrame, scrut, handlerFrame, saved, old, scrut1, scrut2, scrut3, tmp, tmp1, lambda, tmp2;
     prevHandlerFrame = cur.contTrace;
     lbl: while (true) {
       let scrut4, scrut5;
@@ -987,10 +1006,7 @@ let Runtime1;
         tmp3 = Runtime.resume(cur.contTrace);
         return runtime.safeCall(cur.handlerFun(tmp3))
       });
-      lambda1 = (undefined, function (_) {
-        return runtime.Unit
-      });
-      tmp2 = runtime.safeCall(Runtime.try_catch(lambda, lambda1));
+      tmp2 = runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow));
       tmp = tmp2;
     } finally {
       Runtime.stackDepth = old;

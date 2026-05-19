@@ -141,6 +141,7 @@ mut val resumeArr = null
 mut val resumeIdx = null
 mut val resumePc = -1
 
+object EffectException
 object FatalEffect
 object PrintStackEffect
 
@@ -166,7 +167,7 @@ data class FunctionContFrame(next, saved) with
     let argListLength = saved.[currentArgList]
     set
       resumeIdx = currentArgList + argListLength + 2
-    try_catch(() => f.apply(saved.[4], saved.slice(currentArgList + 1, currentArgList + 1 + argListLength)), _ => ())
+    try_catch(() => f.apply(saved.[4], saved.slice(currentArgList + 1, currentArgList + 1 + argListLength)), effectRethrow)
   fun getLocals =
     let debugInfo = saved.[3]
     let i = 0
@@ -328,10 +329,11 @@ fun debugEff(eff) =
 
 // runtime implementations
 fun unwind(...saved) =
-  if saved.[1] === -1 then return
+  if saved.[1] === -1 do return EffectException
   set
     curEffect.contTrace.last.next = new mut FunctionContFrame(null, saved)
     curEffect.contTrace.last = curEffect.contTrace.last.next
+  EffectException
 
 fun mkEffect(handler, handlerFun) =
   let res = new mut EffectSig(new mut ContTrace(null, null, null, null, false), handler, handlerFun)
@@ -339,7 +341,7 @@ fun mkEffect(handler, handlerFun) =
     res.contTrace.last = res.contTrace
     res.contTrace.lastHandler = res.contTrace
     curEffect = res
-  throw ()
+  throw EffectException
 
 fun handleBlockImpl(cur, handler) =
   let handlerFrame = new mut HandlerContFrame(null, null, handler)
@@ -349,8 +351,11 @@ fun handleBlockImpl(cur, handler) =
     cur.contTrace.last = handlerFrame
   handleEffects(cur)
 
+fun effectRethrow(e) =
+  if e !== EffectException do throw e
+
 fun enterHandleBlock(handler, body) =
-  let tmp = try_catch(body, _ => ())
+  let tmp = try_catch(body, effectRethrow)
   if curEffect === null then
     tmp
   else
@@ -362,7 +367,7 @@ fun handleEffects(cur) =
       let nxt = handleEffect(cur)
       if cur === nxt then
         set curEffect = cur
-        throw ()
+        throw EffectException
         // return null
       else
         set cur = nxt
@@ -401,7 +406,7 @@ fun handleEffect(cur) =
   // handle the effect
   set curEffect = null
   let tmp = set stackDepth += 2 in
-    try_catch(() => cur.handlerFun(resume(cur.contTrace)), _ => ())
+    try_catch(() => cur.handlerFun(resume(cur.contTrace)), effectRethrow)
   if curEffect !== null then
     set cur = curEffect
     // relink the saved frames

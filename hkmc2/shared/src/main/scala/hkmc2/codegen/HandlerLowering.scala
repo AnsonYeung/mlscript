@@ -718,7 +718,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
     val withTryCatch = if !exceptionToggle then mainLoop else
       val err = freshTmp("err")
       TryCatch(mainLoop, err,
-        Throw(ctx.unwindCall(unit, pcVar.asPath, vars)(using paths)), End())
+        Assign.discard(Call(paths.runtimePath.selSN("effectRethrow"), (err.asPath.asArg :: Nil) ne_:: Nil)(true, false, false), Throw(ctx.unwindCall(unit, pcVar.asPath, vars)(using paths))), End())
 
     Scoped(
       scopedVars ++ Set(pcVar),
