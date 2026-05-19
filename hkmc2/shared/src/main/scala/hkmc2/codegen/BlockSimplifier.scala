@@ -192,6 +192,8 @@ class BlockSimplifier
           x.rest.analyze
         case TryBlock(sub, finallyDo, rest) =>
           sub.analyze || rest.analyze
+        case TryCatch(sub, _, catchBody, rst) =>
+          rst.analyze
         case Label(lbl, loop, bod, rst) =>
           bod.analyze
             && !BrokenLabels.analyze(bod).contains(lbl) // if `bod` breaks to `lbl`, then we must consider `rst`
