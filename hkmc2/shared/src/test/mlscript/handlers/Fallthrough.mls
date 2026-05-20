@@ -32,7 +32,6 @@ fun f() =
 //│     switch (pc) {
 //│       case 7:
 //│         tmp = runtime.resumeValue;
-//│         pc = 6;
 //│         runtime.resumeValue = g();
 //│         if (runtime.curEffect === null) {
 //│           pc = 6;
@@ -43,7 +42,6 @@ fun f() =
 //│         runtime.resumeValue;
 //│         pc = 5;
 //│       case 5:
-//│         pc = 4;
 //│         runtime.resumeValue = g();
 //│         if (runtime.curEffect === null) {
 //│           pc = 4;
@@ -52,7 +50,6 @@ fun f() =
 //│         }
 //│       case 4:
 //│         runtime.resumeValue;
-//│         pc = 3;
 //│         runtime.resumeValue = g();
 //│         if (runtime.curEffect === null) {
 //│           pc = 3;
@@ -61,7 +58,6 @@ fun f() =
 //│         }
 //│       case 3:
 //│         runtime.resumeValue;
-//│         pc = 2;
 //│         runtime.resumeValue = g();
 //│         if (runtime.curEffect === null) {
 //│           pc = 2;
@@ -70,7 +66,6 @@ fun f() =
 //│         }
 //│       case 2:
 //│         runtime.resumeValue;
-//│         pc = 1;
 //│         runtime.resumeValue = g();
 //│         if (runtime.curEffect === null) {
 //│           pc = 1;
@@ -82,9 +77,9 @@ fun f() =
 //│         return tmp1;
 //│       case 0:
 //│         if (0 === 0) {
-//│           pc = 7;
 //│           runtime.resumeValue = g();
 //│           if (runtime.curEffect === null) {
+//│             pc = 7;
 //│             continue main
 //│           }
 //│           return runtime.unwind(f, 7, "Fallthrough.mls:11:13", null, null, 1, 0, 1, tmp);

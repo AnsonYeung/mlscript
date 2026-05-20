@@ -174,7 +174,6 @@ str
 //│     case 0:
 //│       tmp10 = str + "A";
 //│       str = tmp10;
-//│       pc = 1;
 //│       runtime.resumeValue = runtime.safeCall(k(arg));
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
@@ -206,7 +205,6 @@ str
 //│       tmp10 = str + "B";
 //│       tmp11 = str + tmp10;
 //│       str = tmp11;
-//│       pc = 1;
 //│       runtime.resumeValue = runtime.safeCall(k(arg));
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
@@ -258,7 +256,6 @@ str
 //│   }
 //│   switch (pc) {
 //│     case 0:
-//│       pc = 1;
 //│       runtime.resumeValue = runtime.safeCall(h22.perform(runtime.Unit));
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
@@ -304,7 +301,6 @@ str
 //│     case 0:
 //│       h22 = new Handler$h2$3();
 //│       handleBlock$$here = handleBlock$$2(h22);
-//│       pc = 1;
 //│       runtime.resumeValue = runtime.enterHandleBlock(h22, handleBlock$$here);
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;

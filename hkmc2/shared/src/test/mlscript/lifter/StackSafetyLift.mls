@@ -100,7 +100,6 @@ sum(10000)
 //│                 else
 //│                   let res;
 //│                   set tmp1 = -⁰(n, 1);
-//│                   set pc = 1;
 //│                   set res = sum¹(tmp1);
 //│                   set runtime⁰.stackDepth = curDepth;
 //│                   set runtime⁰.resumeValue = res;

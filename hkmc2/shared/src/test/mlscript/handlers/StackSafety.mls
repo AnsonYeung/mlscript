@@ -73,7 +73,6 @@ sum(10000)
 //│         {
 //│           let res;
 //│           tmp2 = n - 1;
-//│           pc = 1;
 //│           res = sum(tmp2);
 //│           runtime.stackDepth = curDepth;
 //│           runtime.resumeValue = res;
