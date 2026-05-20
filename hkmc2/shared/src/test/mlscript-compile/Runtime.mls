@@ -221,7 +221,7 @@ fun topLevelEffect(debug) =
     console.log(showStackTrace("Stack Trace:", tr, debug, tr.handlerFun))
     set
       curEffect = null
-      v = resume(tr.contTrace)(())
+      v = try_catch(() => resume(tr.contTrace)(()), effectRethrow)
       tr = curEffect
   if tr is EffectSig then
     set curEffect = null

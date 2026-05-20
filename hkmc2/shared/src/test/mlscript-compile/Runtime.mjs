@@ -674,14 +674,17 @@ let Runtime1;
     tr = Runtime.curEffect;
     v = null;
     lbl: while (true) {
-      let scrut, tmp2, tmp3;
+      let scrut, tmp2, lambda, tmp3;
       if (tr instanceof Runtime.EffectSig.class) {
         scrut = tr.handler === Runtime.PrintStackEffect;
         if (scrut === true) {
           tmp2 = Runtime.showStackTrace("Stack Trace:", tr, debug, tr.handlerFun);
           runtime.safeCall(globalThis.console.log(tmp2));
           Runtime.curEffect = null;
-          tmp3 = Runtime.resume(tr.contTrace)(runtime.Unit);
+          lambda = (undefined, function () {
+            return Runtime.resume(tr.contTrace)(runtime.Unit)
+          });
+          tmp3 = runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow));
           v = tmp3;
           tr = Runtime.curEffect;
           continue lbl
