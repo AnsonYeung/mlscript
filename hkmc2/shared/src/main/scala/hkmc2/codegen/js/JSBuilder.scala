@@ -656,15 +656,15 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
     case TryBlock(sub, fin, rst) =>
       doc" # try ${ braced(returningTerm(sub, endSemi = false)) } finally ${
         braced(returningTerm(fin, endSemi = false))
-      } # ${
-        returningTerm(rst, endSemi).stripBreaks}"
+      }${
+        returningTerm(rst, endSemi)}"
       
     case TryCatch(sub, catchVar, catchBody, rst) =>
       blockPreamble(Set.single(catchVar))
       doc" # try ${ braced(returningTerm(sub, endSemi = false)) } catch (${getVar(catchVar, catchVar.toLoc)}) ${
         braced(returningTerm(catchBody, endSemi = false))
-      } # ${
-        returningTerm(rst, endSemi).stripBreaks}"
+      }${
+        returningTerm(rst, endSemi)}"
 
     // Only nested scopes in unusual positions are handled here.
     case Scoped(syms, body) =>

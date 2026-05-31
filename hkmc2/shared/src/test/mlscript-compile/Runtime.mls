@@ -66,7 +66,7 @@ class EffectHandle(_reified) with
     set curEffect = reified
 
 fun try(f) =
-  let res = f()
+  let res = try_catch(f, effectRethrow)
   if curEffect !== null then
     let tmp = curEffect
     set curEffect = null
@@ -332,7 +332,7 @@ fun debugEff(eff) =
 
 // runtime implementations
 fun unwind(...saved) =
-  if saved.[1] === -1 do return EffectException
+  if saved.[1] === -2 do return EffectException
   set
     curEffect.contTrace.last.next = new mut FunctionContFrame(null, saved)
     curEffect.contTrace.last = curEffect.contTrace.last.next
@@ -479,7 +479,7 @@ fun runStackSafe(limit, f) =
   set stackLimit = limit in...
   set stackDepth = 1 in...
   set stackHandler = StackDelayHandler in...
-  let result = enterHandleBlock(StackDelayHandler, f)
+  let result = try_catch(() => enterHandleBlock(StackDelayHandler, f), effectRethrow)
   if curEffect !== null do
     throw new Error("Effect crossed through stack safe boundary")
   while stackResume !== null do
@@ -487,7 +487,7 @@ fun runStackSafe(limit, f) =
     set
       stackResume = null
       stackDepth = 1
-      result = saved(())
+      result = try_catch(() => saved(()), effectRethrow)
     if curEffect !== null do
       throw new Error("Effect crossed through stack safe boundary")
   result

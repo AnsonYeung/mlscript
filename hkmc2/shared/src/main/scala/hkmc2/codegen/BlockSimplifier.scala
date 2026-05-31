@@ -554,6 +554,17 @@ class BlockSimplifier
         val rest2 = applySubBlock(rest)
         if (sub2 is sub) && (finallyDo2 is finallyDo) && (rest2 is rest) then b
         else TryBlock(sub2, finallyDo2, rest2)
+      
+      case TryCatch(sub, catchVar, catchBody, rest) =>
+        val sub2 = applyBlock(sub)
+        val catchBody2 =
+          // * This block might be executed from an unknown point in the previous block,
+          // * so we have to be conservative and not propagate any information.
+          assignedResults = emptyAssignedResults
+          applyBlock(catchBody)
+        val rest2 = applySubBlock(rest)
+        if (sub2 is sub) && (catchBody2 is catchBody) && (rest2 is rest) then b
+        else TryCatch(sub2, catchVar, catchBody2, rest2)
         
       case _: Return | _: Throw | _: Unreachable =>
         makeImpossibleAfter:

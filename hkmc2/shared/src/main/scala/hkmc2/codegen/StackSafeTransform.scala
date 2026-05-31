@@ -9,7 +9,7 @@ import hkmc2.semantics.*
 import hkmc2.syntax.Tree
 import hkmc2.codegen.HandlerLowering.FnOrCls
 
-class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: StackSafetyMap)(using State, Config):
+class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: StackSafetyMap)(using State, Config, TL):
   private val STACK_DEPTH_IDENT: Tree.Ident = Tree.Ident("stackDepth")
 
   private val runtimePath: Path = State.runtimeSymbol.asPath
@@ -135,20 +135,49 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
       lazy val curDepth =
         usedDepth = true
         TempSymbol(None, "curDepth")
-      val newBody = transform(blk, curDepth)
       val resSym = TempSymbol(None, "stackDelayRes")
-      val addStackSafeEffect = blk => blockBuilder
-        .assignFieldN(runtimePath, STACK_DEPTH_IDENT, op("+", stackDepthPath, intLit(increment)))
-        .staticif(usedDepth, _.assignScoped(curDepth, stackDepthPath))
-        .assignScoped(resSym, Call(checkDepthPath, Nil ne_:: Nil)(true, true, false))
-        .ifthen(
-          paths.curEffect,
-          Case.Lit(Tree.UnitLit(true)),
-          End(),
-          S(doUnwindBlk)
-        )
-        .rest(blk)
-      addStackSafeEffect(newBody)
+      if !HandlerLowering.ExceptionToggle then
+        val newBody = transform(blk, curDepth)
+        blockBuilder
+          .assignFieldN(runtimePath, STACK_DEPTH_IDENT, op("+", stackDepthPath, intLit(increment)))
+          .staticif(usedDepth, _.assignScoped(curDepth, stackDepthPath))
+          .assignScoped(resSym, Call(checkDepthPath, Nil ne_:: Nil)(true, true, false))
+          .ifthen(
+            paths.curEffect,
+            Case.Lit(Tree.UnitLit(true)),
+            End(),
+            S(doUnwindBlk)
+          )
+          .rest(newBody)
+      else
+        val inner = blk match
+          case s @ Scoped(body = m @ Match(rest = tc @ TryCatch(sub = tryBlk))) =>
+            s.copy(body = m.copy(rest = tc.copy(sub =
+              blockBuilder
+                .assign(State.noSymbol, Call(checkDepthPath, Nil ne_:: Nil)(true, true, false))
+                .rest(transform(tryBlk, curDepth))
+            )))
+          case s @ Scoped(body = tc @ TryCatch(sub = tryBlk)) =>
+            s.copy(body = tc.copy(sub =
+              blockBuilder
+                .assign(State.noSymbol, Call(checkDepthPath, Nil ne_:: Nil)(true, true, false))
+                .rest(transform(tryBlk, curDepth))
+            ))
+          case _ =>
+            // The bare form, we need to add try catch ourselves
+            val tmp = TempSymbol(N, "err")
+            TryCatch(
+              blockBuilder
+                .assign(State.noSymbol, Call(checkDepthPath, Nil ne_:: Nil)(true, true, false))
+                .rest(transform(blk, curDepth)),
+              tmp,
+              Assign(State.noSymbol, Call(paths.runtimePath.selSN("effectRethrow"), (tmp.asPath.asArg :: Nil) ne_:: Nil)(true, false, false), doUnwindBlk),
+              End(),
+            )
+        blockBuilder
+          .assignFieldN(runtimePath, STACK_DEPTH_IDENT, op("+", stackDepthPath, intLit(increment)))
+          .staticif(usedDepth, _.assignScoped(curDepth, stackDepthPath))
+          .rest(inner)
     case _ => blk
 
 

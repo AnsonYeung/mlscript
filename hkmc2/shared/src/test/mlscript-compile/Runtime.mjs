@@ -643,7 +643,7 @@ let Runtime1;
   } 
   static try(f) {
     let res, scrut, tmp;
-    res = runtime.safeCall(f());
+    res = runtime.safeCall(Runtime.try_catch(f, Runtime.effectRethrow));
     scrut = Runtime.curEffect !== null;
     if (scrut === true) {
       tmp = Runtime.curEffect;
@@ -929,7 +929,7 @@ let Runtime1;
   } 
   static unwind(...saved) {
     let scrut, tmp;
-    scrut = saved.at(1) === -1;
+    scrut = saved.at(1) === -2;
     if (scrut === true) {
       return Runtime.EffectException
     }
@@ -1119,7 +1119,7 @@ let Runtime1;
     return runtime.Unit;
   } 
   static runStackSafe(limit, f) {
-    let old, old1, old2, result, scrut, tmp, tmp1, tmp2;
+    let old, old1, old2, result, scrut, tmp, tmp1, tmp2, lambda;
     old = Runtime.stackLimit;
     try {
       Runtime.stackLimit = limit;
@@ -1129,19 +1129,25 @@ let Runtime1;
         old2 = Runtime.stackHandler;
         try {
           Runtime.stackHandler = Runtime.StackDelayHandler;
-          result = Runtime.enterHandleBlock(Runtime.StackDelayHandler, f);
+          lambda = (undefined, function () {
+            return Runtime.enterHandleBlock(Runtime.StackDelayHandler, f)
+          });
+          result = runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow));
           scrut = Runtime.curEffect !== null;
           if (scrut === true) {
             throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
           }
           lbl: while (true) {
-            let scrut1, saved, scrut2, tmp3;
+            let scrut1, saved, scrut2, lambda1, tmp3;
             scrut1 = Runtime.stackResume !== null;
             if (scrut1 === true) {
               saved = Runtime.stackResume;
               Runtime.stackResume = null;
               Runtime.stackDepth = 1;
-              tmp3 = runtime.safeCall(saved(runtime.Unit));
+              lambda1 = (undefined, function () {
+                return runtime.safeCall(saved(runtime.Unit))
+              });
+              tmp3 = runtime.safeCall(Runtime.try_catch(lambda1, Runtime.effectRethrow));
               result = tmp3;
               scrut2 = Runtime.curEffect !== null;
               if (scrut2 === true) {

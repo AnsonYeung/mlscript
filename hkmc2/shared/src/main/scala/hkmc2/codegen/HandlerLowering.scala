@@ -17,9 +17,9 @@ import semantics.Elaborator.ctx
 import semantics.Elaborator.State
 import hkmc2.Config.EffectHandlers
 
-val exceptionToggle = true
-
 object HandlerLowering:
+
+  val ExceptionToggle = true
 
   private val pcIdent: Tree.Ident = Tree.Ident("pc")
   private val nextIdent: Tree.Ident = Tree.Ident("next")
@@ -218,7 +218,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       val nonTrivialBlockChecker = new BlockDataTransformer(SymbolSubst.Id):
         override def applyBlock(b: Block) = b match
           // Special handling for tail calls
-          case Return(c @ Call(fun, args), false) =>
+          case Return(c @ Call(fun, args), false) if c.mayRaiseEffects =>
             containsCall = true
             b // Prevents the recursion into applyResult
           case _ => super.applyBlock(b)
@@ -590,17 +590,20 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       return translateIllegalEffectCtx(b, Call(paths.illegalEffectPath, (Value.Lit(Tree.StrLit("in a getter")).asArg :: Nil) ne_:: Nil)(true, false, false))
     given FunctionCtx = ctx
     val parts = partitionBlock(b)
-    stackSafetyMap += ctx.resumeInfo.currentStackSafetySym ->
-      (
-        1,
-        ctx.doUnwind(ctx.resumeInfo.currentStackSafetySym.fold(_.toLoc, _.toLoc).fold(unit)(locToStr(_)), -1, Nil)(using paths)
-      )
-    if parts.states.size <= 1 && !parts.containsError then
+    if parts.states.size <= 1 && !parts.containsError && (!opt.stackSafety.isDefined || !parts.containsCall) then
       return b
     val vars = if opt.debug then ctx.resumeInfo.currentLocals else computeRestoreList(parts)
 
     val pcVar = freshTmp("pc")
     val mainLoopLbl = freshLabel("main")
+
+    stackSafetyMap += ctx.resumeInfo.currentStackSafetySym ->
+      (
+        1,
+        locally:
+          val r: Result => Block = if ExceptionToggle then Throw.apply else Ret
+          r(ctx.unwindCall(ctx.resumeInfo.currentStackSafetySym.fold(_.toLoc, _.toLoc).fold(unit)(locToStr(_)), if ExceptionToggle then Value.Ref(pcVar) else intLit(-1), Nil)(using paths))
+      )
 
     val edges = computeEdges(parts)
     val straightLines = computeStraightLines(parts.entry, edges)
@@ -614,7 +617,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             case S(r) =>
               pc
                 .assignFieldN(paths.runtimePath, paths.resumeValueIdent, r)
-                .staticif(!exceptionToggle, _
+                .staticif(!ExceptionToggle, _
                   .ifthen(
                     paths.curEffect,
                     Case.Lit(Tree.UnitLit(true)),
@@ -624,7 +627,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
           pre.continue(mainLoopLbl)
         case Return(c @ Call(fun, args), false) if c.mayRaiseEffects =>
           blockBuilder
-            .assign(pcVar, Value.Lit(Tree.IntLit(-1)))
+            .assign(pcVar, Value.Lit(Tree.IntLit(-2)))
             .rest(b)
         case _ => super.applyBlock(b)
 
@@ -645,7 +648,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
               blockBuilder
                 .assign(pcVar, Value.Lit(Tree.IntLit(uid)))
                 .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-                .staticif(!exceptionToggle, _
+                .staticif(!ExceptionToggle, _
                   .ifthen(
                     paths.curEffect,
                     Case.Lit(Tree.UnitLit(true)),
@@ -655,7 +658,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
                 .break(lblSym)
             case Return(c @ Call(fun, args), false) if c.mayRaiseEffects =>
               blockBuilder
-                .assign(pcVar, Value.Lit(Tree.IntLit(-1)))
+                .assign(pcVar, Value.Lit(Tree.IntLit(-2)))
                 .rest(b)
             case _ => super.applyBlock(b)
         val transformed = transform.applyBlock(blk.blk)
@@ -715,20 +718,31 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
         .assign(getSavedTmp, if idx == 0 then paths.resumeIdx else Call(plus, (getSavedTmp.asPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(false, false, false))
         .assign(local, resumeArrIndexed)
 
-    val withTryCatch = if !exceptionToggle then mainLoop else
+    val withTryCatch = if !ExceptionToggle then mainLoop else
       val err = freshTmp("err")
       TryCatch(mainLoop, err,
         Assign.discard(Call(paths.runtimePath.selSN("effectRethrow"), (err.asPath.asArg :: Nil) ne_:: Nil)(true, false, false), Throw(ctx.unwindCall(unit, pcVar.asPath, vars)(using paths))), End())
 
+    val withMatch =
+      if opt.stackSafety.isDefined && parts.states.size <= 1 then
+         new Match(
+          paths.resumePc,
+          Nil,
+          S(Assign(pcVar, intLit(parts.entry), End())),
+          withTryCatch)
+      else if parts.states.size <= 1 then
+        withTryCatch
+      else
+        Match(
+          paths.resumePc,
+          Case.Lit(Tree.IntLit(-1)) ->
+            Assign(pcVar, intLit(parts.entry), End()) :: Nil,
+          S(restoreVars
+              .assignFieldN(paths.runtimePath, new Tree.Ident("resumePc"), Value.Lit(Tree.IntLit(-1))).end),
+          withTryCatch)
     Scoped(
       scopedVars ++ Set(pcVar),
-      Match(
-        paths.resumePc,
-        Case.Lit(Tree.IntLit(-1)) ->
-          Assign(pcVar, intLit(parts.entry), End()) :: Nil,
-        S(restoreVars
-            .assignFieldN(paths.runtimePath, new Tree.Ident("resumePc"), Value.Lit(Tree.IntLit(-1))).end),
-        withTryCatch))
+      withMatch)
   
   private def translateCtorLike(b: Block, thisPath: Path, isModCtor: Bool)(using h: HandlerCtx): Block =
     translateBlock(b, if isModCtor then HandlerCtx.ModCtor(h.innerDefIsTrulyNested) else HandlerCtx.Ctor, Set.empty)
