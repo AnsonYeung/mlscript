@@ -22,11 +22,11 @@ class SymbolRefresher(existingMapping: Map[Symbol, Symbol])(using State) extends
     toRemoveSymbols = MutSet.empty[Symbol] :: toRemoveSymbols
     val res = b match
     case Scoped(syms, body) =>
-      val newSyms = MutSet.empty[Symbol]
+      val newSyms = MutSet.empty[ScopedSymbol]
       val oldSyms = MutSet.empty[Symbol]
       for s <- syms.toList.sortBy(_.uid) do
         assert(!mapping.isDefinedAt(s), s"already defined: $s")
-        val newS = s match
+        val new_s: ScopedSymbol = s match
           case tmpSym: TempSymbol => new TempSymbol(N, tmpSym.nme)
           case bms: BlockMemberSymbol =>
             val newBms = new BlockMemberSymbol(bms.nme, Nil, bms.nameIsMeaningful)
@@ -41,10 +41,9 @@ class SymbolRefresher(existingMapping: Map[Symbol, Symbol])(using State) extends
               nt
             newBms
           case varSym: VarSymbol => new VarSymbol(varSym.id)
-          case _ => lastWords(s"unexpected symbol kind: $s")
-        mapping(s) = newS
+        mapping(s) = new_s
         oldSyms.add(s)
-        newSyms.add(newS)
+        newSyms.add(new_s)
       val r = Scoped(newSyms, applyBlock(body))
       for s <- oldSyms do mapping.remove(s)
       r
@@ -57,7 +56,13 @@ class SymbolRefresher(existingMapping: Map[Symbol, Symbol])(using State) extends
     b match
     case Assign(lhs, rhs, rest) =>
       applyResult(rhs): newRhs =>
-        val newLhs = mapping.getOrElse(lhs, lhs)
+        val newLhs: Assignable = lhs match
+          case lhs: NoSymbol => lhs
+          case lhs: LocalVarSymbol =>
+            mapping.get(lhs) match
+            case Some(sym: LocalVarSymbol) => sym
+            case Some(sym) => lastWords(s"assignment local ${lhs.nme} mapped to non-variable ${sym.nme}")
+            case None => lhs
         val newRest = applyBlock(rest)
         if (newLhs is lhs) && (newRhs is rhs) && (newRest is rest) then b else Assign(newLhs, newRhs, newRest)
     case Label(label, loop, body, rest) =>
@@ -87,6 +92,10 @@ class SymbolRefresher(existingMapping: Map[Symbol, Symbol])(using State) extends
             assert(tsym.owner.isEmpty)
             new TermSymbol(tsym.k, N, tsym.id)
           newBms.tsym = S(newDsym.get)
+          // Keep the definition symbol in sync with the freshly-created member symbol.
+          // Self-recursive references use the disambiguating TermSymbol, and later passes
+          // such as inlining rely on that symbol to identify the function being called.
+          mapping(fun.dSym) = newDsym.get
           mapping(fun.sym) = newBms
           (newBms, newDsym.get)
         case _ => die
@@ -113,7 +122,11 @@ class SymbolRefresher(existingMapping: Map[Symbol, Symbol])(using State) extends
       val (tsym2, sym2) = mapping.get(sym) match
         case None =>
           val newBms = new BlockMemberSymbol(sym.nme, sym.trees, sym.nameIsMeaningful)
-          val newTsym = new TermSymbol(tsym.k, tsym.owner, tsym.id)
+          val newOwner = tsym.owner.map: o =>
+            existingMapping.get(o) match
+              case Some(inner: InnerSymbol) => inner
+              case _ => o
+          val newTsym = new TermSymbol(tsym.k, newOwner, tsym.id)
           newBms.tsym = S(newTsym)
           (newTsym, newBms)
         case S(bms: BlockMemberSymbol) =>
@@ -202,21 +215,24 @@ class SymbolRefresher(existingMapping: Map[Symbol, Symbol])(using State) extends
     case _ => super.applyPath(p)(k)
 
   override def applyValue(v: Value)(k: Value => Block): Block = v match
-    case Value.Ref(l, x) =>
+    case Value.SimpleRef(l) =>
       mapping.get(l) match
-        case None => super.applyValue(v)(k)
+        case Some(newSym: SimpleSymbol) =>
+          k(newSym.asSimpleRef)
+        case _ => super.applyValue(v)(k)
+    case Value.MemberRef(bms, disamb) =>
+      mapping.get(bms) match
         case Some(newBms: BlockMemberSymbol) =>
-          val newDisamb = x match
-            case Some(oldDisamb) =>
-              mapping.get(oldDisamb) match
-                case Some(nd: DefinitionSymbol[?]) => Some(nd)
-                case _ => newBms.tsym.orElse(x)
-            case None => newBms.tsym
-          k(Value.Ref(newBms, newDisamb))
-        case Some(newSym) => k(Value.Ref(newSym, N))
+          val newDisamb = mapping.get(disamb) match
+            case Some(nd: DefinitionSymbol[?]) => nd
+            case Some(nd) => lastWords(s"unexpected symbol kind for disamb: ${nd}")
+            case N => lastWords(s"unexpected lack of refreshed disamb symbol for $disamb")
+          k(newBms.asMemberRef(newDisamb))
+        case Some(newSym: (LocalVarSymbol | TempSymbol)) => k(newSym.asSimpleRef)
+        case _ => super.applyValue(v)(k)
     case Value.This(sym) =>
       mapping.get(sym) match
-        case Some(inner: InnerSymbol) => k(Value.This(inner).withLocOf(v))
+        case Some(inner: InnerSymbol) => k(inner.asThis.withLocOf(v))
         case _ => super.applyValue(v)(k)
     case _ => super.applyValue(v)(k)
   

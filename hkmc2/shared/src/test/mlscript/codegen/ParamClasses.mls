@@ -4,6 +4,7 @@
 :sjs
 
 
+:sir
 data class Foo()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Foo1;
@@ -15,25 +16,31 @@ data class Foo()
 //│     Foo1.class = this
 //│   }
 //│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Foo", []]; 
+//│   static [definitionMetadata] = ["class", "Foo", []];
 //│ });
+//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
+//│ let Foo⁰; @data define Foo⁰ as class Foo² { constructor Foo¹ }; end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
+// * Notice that `Foo¹` correctly refers to the ClassCtorSymbol of `Foo` shown above
+:sir
 Foo
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo1
+//│ return Foo1
+//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
+//│ return Foo¹
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun Foo { class: class Foo }
 
 Foo()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo1()
+//│ return Foo1()
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = Foo()
 
 Foo.class
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo1.class
+//│ return Foo1.class
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = class Foo
 
@@ -52,32 +59,32 @@ data class Foo(a)
 //│     this.a = a;
 //│   }
 //│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Foo", ["a"]]; 
+//│   static [definitionMetadata] = ["class", "Foo", ["a"]];
 //│ });
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 Foo
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo3
+//│ return Foo3
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = fun Foo { class: class Foo }
 
 Foo(1)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo3(1)
+//│ return Foo3(1)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = Foo(1)
 
 Foo(1).a
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp; tmp = Foo3(1); tmp.a
+//│ let tmp; tmp = Foo3(1); return tmp.a
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 1
 
 fun foo(y) = Foo(y)
 foo(27)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let foo, inlinedVal; foo = function foo(y) { return Foo3(y) }; inlinedVal = Foo3(27); inlinedVal
+//│ let foo; foo = function foo(y) { return Foo3(y) }; return Foo3(27)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = Foo(27)
 
@@ -97,7 +104,7 @@ data class Foo(a, b)
 //│     this.b = b;
 //│   }
 //│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Foo", ["a", "b"]]; 
+//│   static [definitionMetadata] = ["class", "Foo", ["a", "b"]];
 //│ });
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -121,13 +128,13 @@ let f = new! foo(1, 2)
 
 f.a
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ f1.a
+//│ return f1.a
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 1
 
 f.b
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ f1.b
+//│ return f1.b
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 2
 
@@ -139,19 +146,19 @@ let f = Foo(1, 2)
 
 f.a
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ f2.a
+//│ return f2.a
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 1
 
 f.b
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ f2.b
+//│ return f2.b
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 2
 
 Foo(print(1), print(2))
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp1, tmp2; tmp1 = Predef.print(1); tmp2 = Predef.print(2); Foo5(tmp1, tmp2)
+//│ let tmp1, tmp2; tmp1 = Predef.print(1); tmp2 = Predef.print(2); return Foo5(tmp1, tmp2)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > 1
 //│ > 2
@@ -178,7 +185,7 @@ data class Inner(c) with
 //│     return this.c + d
 //│   }
 //│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Inner", ["c"]]; 
+//│   static [definitionMetadata] = ["class", "Inner", ["c"]];
 //│ });
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -191,7 +198,7 @@ let i = new Inner(100)
 
 i.i1(20)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ runtime.safeCall(i.i1(20))
+//│ return runtime.safeCall(i.i1(20))
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 120
 
@@ -218,33 +225,31 @@ class Foo(x, val y, z, val z, z) with
 //│     let tmp3, tmp4, tmp5, tmp6, tmp7;
 //│     this.y = y;
 //│     this.z = z1;
-//│     this.#z1 = z2;
-//│     this.#x1 = 1;
+//│     this.#z = z2;
+//│     this.#x = 1;
 //│     this.#y = this.y + 1;
-//│     tmp3 = "x = " + this.#x1;
+//│     tmp3 = "x = " + this.#x;
 //│     Predef.print(tmp3);
 //│     tmp4 = "y = " + this.#y;
 //│     Predef.print(tmp4);
 //│     tmp5 = "this.y = " + this.y;
 //│     Predef.print(tmp5);
-//│     tmp6 = "z = " + this.#z1;
+//│     tmp6 = "z = " + this.#z;
 //│     Predef.print(tmp6);
 //│     tmp7 = "this.z = " + this.z;
 //│     Predef.print(tmp7);
 //│   }
-//│   #x;
 //│   #z;
-//│   #z1;
-//│   #x1;
+//│   #x;
 //│   #y;
 //│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Foo", [null, "y", null, "z", null]]; 
+//│   static [definitionMetadata] = ["class", "Foo", [null, "y", null, "z", null]];
 //│ });
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 Foo(10, 20, 30, 40, 50)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo7(10, 20, 30, 40, 50)
+//│ return Foo7(10, 20, 30, 40, 50)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > x = 1
 //│ > y = 21
@@ -258,10 +263,10 @@ Foo(10, 20, 30, 40, 50)
 class Foo(val z, val z)
 //│ ╔══[COMPILATION ERROR] Duplicate definition of member named 'z'.
 //│ ╟── Defined at: 
-//│ ║  l.258: 	class Foo(val z, val z)
+//│ ║  l.263: 	class Foo(val z, val z)
 //│ ║         	              ^
 //│ ╟── Defined at: 
-//│ ║  l.258: 	class Foo(val z, val z)
+//│ ║  l.263: 	class Foo(val z, val z)
 //│ ╙──       	                     ^
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Foo9;
@@ -273,13 +278,13 @@ class Foo(val z, val z)
 //│     Foo9.class = this
 //│   }
 //│   toString() { return runtime.render(this); }
-//│   static [definitionMetadata] = ["class", "Foo", ["z", "z"]]; 
+//│   static [definitionMetadata] = ["class", "Foo", ["z", "z"]];
 //│ });
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 Foo(1, 2)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ Foo9(1, 2)
+//│ return Foo9(1, 2)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = Foo(undefined, undefined)
 

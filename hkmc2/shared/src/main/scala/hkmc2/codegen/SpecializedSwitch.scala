@@ -75,7 +75,7 @@ private object PostCondRes:
 // that could possibly come before this result must be discarded.
 // isAbortive: indicates whether the result was computed for an abortive block. When merging results from
 // different branches, the results for this must be discarded.
-private case class PostCondRes(isImpure: Bool, isAbortive: Bool, varsMap: Map[Local, Literal]):
+private case class PostCondRes(isImpure: Bool, isAbortive: Bool, varsMap: Map[ValueSymbol, Literal]):
   def markImpure = copy(isImpure = true)
 
 // Combines postconditions from different branches.
@@ -101,7 +101,7 @@ extension (r: PostCondRes)
     if r.isAbortive then r
     else if r2.isImpure then r2
     else PostCondRes(r.isImpure, r2.isAbortive, r.varsMap ++ r2.varsMap)
-  def +(v: Local -> Literal): PostCondRes = PostCondRes(r.isImpure, r.isAbortive, r.varsMap + v)
+  def +(v: ValueSymbol -> Literal): PostCondRes = PostCondRes(r.isImpure, r.isAbortive, r.varsMap + v)
 
 // Analyzes postconditions for a block. Namely, determines variables that are
 // definitely set to a certain literal.
@@ -115,7 +115,7 @@ extension (r: PostCondRes)
 // because they will be irrelevant in that case anyway.
 private object PostCondAnalysisImpl extends CachedAnalysis[Block, PostCondRes]:
   
-  private def res(lhs: Opt[Local], rhs: Result, rest: Block) =
+  private def res(lhs: Opt[ValueSymbol], rhs: Result, rest: Block) =
     if rhs.isPure then lhs match
       case Some(lhs) => rhs match
         case Value.Lit(lit) => PostCondRes(false, false, Map(lhs -> lit)) >=> analyze(rest)
@@ -151,7 +151,8 @@ private object PostCondAnalysisImpl extends CachedAnalysis[Block, PostCondRes]:
     case Begin(sub, rest) => analyze(sub) >=> analyze(rest)
     case TryBlock(sub, finallyDo, rest) => analyze(sub) >=> analyze(finallyDo) >=> analyze(rest)
     case TryCatch(sub, _, catchBody, rest) => PostCondRes(true, false, Map.empty) >=> analyze(rest)
-    case Assign(lhs, rhs, rest) => res(S(lhs), rhs, rest)
+    case Assign(_: NoSymbol, rhs, rest) => res(N, rhs, rest)
+    case Assign(lhs: ValueSymbol, rhs, rest) => res(S(lhs), rhs, rest)
     case AssignField(path, _, rhs, rest) => res(N, rhs, rest)
     case AssignDynField(lhs, fld, arrayIdx, rhs, rest) => res(N, rhs, rest)
     case Define(defn, rest) => defn match
@@ -160,8 +161,8 @@ private object PostCondAnalysisImpl extends CachedAnalysis[Block, PostCondRes]:
       case f: FunDefn => analyze(rest)
     case b: BlockTail => PostCondRes.empty.copy(isAbortive = b.isAbortive)
 
-private object PostCondAnalysis extends CachedAnalysis[Block, Map[Local, Literal]]:
-  override def analyzeUncached(b: Block): Map[Symbol, Literal] = PostCondAnalysisImpl.analyze(b).varsMap
+private object PostCondAnalysis extends CachedAnalysis[Block, Map[ValueSymbol, Literal]]:
+  override def analyzeUncached(b: Block): Map[ValueSymbol, Literal] = PostCondAnalysisImpl.analyze(b).varsMap
 
 // Matches List[Case.Lit -> Block]
 private object LitCases:
@@ -169,7 +170,7 @@ private object LitCases:
     case (S(acc), Case.Lit(litVal) -> b) => S((litVal -> b) :: acc)
     case _ => N
 
-private case class MatchChain(scrut: Value.Ref, cases: List[MatchType], dflt: Opt[Block], rest: Block)
+private case class MatchChain(scrut: Value.SimpleRef, cases: List[MatchType], dflt: Opt[Block], rest: Block)
 
 // Helper that determines whether a default branch is empty
 private def isEmptyDflt(dflt: Opt[Block]) = dflt match
@@ -181,13 +182,13 @@ private def isEmptyDflt(dflt: Opt[Block]) = dflt match
 @tailrec
 private def findMatchChainRec(
   b: Block,
-  scrutRef: Value.Ref,
+  scrutRef: Value.SimpleRef,
   acc: List[MatchType]
 ): MatchChain =
   object TailAssign:
     def unapply(b: Block) =
       if b.isAbortive then N
-      else PostCondAnalysis.analyze(b).get(scrutRef.l) match
+      else PostCondAnalysis.analyze(b).get(scrutRef.sym) match
         case S(value) => S(value)
         case N => N
   
@@ -263,7 +264,7 @@ private def findMatchChainRec(
     case S(_: MatchType.MAbortive) | N => join // OK
     case S(_) => fail
 
-private case class SwitchLike(scrut: Value.Ref, cases: List[SwitchCase], dflt: Opt[Block], rest: Block)
+private case class SwitchLike(scrut: Value.SimpleRef, cases: List[SwitchCase], dflt: Opt[Block], rest: Block)
 
 // Converts a match chain to a switch.
 private def matchChainToSwitch(m: MatchChain): SwitchLike =
@@ -280,11 +281,10 @@ private def matchChainToSwitch(m: MatchChain): SwitchLike =
 
 object SpecializedSwitch:
   def unapply(b: Block) = b match
-    case m @ Match(scrut = r @ Value.Ref(l, _)) =>
+    case m @ Match(scrut = r @ Value.SimpleRef(l)) =>
       val chain = findMatchChainRec(m, r, Nil)
       val SwitchLike(scrut, cases, dflt, rest) = matchChainToSwitch(chain)
       if cases.size < 2 then N
       else
         S((scrut, cases.reverse, dflt, rest))
     case _ => N
-

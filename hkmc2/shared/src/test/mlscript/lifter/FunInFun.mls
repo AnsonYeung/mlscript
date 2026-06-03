@@ -63,6 +63,7 @@ fun f(used1, unused1) =
 f(1, 2)
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
 //│ let g⁰, f⁰, g$⁰;
+//│ @inline
 //│ define g$⁰ as fun g$¹(used1, used2)(g_arg) {
 //│   return g¹(used1, used2, g_arg)
 //│ };
@@ -80,7 +81,7 @@ f(1, 2)
 //│   set tmp = foo(used2);
 //│   return +⁰(tmp, unused2)
 //│ };
-//│ f¹(1, 2)
+//│ return f¹(1, 2)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 5
 
@@ -103,7 +104,7 @@ f(1,2,3,4,5,6)
 //│ define f² as fun f³(a1, a2, a3, a4, a5, a6) {
 //│   return g³(a1, a2, a3, a4, a5, a6)
 //│ };
-//│ f³(1, 2, 3, 4, 5, 6)
+//│ return f³(1, 2, 3, 4, 5, 6)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 21
 
@@ -177,7 +178,7 @@ f(1, 2, 1000)
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
 //│ let g⁴, h⁰, f⁴, Capture$f⁰;
 //│ define g⁴ as fun g⁵(f$cap, immutable) {
-//│   set f$cap.mutated$0 = 2;
+//│   set f$cap.mutated$0⁰ = 2;
 //│   return +⁰(immutable, f$cap.mutated$0⁰)
 //│ };
 //│ define h⁰ as fun h¹(f$cap) {
@@ -197,7 +198,7 @@ f(1, 2, 1000)
 //│   set tmp1 = +⁰(a, tmp);
 //│   return +⁰(tmp1, unused)
 //│ };
-//│ f⁵(1, 2, 1000)
+//│ return f⁵(1, 2, 1000)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 7
 
@@ -273,24 +274,25 @@ g()(1)
 //│   set x = 4;
 //│   return +⁰(x, scope0$cap.y$0¹)
 //│ };
+//│ @inline
 //│ define f$⁰ as fun f$¹(scope0$cap)(x) {
 //│   return f⁷(scope0$cap, x)
 //│ };
 //│ define f⁶ as fun f⁷(scope0$cap, x) {
 //│   let k;
 //│   set k = 4;
-//│   set scope0$cap.y$0 = 2;
+//│   set scope0$cap.y$0¹ = 2;
 //│   return x
 //│ };
 //│ define g⁶ as fun g⁷() {
 //│   let y, scope0$cap, f$here;
 //│   set scope0$cap = new mut Capture$scope0²(y);
-//│   set scope0$cap.y$0 = 0;
+//│   set scope0$cap.y$0¹ = 0;
 //│   set f$here = f$¹(scope0$cap);
 //│   return f$here
 //│ };
 //│ set baseCall = g⁷();
-//│ baseCall(1)
+//│ return baseCall(1)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 1
 
@@ -389,7 +391,7 @@ f(0)
 //│       return x
 //│   end
 //│ };
-//│ f⁹(0)
+//│ return f⁹(0)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 1
 
@@ -411,6 +413,7 @@ fun f(x) =
     [g, g]
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
 //│ let g¹⁰, f¹⁰, g$²;
+//│ @inline
 //│ define g$² as fun g$³(y)() {
 //│   return g¹¹(y)
 //│ };
@@ -442,6 +445,7 @@ fun f(x) =
   [a, g]
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
 //│ let g¹², f¹², Capture$f³, g$⁴;
+//│ @inline
 //│ define g$⁴ as fun g$⁵(f$cap)() {
 //│   return g¹³(f$cap)
 //│ };
@@ -460,7 +464,7 @@ fun f(x) =
 //│   set g$here = g$⁵(f$cap);
 //│   set a = g$here;
 //│   set tmp = +⁰(f$cap.x$0⁰, 1);
-//│   set f$cap.x$0 = tmp;
+//│   set f$cap.x$0⁰ = tmp;
 //│   set g$here = g$⁵(f$cap);
 //│   return [a, g$here]
 //│ };

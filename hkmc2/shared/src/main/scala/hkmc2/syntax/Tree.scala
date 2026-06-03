@@ -500,7 +500,7 @@ case object MutVal extends Val("mut val", "mutable value")
 case object LetBind extends ValLike("let", "let binding")
 case object HandlerBind extends TermDefKind("handler", "handler binding")
 case object Fun extends TermDefKind("fun", "function")
-case object Ins extends TermDefKind("using", "implicit instance")
+case object Ins extends Val("using", "implicit instance")
 sealed abstract class TypeDefKind(str: Str, desc: Str)(using Line) extends DeclKind(str, desc)
 sealed trait ObjDefKind
 sealed trait ClsLikeKind extends ObjDefKind:
@@ -638,13 +638,11 @@ trait TypeDefImpl(using State) extends TypeOrTermDef:
     this.paramLists.map: tup =>
       val pts = tup.fields
       val inUsing = pts.headOption.exists(_.isModified(Ins))
-      pts.flatMap(_.desugared.asParam(inUsing = inUsing).toOption).map:
-        // case ParamTree(spd = S(_)) => lastWords("spreads are not allowed in class parameters") // TODO: properly report this in Elaborator
-        case pt @ ParamTree(ident = id) =>
+      pts.flatMap(_.desugared.asParam(inUsing = inUsing).toOption).collect:
+        case pt @ ParamTree(ident = id, spd = N) =>
           val k = if pt.flags.mut then MutVal else ImmutVal
           TermSymbol(k, symbol.asClsLike, id)
       .toList
     
   lazy val allSymbols = definedSymbols ++
     clsParams.iterator.flatMap(_.iterator.map(s => s.nme -> s)).toMap
-

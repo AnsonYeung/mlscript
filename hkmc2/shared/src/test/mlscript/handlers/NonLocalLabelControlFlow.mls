@@ -79,6 +79,7 @@ continueFromNestedFunctionWithEffects()
 //│ define NonLocalLabelEffectcontinue⁰ as fun NonLocalLabelEffectcontinue¹(resume) {
 //│   return runtime⁰.Continue﹖
 //│ };
+//│ @inline
 //│ define NonLocalLabelEffectbreak$⁰ as fun NonLocalLabelEffectbreak$¹(value)(resume) {
 //│   return NonLocalLabelEffectbreak¹(value, resume)
 //│ };
@@ -94,7 +95,7 @@ continueFromNestedFunctionWithEffects()
 //│     else
 //│       let saveOffset;
 //│       set pc = runtime⁰.resumePc﹖;
-//│       set runtime⁰.resumePc = -1;
+//│       set runtime⁰.resumePc﹖ = -1;
 //│       end
 //│   loop main:
 //│     match pc
@@ -105,13 +106,13 @@ continueFromNestedFunctionWithEffects()
 //│     match pc
 //│       1 =>
 //│         set tmp1 = +⁰(scope0$cap.i$0¹, 1);
-//│         set scope0$cap.i$0 = tmp1;
+//│         set scope0$cap.i$0¹ = tmp1;
 //│         return nonLocalHandler$root.continue﹖()
 //│       0 =>
 //│         set scrut = >=⁰(scope0$cap.i$0¹, 3);
 //│         match scrut
 //│           true =>
-//│             set runtime⁰.resumeValue = nonLocalHandler$root.break﹖(scope0$cap.i$0¹);
+//│             set runtime⁰.resumeValue﹖ = nonLocalHandler$root.break﹖(scope0$cap.i$0¹);
 //│             match runtime⁰.curEffect﹖
 //│               null =>
 //│                 set pc = 2;
@@ -128,10 +129,11 @@ continueFromNestedFunctionWithEffects()
 //│     end
 //│   end
 //│ };
+//│ @inline
 //│ define handleBlock$$⁰ as fun handleBlock$$¹(scope0$cap, nonLocalHandler$root)() {
 //│   return handleBlock$¹(scope0$cap, nonLocalHandler$root)
 //│ };
-//│ define NonLocalLabelEffect⁰ as class NonLocalLabelEffect¹ {
+//│ define NonLocalLabelEffect⁰ as class extends runtime⁰.NonLocalReturn⁰ NonLocalLabelEffect¹ {
 //│   method break⁰ = fun break¹(value) {
 //│     let suspendRes, NonLocalLabelEffectbreak$here;
 //│     set NonLocalLabelEffectbreak$here = NonLocalLabelEffectbreak$¹(value);
@@ -156,13 +158,13 @@ continueFromNestedFunctionWithEffects()
 //│       set pc = runtime⁰.resumePc﹖;
 //│       set saveOffset = runtime⁰.resumeIdx﹖;
 //│       set scope0$cap = runtime⁰.resumeArr﹖.saveOffset;
-//│       set runtime⁰.resumePc = -1;
+//│       set runtime⁰.resumePc﹖ = -1;
 //│       end
 //│   loop main:
 //│     match pc
 //│       0 =>
 //│         set scope0$cap = new mut Capture$scope0²(i);
-//│         set scope0$cap.i$0 = 0;
+//│         set scope0$cap.i$0¹ = 0;
 //│         set pc = 1;
 //│         end
 //│     match pc
@@ -170,7 +172,7 @@ continueFromNestedFunctionWithEffects()
 //│         block brk1:
 //│           set nonLocalHandler$root = new mut NonLocalLabelEffect¹();
 //│           set handleBlock$$here = handleBlock$$¹(scope0$cap, nonLocalHandler$root);
-//│           set runtime⁰.resumeValue = runtime⁰.enterHandleBlock﹖(nonLocalHandler$root, handleBlock$$here);
+//│           set runtime⁰.resumeValue﹖ = runtime⁰.enterHandleBlock﹖(nonLocalHandler$root, handleBlock$$here);
 //│           match runtime⁰.curEffect﹖
 //│             null =>
 //│               break brk1
@@ -203,10 +205,10 @@ continueFromNestedFunctionWithEffects()
 //│ set tmp = continueFromNestedFunctionWithEffects¹();
 //│ match runtime⁰.curEffect﹖
 //│   null =>
-//│     tmp
+//│     return tmp
 //│   else
 //│     set tmp = runtime⁰.topLevelEffect﹖(false);
-//│     tmp
+//│     return tmp
 //│ end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 3

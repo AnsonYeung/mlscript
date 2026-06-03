@@ -21,9 +21,9 @@ class BlockTransformer(subst: SymbolSubst):
   def applyMainBlock(main: Block): Block =
     applyBlock(main)
   
-  def applyImport(imp: Local -> Str): Local -> Str =
+  def applyImport(imp: ImportSymbol -> Str): ImportSymbol -> Str =
     val (l, s) = imp
-    val l2 = applyLocal(l)
+    val l2 = applyImportSymbol(l)
     if l2 is l then imp else l2 -> s
   
   def applySubBlock(b: Block): Block = applyBlock(b)
@@ -40,9 +40,9 @@ class BlockTransformer(subst: SymbolSubst):
     case Continue(lbl) =>
       val lbl2 = lbl.subst
       if lbl2 is lbl then b else Continue(lbl2)
-    case Return(res, implct) =>
+    case Return(res) =>
       applyResult(res): res2 =>
-        if res2 is res then b else Return(res2, implct)
+        if res2 is res then b else Return(res2)
     case Throw(exc) =>
       applyResult(exc): exc2 =>
         if exc2 is exc then b else Throw(exc2)
@@ -82,14 +82,14 @@ class BlockTransformer(subst: SymbolSubst):
     case TryCatch(sub, catchVar, catchBody, rst) =>
       def applySub(b: Block) = if rst.isEmpty then applySubBlock(b) else applySubBlockNonTail(b)
       val sub2 = applySub(sub)
-      val catchVar2 = catchVar.subst
+      val catchVar2 = applyAssignLhs(catchVar)
       val catchBody2 = applySub(catchBody)
       val rst2 = applySubBlock(rst)
       if (sub2 is sub) && (catchVar2 is catchVar) && (catchBody2 is catchBody) && (rst2 is rst)
         then b else TryCatch(sub2, catchVar2, catchBody2, rst2)
     case Assign(l, r, rst) =>
       applyResult(r): r2 =>
-        val l2 = applyLocal(l)
+        val l2 = applyAssignLhs(l)
         val rst2 = applySubBlock(rst)
         if (l2 is l) && (r2 is r) && (rst2 is rst) then b else Assign(l2, r2, rst2)
     case b @ AssignField(l, n, r, rst) =>
@@ -186,15 +186,31 @@ class BlockTransformer(subst: SymbolSubst):
     case v: Value => applyValue(v)(k)
   
   def applyValue(v: Value)(k: Value => Block) = v match
-    case Value.Ref(l, disamb) =>
-      val l2 = applyLocal(l)
-      k(if (l2 is l) then v else Value.Ref(l2, disamb).withLocOf(v))
+    case Value.SimpleRef(l) =>
+      val l2 = applySimpleSymbol(l)
+      k(if (l2 is l) then v else l2.asSimpleRef.withLocOf(v))
+    case Value.MemberRef(bms, disamb) =>
+      val bms2 = bms.subst
+      val disamb2 = disamb.subst
+      k(if (bms2 is bms) && (disamb2 is disamb) then v else bms2.asMemberRef(disamb2).withLocOf(v))
     case Value.This(sym) =>
       val sym2 = sym.subst
-      k(if (sym2 is sym) then v else Value.This(sym2).withLocOf(v))
+      k(if (sym2 is sym) then v else sym2.asThis.withLocOf(v))
     case Value.Lit(lit) => k(v)
   
-  def applyLocal(sym: Local): Local = sym.subst
+  def applySimpleSymbol(sym: SimpleSymbol): SimpleSymbol = sym match
+    case sym: LocalVarSymbol => sym.subst
+    case sym: BuiltinSymbol => sym.subst
+  
+  def applyImportSymbol(sym: ImportSymbol): ImportSymbol = sym match
+    case sym: TempSymbol => sym.subst
+    case sym: VarSymbol => sym.subst
+    case sym: BlockMemberSymbol => sym.subst
+  
+  def applyAssignLhs(sym: Assignable): Assignable = sym match
+    case sym: NoSymbol => sym
+    case sym: TempSymbol => sym.subst
+    case sym: VarSymbol => sym.subst
   
   def applyFunDefn(fun: FunDefn): FunDefn =
     val own2 = fun.owner.mapConserve(_.subst)
@@ -303,7 +319,7 @@ class BlockTransformer(subst: SymbolSubst):
   def applyLam(lam: Lambda): Lambda =
     val params2 = applyParamList(lam.params)
     val body2 = applyFunBodyLikeBlock(lam.body)
-    if (params2 is lam.params) && (body2 is lam.body) then lam else Lambda(params2, body2)
+    if (params2 is lam.params) && (body2 is lam.body) then lam else Lambda(params2, body2)(lam.annot)
   
   def applyListOf[A](ls: List[A], f: (A, (A => Block)) => Block)(k: List[A] => Block): Block =
     def rec(ls: List[A], k: List[A] => Block): Block = ls match

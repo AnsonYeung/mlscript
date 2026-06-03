@@ -22,9 +22,23 @@ enum Annot extends AutoLocated:
   case Untyped
   case Modifier(mod: Keyword)
   case Trm(trm: Term)
+  // NOTE: The presence of TailRec and TailCall annotations does not affect whether a function is optimized or not;
+  // it only affects whether a warning is thrown if the function/call is not actually tail-recursive.
   case TailRec
   case TailCall
+  case Inline
   case Config(modify: hkmc2.Config => hkmc2.Config)
+  // Marks if a function or lambda is one-shot, i.e. called at most once.
+  // Functions with multiple parameter lists are considered here as a chain of
+  // function values. `whichParamList` is the zero-based index of the parameter
+  // list whose corresponding function value is one-shot.
+  // For example, on `fun f(a)(b)`,
+  // - its list of annotations containing `Affine(0)` says that `f` is one-shot;
+  // - its list of annotations containing `Affine(1)` says that
+  //   each function value produced by `f(a)` is one-shot;
+  // - its list of annotations containing both `Affine(0)` and `Affine(1)` says that
+  //   `f` is one-shot and each function value produced by `f(a)` is also one-shot.
+  case Affine(whichParamList: Int)
   
   def symbol: Opt[Symbol] = this match
     case Trm(trm) => trm.symbol
@@ -32,14 +46,17 @@ enum Annot extends AutoLocated:
   
   def subTerms: Vector[Term] = this match
     case Trm(trm) => Vector.single(trm)
-    case _: Modifier | Untyped | TailRec | TailCall | _: Config => Vector.empty
+    case _: Modifier | Untyped | TailRec | TailCall | Inline | _: Config => Vector.empty
   
   def children: Vector[Located] = this match
     case Trm(trm) => Vector.single(trm)
-    case _: Modifier | Untyped | TailRec | TailCall | _: Config => Vector.empty
+    case _: Modifier | Untyped | TailRec | TailCall | Inline | _: Config => Vector.empty
   
   def show(using Scope, ShowCfg, Raise): Document = this match
-    case Untyped => doc"‹untyped›"
+    case Untyped => doc"@untyped"
+    case Inline => doc"@inline"
+    case TailRec => doc"@tailrec"
+    case Affine(n) => doc"@affine($n)"
     case Modifier(mod) => doc"@${mod.name}"
     case Trm(trm) => doc"@${trm.show}"
     case Config(_) => doc"@config(...)"
@@ -50,6 +67,7 @@ enum Annot extends AutoLocated:
     case Trm(trm) => Trm(trm.mkClone)
     case TailRec => TailRec
     case TailCall => TailCall
+    case Inline => Inline
     case c: Config => c
 
 object Annot:
@@ -343,7 +361,7 @@ enum Term extends Statement:
   case Continue(label: LabelSymbol)
   case Try(body: Term, finallyDo: Term)
   case Annotated(annot: Annot, target: Term)
-  case Handle(lhs: LocalSymbol, rhs: Term, args: List[Term],
+  case Handle(lhs: LocalVarSymbol, rhs: Term, args: List[Term],
     derivedClsSym: ClassSymbol, defs: Ls[HandlerTermDefinition], body: Term)
   case LeadingDotSel(nme: Tree.Ident)(
       val originalCtx: Opt[SrcScope]
@@ -915,12 +933,12 @@ sealed trait Statement extends AutoLocated, ProductWithExtraInfo:
     case Missing => "missing"
     case LeadingDotSel(nme) => s"_?_.${nme.name}"
 
-final case class LetDecl(sym: LocalSymbol, annotations: Ls[Annot]) extends Statement
+final case class LetDecl(sym: LocalVarSymbol | TermSymbol, annotations: Ls[Annot]) extends Statement
 
 final case class RcdField(field: Term, rhs: Term) extends Statement
 final case class RcdSpread(rcd: Term) extends Statement
 
-final case class DefineVar(sym: LocalSymbol, rhs: Term) extends Statement
+final case class DefineVar(sym: LocalSymbol | TermSymbol, rhs: Term) extends Statement
 
 /** A global configuration change directive (`#config(...)`).
   * Records a function that modifies the current compiler configuration. */
@@ -1051,11 +1069,13 @@ case class ObjBody(blk: Term.Blk):
 end ObjBody
 
 
-/** `sym` is a `MemberSymbol` when the import is made by the user and can be referred to by name,
+/** `sym` is a `BlockMemberSymbol` or a `VarSymbol` when the import is made by the user
+  * and can be referred to by name (it's either the BMS of the imported module
+  * or the VarSymbol of the alias, in an aliased import `import "..." as alias`),
   * in which case it is a `BlockMemberSymbol` when importing files explicitly
   * and a `TermSymbol` when the import is made implicitly by the compiler (eg, importing "Predef").
   * Note that the `file` Path may not represent a real file; eg when importing "fs". */
-case class Import(sym: TempSymbol | MemberSymbol, str: Str, file: io.Path) extends Statement
+case class Import(sym: ImportSymbol, str: Str, file: io.Path) extends Statement
 
 
 sealed abstract class Declaration:
@@ -1197,14 +1217,15 @@ object ClassDef:
       body: ObjBody,
       annotations: Ls[Annot],
       comp: Opt[ClassCompanionSymbol],
+      auxCtorParams: Ls[ParamList],
   ): ClassDef =
     params match
       case ps :: pss => Parameterized(owner, kind, sym.asInstanceOf// TODO: improve
         , bsym, S(ctorSym.getOrElse(lastWords("Parameterized classes should have a ctor symbol.")))
-        , tparams, ps, pss, ext, body, comp, annotations)
+        , tparams, ps, pss ::: auxCtorParams, ext, body, comp, annotations)
       case Nil => Plain(owner, kind, sym.asInstanceOf// TODO: improve
         , bsym
-        , tparams, ext, body, comp, annotations)
+        , tparams, ext, body, comp, annotations, auxParams = auxCtorParams, ctorSym = ctorSym)
   
   def unapply(cls: ClassDef): Opt[(ClassSymbol, Ls[TyParam], Opt[ParamList], ObjBody)] =
     S((cls.sym, cls.tparams, cls.paramsOpt, cls.body))
@@ -1234,11 +1255,11 @@ object ClassDef:
       ext: Opt[New],
       body: ObjBody,
       companion: Opt[ClassCompanionSymbol],
-      annotations: Ls[Annot]
+      annotations: Ls[Annot],
+      auxParams: List[ParamList],
+      ctorSym: Opt[ClassCtorSymbol],
   ) extends ClassDef:
     val paramsOpt: Opt[ParamList] = N
-    val auxParams: List[ParamList] = Nil
-    val ctorSym: Opt[ClassCtorSymbol] = N
   
 end ClassDef
 

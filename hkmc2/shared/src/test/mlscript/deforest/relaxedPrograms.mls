@@ -1,7 +1,34 @@
 :js
 
+
+
 :deforest
 :expect 5
+data class AA(x)
+class Store(n) with
+  val nn = n
+  fun get() =
+    if AA(n) is AA(x) then x + nn
+  fun foo(x) =
+    if x is
+      AA(x) then x + nn
+val store = Store(1)
+store.foo(AA(4))
+//│ deforest > >>> fusing >>>
+//│ deforest > AA⁰(Store⁰.this.n⁰) ->
+//│ deforest > 	match: scrut⁰
+//│ deforest > 	fields: scrut⁰.x⁰
+//│ deforest > <<< fusing <<<
+//│ = 5
+//│ store = Store(_)
+
+
+
+
+:deforest
+:expect 5
+:noInline
+:fixme
 data class AA(x)
 class Store(n) with
   fun get() =
@@ -12,12 +39,15 @@ class Store(n) with
 val store = Store(1)
 store.foo(AA(4))
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(n⁰) ->
-//│ deforest > 	match: scrut⁰
-//│ deforest > 	fields: scrut⁰.x⁰
+//│ deforest > AA¹(Store¹.this.n¹) ->
+//│ deforest > 	match: scrut¹
+//│ deforest > 	fields: scrut¹.x¹
 //│ deforest > <<< fusing <<<
-//│ = 5
-//│ store = Store(_)
+//│ ═══[INTERNAL ERROR] `this` not in scope: class:Store
+//│ > let AA3, Store3, store1, tmp2, tmp3, $scrut_AA;try { const n$accessorSymbol = globalThis.Symbol("n"); $scrut_AA = function $scrut_AA(AA_x) {   runtime.checkArgs("$scrut_AA", 1, true, arguments.length);   return (fv_x, fv_arg$AA$0$) => {     fv_arg$AA$0$ = AA_x;     fv_x = AA_x;     return AA_x + ‹MISSING_THIS›[n$accessorSymbol]   } }; AA3 = function AA(x) {   return globalThis.Object.freeze(new AA.class(x)); }; globalThis.Object.freeze(class AA2 {   static {     AA3.class = this   }   constructor(x) {     this.x = x;   }   toString() { return runtime.render(this); }   static [definitionMetadata] = ["class", "AA", ["x"]]; }); Store3 = function Store(n) {   return globalThis.Object.freeze(new Store.class(n)); }; globalThis.Object.freeze(class Store2 {   static {     Store3.class = this   }   constructor(n) {     this.#n = n;   }   #n;   get [n$accessorSymbol]() { return this.#n; }   set [n$accessorSymbol](value) { this.#n = value; }   get get$__checkNotMethod() { runtime.deboundMethod("get", "Store"); }    get foo$__checkNotMethod() { runtime.deboundMethod("foo", "Store"); }   get() {     runtime.checkArgs("get", 0, true, arguments.length);     let AA_x;     AA_x = this.#n;     return runtime.checkCall($scrut_AA(AA_x)(undefined, undefined))   }   foo(x) {     runtime.checkArgs("foo", 1, true, arguments.length);     let arg$AA$0$;     if (x instanceof AA3.class) {       arg$AA$0$ = x.x;       return arg$AA$0$ + this.#n     }     throw globalThis.Object.freeze(new globalThis.Error("match error"));   }   toString() { return runtime.render(this); }   static [definitionMetadata] = ["class", "Store", [null]]; }); tmp2 = runtime.checkCall(Store3(1)); store1 = tmp2; tmp3 = runtime.checkCall(AA3(4)); block$res2 = runtime.safeCall(store1.foo(tmp3));; undefined } catch (e) { console.log('\u200B' + e + '\u200B'); }
+//│ ═══[COMPILATION ERROR] [Uncaught SyntaxError] Invalid or unexpected token
+//│ ═══[RUNTIME ERROR] Expected: '5', got: 'undefined'
+//│ ═══[RUNTIME ERROR] ReferenceError: store1 is not defined
 
 
 
@@ -27,19 +57,21 @@ store.foo(AA(4))
 
 :deforest
 :expect 3
+:fixme // requires the block above to succeed
 fun classMethodSibling() =
   if AA(1) is
     AA(x) then x + store.get()
 classMethodSibling()
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut¹
-//│ deforest > 	fields: scrut¹.x⁰
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut¹
-//│ deforest > 	fields: scrut¹.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut²
+//│ deforest > 	fields: scrut².x¹
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut²
+//│ deforest > 	fields: scrut².x¹
 //│ deforest > <<< fusing <<<
-//│ = 3
+//│ ═══[RUNTIME ERROR] ReferenceError: store1 is not defined
+//│ ═══[RUNTIME ERROR] Expected: '3', got: 'undefined'
 
 
 :deforest
@@ -50,9 +82,9 @@ if AA(1) is
   AA(x) then
     x + r!a
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut²
-//│ deforest > 	fields: scrut².x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut³
+//│ deforest > 	fields: scrut³.x¹
 //│ deforest > <<< fusing <<<
 //│ = 1
 //│ r = {a: 0, value: 1}
@@ -65,9 +97,9 @@ if AA(1) is
     let xs = [0, 1]
     x + xs!1
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut³
-//│ deforest > 	fields: scrut³.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁴
+//│ deforest > 	fields: scrut⁴.x¹
 //│ deforest > <<< fusing <<<
 //│ = 2
 
@@ -84,12 +116,12 @@ fun nestedClass() =
     AA(x) then x
 nestedClass()
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁴
-//│ deforest > 	fields: scrut⁴.x⁰
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁴
-//│ deforest > 	fields: scrut⁴.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁵
+//│ deforest > 	fields: scrut⁵.x¹
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁵
+//│ deforest > 	fields: scrut⁵.x¹
 //│ deforest > <<< fusing <<<
 //│ /!!!\ Uncaught error: java.lang.AssertionError: assertion failed
 
@@ -103,15 +135,14 @@ fun loopSibling() =
     if AA(1) is
       AA(x) then print(x)
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁵
-//│ deforest > 	fields: scrut⁵.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁶
+//│ deforest > 	fields: scrut⁶.x¹
 //│ deforest > <<< fusing <<<
 //│ /!!!\ Uncaught error: scala.NotImplementedError: unsupported `continue` instruction during rewriting (of class String)
 
 
-// TODO: branch body capturing mutable vars
-:fixme
+// Branch body capturing mutable vars
 :deforest
 :expect 5
 class C(n) with
@@ -124,17 +155,15 @@ class C(n) with
 let c = C(1)
 c.get() + c.get()
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁶
-//│ deforest > 	fields: scrut⁶.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁷
+//│ deforest > 	fields: scrut⁷.x¹
 //│ deforest > <<< fusing <<<
-//│ ═══[RUNTIME ERROR] Expected: '5', got: '4'
-//│ = 4
+//│ = 5
 //│ c = C(_)
 
 
-// TODO: private members aren't visible outside
-:fixme
+// Private members are now visible outside the class
 :deforest
 module M with
   let _private = 3
@@ -143,16 +172,14 @@ module M with
       AA(a) then a + _private
 M.f()
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁷
-//│ deforest > 	fields: scrut⁷.x⁰
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁷
-//│ deforest > 	fields: scrut⁷.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁸
+//│ deforest > 	fields: scrut⁸.x¹
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁸
+//│ deforest > 	fields: scrut⁸.x¹
 //│ deforest > <<< fusing <<<
-//│ > let M1, f_7$scrut_AA, f_6$f, f_6$scrut_AA, inlinedVal1, scrut3, AA_x3;try { globalThis.Object.freeze(class M {   static {     M1 = this   }   static #_private;   static {     M.#_private = 3;   }   static f() {     runtime.checkArgs("f", 0, true, arguments.length);     let scrut4, AA_x4;     AA_x4 = 1;     scrut4 = (fv_ctorLam__private) => {       let AA_x5, inlinedVal2;       AA_x5 = AA_x4;       inlinedVal2 = AA_x5 + fv_ctorLam__private;       return inlinedVal2     };     return runtime.checkCall(scrut4(M.#_private))   }   toString() { return runtime.render(this); }   static [definitionMetadata] = ["class", "M"];  }); AA_x3 = 1; scrut3 = (fv_ctorLam__private) => {   let AA_x4, inlinedVal2;   AA_x4 = AA_x3;   inlinedVal2 = AA_x4 + fv_ctorLam__private;   return inlinedVal2 }; inlinedVal1 = runtime.checkCall(scrut3(M.#_private)); block$res6 = inlinedVal1; undefined; undefined } catch (e) { console.log('\u200B' + e + '\u200B'); }
-//│ >                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ^
-//│ ═══[COMPILATION ERROR] [Uncaught SyntaxError] Private field '#_private' must be declared in an enclosing class
+//│ = 4
 
 
 
@@ -167,11 +194,13 @@ module M with
         AA(a) then a + g()
 M.MM.f()
 //│ deforest > >>> fusing >>>
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁸
-//│ deforest > 	fields: scrut⁸.x⁰
-//│ deforest > AA⁰(1) ->
-//│ deforest > 	match: scrut⁸
-//│ deforest > 	fields: scrut⁸.x⁰
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁹
+//│ deforest > 	fields: scrut⁹.x¹
+//│ deforest > AA¹(1) ->
+//│ deforest > 	match: scrut⁹
+//│ deforest > 	fields: scrut⁹.x¹
 //│ deforest > <<< fusing <<<
 //│ ═══[RUNTIME ERROR] ReferenceError: MM is not defined
+
+

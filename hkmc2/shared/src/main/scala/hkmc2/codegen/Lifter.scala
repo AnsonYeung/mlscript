@@ -10,24 +10,19 @@ import hkmc2.Message.*
 import hkmc2.ScopeData.*
 import hkmc2.semantics.Elaborator.State
 import hkmc2.syntax.Tree
-import hkmc2.codegen.llir.FreshInt
 
 import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.Map as MutMap
 import scala.collection.mutable.Set as MutSet
 import scala.collection.mutable.ListBuffer
 
-object Lifter:
   
-  /**
-    * Describes the free variables of a function that have been accessed by its nested definitions.
-    * @param vars The free variables that are accessed by nested classes/functions.
-    * @param reqCapture The free variables that must be captured using a heap-allocated object.
-    */
-  case class FreeVars(vars: Set[Local], reqCapture: Set[Local]):
-    def ++(that: FreeVars) = FreeVars(vars ++ that.vars, reqCapture ++ that.reqCapture)
-  object FreeVars:
-    val empty = FreeVars(Set.empty, Set.empty)
+/** This loose type is only here as a legacy for the lifter to work,
+  * but eventually the lifter should use more precise types for the symbols it tracks. */
+type ScopedOrInnerSymbol = ScopedSymbol | InnerSymbol
+
+
+object Lifter:
   
   extension (l: List[Lazy[Defn] | Defn])
     def gatherUsed: List[Defn] = l.collect:
@@ -44,8 +39,8 @@ object Lifter:
     * @param refdDefns Previously defined definitions which could possibly be used by this definition.
     */
   case class AccessInfo(
-      accessed: Set[Local], 
-      mutated: Set[Local], 
+      accessed: Set[ScopedOrInnerSymbol], 
+      mutated: Set[ScopedOrInnerSymbol], 
       refdDefns: Set[ScopedInfo]
     ):
     def ++(that: AccessInfo) = AccessInfo(
@@ -53,18 +48,18 @@ object Lifter:
         mutated ++ that.mutated,
         refdDefns ++ that.refdDefns
       )
-    def withoutLocals(locals: Set[Local]) = AccessInfo(
+    def withoutLocals(locals: Set[ScopedOrInnerSymbol]) = AccessInfo(
         accessed -- locals,
         mutated -- locals,
         refdDefns
       )
-    def intersectLocals(locals: Set[Local]) = AccessInfo(
+    def intersectLocals(locals: Set[ScopedOrInnerSymbol]) = AccessInfo(
         accessed.intersect(locals),
         mutated.intersect(locals),
         refdDefns
       )
-    def addAccess(l: Local) = copy(accessed = accessed + l)
-    def addMutated(l: Local) = copy(accessed = accessed + l, mutated = mutated + l)
+    def addAccess(l: ScopedOrInnerSymbol) = copy(accessed = accessed + l)
+    def addMutated(l: ScopedOrInnerSymbol) = copy(accessed = accessed + l, mutated = mutated + l)
     def addRefdScopedObj(l: ScopedInfo) = copy(refdDefns = refdDefns + l)
     
   object AccessInfo:
@@ -72,7 +67,7 @@ object Lifter:
 
   object RefOfBms:
     def unapply(p: Path): Opt[(BlockMemberSymbol, Opt[DefinitionSymbol[?]], Bool)] = p match
-      case Value.Ref(l: BlockMemberSymbol, disamb) => S((l, disamb, false))
+      case Value.MemberRef(bms, disamb) => S((bms, S(disamb), false))
       case s @ Select(_, _) => s.symbol match
         case Some(value) => value.asBlkMember.map((_, S(value), true))
         case _ => N
@@ -91,41 +86,80 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
 
   import Lifter.*
   
-  extension (l: Local)
+  /** Symbols that can appear as a direct local-like `LocalPath.Sym` in the lifter.
+    *
+    * More structured references, such as block members, `this`, and fields, have
+    * their own `LocalPath` cases so lifting cannot accidentally treat them as
+    * assignable block-local variables.
+    */
+  type LocalPathSymbol = LocalVarSymbol | BuiltinSymbol
+  
+  extension (l: LocalPathSymbol)
     def asLocalPath: LocalPath = LocalPath.Sym(l)
+  extension (l: LocalVarSymbol)
     def asDefnRef: DefnRef = DefnRef.Sym(l)
   
   enum LocalPath:
-    case Sym(l: Local)
+    case Sym(l: LocalPathSymbol)
+    case ThisPath(sym: InnerSymbol)
     case BmsRef(l: BlockMemberSymbol, d: DefinitionSymbol[?])
-    case InCapture(capturePath: Path, field: TermSymbol)
+    /** A source local whose storage has been moved to a field while lifting.
+      *
+      * This is not used for arbitrary source field selections: those should
+      * already have been lowered to `Select`/`AssignField`. It is specifically
+      * for locals that the lifter itself makes field-backed, such as captured
+      * locals inside capture classes, values passed into lifted classes, and
+      * neighboring lifted object references stored as private fields.
+      */
+    case Field(lhs: Path, field: TermSymbol)
     
     def read(using ctx: LifterCtxNew): Path = this match
-      case Sym(l) => l.asPath
-      case BmsRef(l, d) => Value.Ref(l, S(d))
-      case InCapture(path, field) => Select(path, field.id)(S(field))
+      case Sym(l) => l.asSimpleRef
+      case ThisPath(sym) => sym.asThis
+      case BmsRef(l, d) => l.asMemberRef(d)
+      case Field(path, field) => Select(path, field.id)(S(field))
       
     def asArg(using ctx: LifterCtxNew) = read.asArg
     
     def assign(value: Result, rest: Block)(using ctx: LifterCtxNew): Block = this match
-      case Sym(l) => Assign(l, value, rest)
+      case Sym(l: Assignable) => Assign(l, value, rest)
+      case Sym(l) => lastWords(s"Tried to assign to non-variable local ${l.nme}")
+      case ThisPath(sym) => lastWords(s"Tried to assign to this-path ${sym.nme}")
       case BmsRef(l, d) => lastWords("Tried to assign to a BlockMemberSymbol")
-      case InCapture(path, field) => AssignField(path, field.id, value, rest)(S(field))
-
+      case Field(path, field) => AssignField(path, field.id, value, rest)(S(field))
+      
+  end LocalPath
+  object LocalPath:
+    /** Use when the lifter deliberately stores a captured value, passed local,
+      * or neighboring lifted object in a private field of the class it is
+      * currently rewriting. The map still has to be keyed by the original
+      * local symbol because the lifted body mentions that original symbol;
+      * the value says that reads and writes are now field selections on self.
+      * Source private members should already have been lowered to selections,
+      * so this is not a recovery path for arbitrary private `Value.Ref`s.
+      */
+    def privateSelfField(field: TermSymbol): LocalPath =
+      field.owner match
+      case S(owner) => Field(owner.asThis, field)
+      case N => lastWords(s"tried to build a private field path for ownerless symbol ${field.nme}")
+  end LocalPath
+  
   enum DefnRef:
-    case Sym(l: Local)
+    case Sym(l: LocalVarSymbol)
+    case PathRef(path: Path)
     case InScope(l: BlockMemberSymbol, d: DefinitionSymbol[?])
     case Field(isym: InnerSymbol, l: BlockMemberSymbol, d: DefinitionSymbol[?])
   
     def read(using ctx: LifterCtxNew): Path = this match
-      case Sym(l) => l.asPath
-      case InScope(l, d) => Value.Ref(l, S(d))
+      case Sym(l) => l.asSimpleRef
+      case PathRef(path) => path
+      case InScope(l, d) => l.asMemberRef(d)
       case Field(isym, l, d) => Select(ctx.symbolsMap(isym).read, Tree.Ident(l.nme))(S(d))
     
     def asArg(using ctx: LifterCtxNew) = read.asArg
   
   case class FunSyms[T <: DefinitionSymbol[?]](b: BlockMemberSymbol, d: T):
-    def asPath = Value.Ref(b, S(d))
+    def asPath = b.asMemberRef(d)
   object FunSyms:
     def fromFun(b: BlockMemberSymbol, owner: Opt[InnerSymbol] = N) =
       FunSyms(b, TermSymbol.fromFunBms(b, owner))
@@ -279,10 +313,10 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
   // Remark: This is why so much prior analysis is needed and is the main source of complexity in the lifter.
   class BlockRewriter(using ctx: LifterCtxNew) extends ScopeRewriter:
     // Closure symbols that point to an initialized closure in this scope
-    var activeClosures: Set[Local] = Set.empty
+    var activeClosures: Set[TempSymbol] = Set.empty
     // Map from block member symbols to initialized closures
-    val closureMap: MutMap[BlockMemberSymbol, Local] = MutMap.empty
-    val extraLocals: MutSet[Local] = MutSet.empty
+    val closureMap: MutMap[BlockMemberSymbol, TempSymbol] = MutMap.empty
+    val extraLocals: MutSet[ScopedSymbol] = MutSet.empty
     
     def rewrite(b: Block) =
       val ret = applyBlock(b)
@@ -300,8 +334,8 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     // always rewritten using `this.defnName` (when accessed internally) or `object.defnName`.
     def rewriteBms(b: Block) =
       // BMS's that need to be created
-      val syms: LinkedHashMap[FunSyms[?], Local] = LinkedHashMap.empty
-      val extraLocals: MutSet[Local] = MutSet.empty
+      val syms: LinkedHashMap[FunSyms[?], LocalVarSymbol] = LinkedHashMap.empty
+      val extraLocals: MutSet[ScopedSymbol] = MutSet.empty
 
       val walker = new BlockDataTransformer(SymbolSubst.Id):
         // only scan within the block. don't traverse
@@ -372,7 +406,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
                   case Some(value) =>
                     syms.addOne(FunSyms(l, d) -> value)
                     value
-                k(Value.Ref(newSym, N))
+                k(newSym.asSimpleRef)
             
             // Naked reference to a parameterized class constructor (used as a first-class function).
             // Replace with a partially applied curried C$ wrapper.
@@ -389,7 +423,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
                   case Some(value) =>
                     syms.addOne(FunSyms(l, d) -> value)
                     value
-                k(Value.Ref(newSym, N))
+                k(newSym.asSimpleRef)
               case _ =>
                 resolveDefnRef(l, d, ctor) match
                 case Some(value) => k(value)
@@ -476,11 +510,11 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
           if (sub2 is sub) && (fin2 is fin) && (rst2 is rst) then rewritten else TryBlock(sub2, fin2, rst2)
         
         // Assignment to variables
-        case Assign(lhs, rhs, rest) => ctx.symbolsMap.get(lhs) match
+        case Assign(_: NoSymbol, _, _) => super.applyBlock(rewritten)
+        case Assign(lhs: LocalVarSymbol, rhs, rest) => ctx.symbolsMap.get(lhs) match
           case Some(path) => applyResult(rhs): rhs2 =>
             path.assign(rhs2, applySubBlock(rest))
           case _ => super.applyBlock(rewritten)
-        
         // rewrite object definitions, assigning to the saved symbol
         case Define(d @ ClsLikeDefn(k = syntax.Obj), rest: Block) => ctx.liftedScopes.get(d.isym) match
           case Some(l: LiftedClass) if l.obj.isObj =>
@@ -492,7 +526,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     
     override def applyPath(p: Path)(k: Path => Block): Block = p match
       // This rewrites naked references to locals,
-      case Value.Ref(l, _) => ctx.symbolsMap.get(l) match
+      case r: Value.RefLike => ctx.symbolsMap.get(r.symbol) match
         case Some(value) => k(value.read)
         case _ => super.applyPath(p)(k)
       
@@ -502,7 +536,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
   case class LifterCtxNew(
     liftedScopes: MutMap[LiftedSym, LiftedScope[?]] = MutMap.empty,
     rewrittenScopes: MutMap[ScopedInfo, RewrittenScope[?]] = MutMap.empty,
-    var symbolsMap: Map[Local, LocalPath] = Map.empty,
+    var symbolsMap: Map[ValueSymbol, LocalPath] = Map.empty,
     var defnsMap: Map[DefinitionSymbol[?], DefnRef] = Map.empty,
     var capturesMap: Map[ScopedInfo, Path] = Map.empty
   )
@@ -515,7 +549,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     * `varsMap` maps the function's locals to the corresponding `VarSymbol` (for the class parameters) in the correct order. 
     */
   def createCaptureCls(s: ScopedObject)
-      : (ClsLikeDefn, List[(Symbol, TermSymbol)]) =
+      : (ClsLikeDefn, List[(ValueSymbol, TermSymbol)]) =
     val nme = "Capture$" + s.nme
 
     val clsSym = ClassSymbol(
@@ -525,11 +559,11 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
 
     val cap = usedVars.reqdCaptures(s.toInfo)
 
-    val fresh = FreshInt()
+    val fresh = new Uid.Symbol.State
     
-    val sortedVars: Array[(ctorSyms: (local: Local, vs: VarSymbol), param: Param, valDefn: ValDefn)] =
+    val sortedVars: Array[(ctorSyms: (local: ValueSymbol, vs: VarSymbol), param: Param, valDefn: ValDefn)] =
       cap.toArray.sortBy(_.uid).map: sym =>
-        val id = fresh.make
+        val id = fresh.nextUid.asInt
         val nme = sym.nme + "$" + id
         
         val ident = new Tree.Ident(nme)
@@ -543,7 +577,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
         val vd = ValDefn(
           tSym,
           fldSym,
-          Value.Ref(varSym)
+          varSym.asSimpleRef
         )(N, Nil)
         
         (sym -> varSym, p, vd)
@@ -622,34 +656,34 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     val hasCapture = !thisCapturedLocals.isEmpty
     
     // These are lazy, because we don't necessarily need a captrue 
-    private final lazy val captureInfo: (ClsLikeDefn, List[(Local, TermSymbol)]) = createCaptureCls(obj)
+    private final lazy val captureInfo: (ClsLikeDefn, List[(ValueSymbol, TermSymbol)]) = createCaptureCls(obj)
     
     lazy val captureClass = captureInfo._1
     lazy val captureMap = captureInfo._2.toMap
     lazy val liftedObjsMap: Map[InnerSymbol, LocalPath]
     
     lazy val capturePath: Path
-
+    
     protected def rewriteImpl: LifterResult[T]
     
-    protected final def addExtraSyms(b: Block, captureSym: Local, objSyms: Iterable[Local], define: Bool): Block =
+    protected final def instantiateCapture: Instantiate =
       if hasCapture then
-        val undef = Value.Lit(Tree.UnitLit(false)).asArg
-        val inst = Instantiate(
+        Instantiate(
           true,
-          Value.Ref(captureClass.sym, S(captureClass.isym)),
+          captureClass.sym.asMemberRef(captureClass.isym),
           captureInfo._2.map(
             (sym, _) => sym.asPath.asArg) :: Nil
         )
-        val assign = Assign(captureSym, inst, b)
-        if define then
-          Scoped(
-            Set(captureSym) ++ objSyms,
-            assign
-          )
-        else assign
+      else lastWords("tried to instantiate an empty capture")
+    
+    protected final def addExtraSyms(b: Block, captureSym: LocalVarSymbol, objSyms: Iterable[ScopedSymbol]): Block =
+      if hasCapture then
+        Scoped(
+          objSyms.toSet + captureSym,
+          Assign(captureSym, instantiateCapture, b)
+        )
       else
-        if define then Scoped(objSyms.toSet, b) else b
+        Scoped(objSyms.toSet, b)
     
     /**
       * Rewrites the contents of this scoped object to reference the lifted versions of variables.
@@ -665,26 +699,39 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     /** The path to access locals defined by this object. The primary purpose of this is to rewrite accesses
       * to locals that have been moved to a capture.
       */
-    protected final def pathsFromThisObj: Map[Local, LocalPath] =
+    protected final def pathsFromThisObj: Map[ScopedOrInnerSymbol, LocalPath] =
       // Remove child BlockMemberSymbols; we will use their definition symbols instead
-        
+      
       // Locals introduced by this object
+      /* // -- This is the old definition: --
       val fromThisObj = node.localsWithoutBms
         .map: s =>
           s -> s.asLocalPath
+      */ // -- The new definition now needs a hack to work, which we should remove: --
+      val fromThisObj: Map[ScopedOrInnerSymbol, LocalPath] = node.localsWithoutBms
+        .flatMap: s =>
+          s match
+            case s: BlockMemberSymbol =>
+              // * This use of `s.asPrincipal` is incorrect – we can't just assume this is the correct disambiguation!
+              // softTODO(false, s"disambiguation symbol for ${s.nme} picked arbitrarily") // * uncomment to see where this happens; commented by default because too noisy
+              S(s -> LocalPath.BmsRef(s, s.asPrincipal.getOrElse:
+                lastWords(s"Cannot resolve overloaded member symbol ${s.nme}: no principal disambiguation found")
+              ))
+              // N  // * can't simply do this, as it makes `Debugging.mls` and `Token.mls` fail to compile
+            case s: LocalPathSymbol => S(s -> s.asLocalPath)
+            case s: InnerSymbol => S(s -> LocalPath.ThisPath(s))
         .toMap
       // Locals introduced by this object that are inside this object's capture
-      val fromCap = thisCapturedLocals
+      val fromCap: Map[ScopedOrInnerSymbol, LocalPath] = thisCapturedLocals
         .map: s =>
           val tSym = captureMap(s)
-          s -> LocalPath.InCapture(capturePath, tSym)
+          s -> LocalPath.Field(capturePath, tSym)
         .toMap
       // Inner symbols of nested modules and objects
-      val isyms = node.children
+      val isyms: Map[ScopedOrInnerSymbol, LocalPath] = node.children
         .collect:
           case ScopeNode(obj = c: ScopedObject.Companion) =>
-            val s: Local = c.clsBody.isym
-            s -> LocalPath.BmsRef(c.bsym, c.clsBody.isym)
+            c.clsBody.isym -> LocalPath.BmsRef(c.bsym, c.clsBody.isym)
           case ScopeNode(obj = c: ScopedObject.Class) if c.isObj =>
             c.cls.isym -> (liftedObjsMap.get(c.cls.isym) match
               case Some(value) => value // lifted
@@ -716,7 +763,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     
     lazy val defnPaths: Map[DefinitionSymbol[?], DefnRef] = defnPathsFromThisObj
     
-    lazy val symbolsMap: Map[Local, LocalPath] = pathsFromThisObj
+    lazy val symbolsMap: Map[ScopedOrInnerSymbol, LocalPath] = pathsFromThisObj
   
   /** Represents a scoped object that is to be rewritten and lifted. */
   sealed abstract class LiftedScope[T <: Defn](override val obj: ScopedObject.Liftable[T])(using ctx: LifterCtxNew) extends RewrittenScope[T](obj):
@@ -742,11 +789,11 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
           case None => L(s)
     
     /** Locals that are directly passed to this object, i.e. not via a capture. */
-    final val passedSyms: Set[Local] = reqPassedSymbols
+    final val passedSyms: Set[ScopedOrInnerSymbol] = reqPassedSymbols
     /** Maps locals to the scope where they were defined. */
-    final val capturesOrigin: Map[Local, ScopedInfo] = captures.toMap
+    final val capturesOrigin: Map[ValueSymbol, ScopedInfo] = captures.toMap
     /** Locals that are inside captures. */
-    final val inCaptureSyms: Set[Local] = captures.map(_._1)
+    final val inCaptureSyms: Set[ValueSymbol] = captures.map(_._1)
     /** Scopes whose captures this object requires. */
     final val reqCaptures: Set[ScopedInfo] = captures.map(_._2)
     /**
@@ -758,14 +805,14 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       .toSet.intersect(refdDSyms)
     
     /** Maps directly passed locals to the path representing that local within this object. */
-    protected val passedSymsMap: Map[Local, LocalPath]
+    protected val passedSymsMap: Map[ValueSymbol, LocalPath]
     /** Maps scopes to the path representing their captures within this object. */
     protected val capSymsMap: Map[ScopedInfo, Path]
     /** Maps definition symbols to the path representing that definition. */
     protected val passedDefnsMap: Map[DefinitionSymbol[?], DefnRef]
     
     protected lazy val capturesOrdered: List[ScopedInfo] = reqCaptures.toList.sorted
-    protected final lazy val passedSymsOrdered: List[Local] = reqPassedSymbols.toList.sortBy(_.uid)
+    protected final lazy val passedSymsOrdered: List[ValueSymbol] = reqPassedSymbols.toList.sortBy(_.uid)
     protected final lazy val reqDefnsOrdered: List[DefinitionSymbol[?]] = reqDefns.toList.sortBy(_.uid)
     
     override lazy val capturePaths: Map[ScopedInfo, Path] =
@@ -779,7 +826,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     /** Maps symbols to the path representing that local within this object.
       * Includes locals defined by this object's parents, and this object's own defined locals.
       */
-    override lazy val symbolsMap: Map[Local, LocalPath] = 
+    override lazy val symbolsMap: Map[ScopedOrInnerSymbol, LocalPath] = 
       val fromParents = reqSymbols
         .map: s =>
           passedSymsMap.get(s) match
@@ -790,7 +837,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
               val fromScope = capturesOrigin(s)
               val capSym = capSymsMap(fromScope)
               val tSym = ctx.rewrittenScopes(fromScope).captureMap(s)
-              s -> LocalPath.InCapture(capSym, tSym)
+              s -> LocalPath.Field(capSym, tSym)
         .toMap
       fromParents ++ pathsFromThisObj
     
@@ -819,7 +866,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     */
   sealed trait GenericRewrittenScope[T] extends RewrittenScope[T]:
     lazy val captureSym = VarSymbol(Tree.Ident(obj.nme + "$cap"))
-    override lazy val capturePath = captureSym.asPath
+    override lazy val capturePath = captureSym.asSimpleRef
     protected val liftedObjsOrdered: List[InnerSymbol] = node.liftedObjSyms.toList.sortBy(_.uid)
     protected val liftedObjsSyms: Map[InnerSymbol, VarSymbol] = liftedObjsOrdered.map: s =>
         s -> VarSymbol(Tree.Ident(s.nme + "$"))
@@ -827,20 +874,20 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     override lazy val liftedObjsMap: Map[InnerSymbol, LocalPath] = liftedObjsSyms.map:
       case k -> v => k -> v.asLocalPath
     
-    protected def addExtraSyms(b: Block): Block = addExtraSyms(b, captureSym, liftedObjsSyms.values, true)
+    protected def addExtraSyms(b: Block): Block = addExtraSyms(b, captureSym, liftedObjsSyms.values)
     
   /**
     * A rewritten scope with a TermSymbol capture symbol.
     */
   sealed trait ClsLikeRewrittenScope[T](sym: InnerSymbol) extends RewrittenScope[T]:
     lazy val captureSym = TermSymbol(syntax.ImmutVal, S(sym), Tree.Ident(obj.nme + "$cap"))
-    override lazy val capturePath = captureSym.asPath
+    override lazy val capturePath = Select(Value.This(sym), captureSym.id)(S(captureSym))
     protected val liftedObjsOrdered: List[InnerSymbol] = node.liftedObjSyms.toList.sortBy(_.uid)
     protected val liftedObjsSyms: Map[InnerSymbol, TermSymbol] = liftedObjsOrdered.map: s =>
         s -> TermSymbol(syntax.ImmutVal, S(sym), Tree.Ident(s.nme + "$"))
       .toMap
     override lazy val liftedObjsMap: Map[InnerSymbol, LocalPath] = liftedObjsSyms.map:
-      case k -> v => k -> v.asLocalPath
+      case k -> v => k -> LocalPath.privateSelfField(v)
     protected def appendCaptureField(privFields: List[TermSymbol]) =
       if hasCapture then captureSym :: privFields else privFields
     protected def rewriteMethods(node: ScopeNode, methods: List[FunDefn])(using ctx: LifterCtxNew) =
@@ -851,6 +898,9 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
           case r: RewrittenFunc if r.obj.isMethod.isDefined => r 
       val (liftedMtds, extras) = mtds.map(liftNestedScopes).unzip(using l => (l.liftedDefn, l.extraDefns))
       LifterResult(liftedMtds, extras.flatten)
+    protected final def initCaptureField(b: Block): Block =
+      if hasCapture then AssignField(sym.asThis, captureSym.id, instantiateCapture, b)(S(captureSym))
+      else b
   
   // some helpers
   private def dupParam(p: Param): Param = p.copy(sym = VarSymbol(Tree.Ident(p.sym.nme)))
@@ -901,14 +951,14 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       with ClsLikeRewrittenScope[ClsLikeDefn](obj.cls.isym):
     
     private val captureSym = TermSymbol(syntax.ImmutVal, S(obj.cls.isym), Tree.Ident(obj.nme + "$cap"))
-    override lazy val capturePath: Path = captureSym.asPath
+    override lazy val capturePath: Path = Select(Value.This(obj.cls.isym), captureSym.id)(S(captureSym))
     
     override def rewriteImpl: LifterResult[ClsLikeDefn] =
       val rewriterCtor = new BlockRewriter
       val rewriterPreCtor = new BlockRewriter
       val rewrittenCtor = rewriterCtor.rewrite(obj.cls.ctor)
       val rewrittenPrector = rewriterPreCtor.rewrite(obj.cls.preCtor)
-      val ctorWithCap = addExtraSyms(rewrittenCtor, captureSym, Nil, false)
+      val ctorWithCap = initCaptureField(rewrittenCtor)
       
       val LifterResult(newMtds, extras) = rewriteMethods(node, obj.cls.methods)
       val newCls = obj.cls.copy(
@@ -924,12 +974,12 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       with ClsLikeRewrittenScope[ClsLikeBody](obj.clsBody.isym):
     
     private val captureSym = TermSymbol(syntax.ImmutVal, S(obj.clsBody.isym), Tree.Ident(obj.nme + "$cap"))
-    override lazy val capturePath: Path = captureSym.asPath
+    override lazy val capturePath: Path = Select(Value.This(obj.clsBody.isym), captureSym.id)(S(captureSym))
       
     override def rewriteImpl: LifterResult[ClsLikeBody] =
       val rewriterCtor = new BlockRewriter
       val rewrittenCtor = rewriterCtor.rewrite(obj.clsBody.ctor)
-      val ctorWithCap = addExtraSyms(rewrittenCtor, captureSym, Nil, false)
+      val ctorWithCap = initCaptureField(rewrittenCtor)
       val LifterResult(newMtds, extras) = rewriteMethods(node, obj.clsBody.methods)
       val newComp = obj.clsBody.copy(
         ctor = ctorWithCap,
@@ -937,9 +987,9 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
         methods = newMtds
       )
       LifterResult(newComp, rewriterCtor.extraDefns.toList ::: extras)
-   
+  
   class LiftedFunc(override val obj: ScopedObject.Func)(using ctx: LifterCtxNew) extends LiftedScope[FunDefn](obj) with GenericRewrittenScope[FunDefn]:
-    private val passedSymsMap_ : Map[Local, VarSymbol] = passedSymsOrdered.map: s =>
+    private val passedSymsMap_ : Map[ValueSymbol, VarSymbol] = passedSymsOrdered.map: s =>
         s -> VarSymbol(Tree.Ident(s.nme))
       .toMap
     private val capSymsMap_ : Map[ScopedInfo, VarSymbol] = capturesOrdered.map: i =>
@@ -952,7 +1002,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       .toMap
     
     override protected val passedSymsMap = passedSymsMap_.view.mapValues(_.asLocalPath).toMap
-    override protected val capSymsMap = capSymsMap_.view.mapValues(_.asPath).toMap
+    override protected val capSymsMap = capSymsMap_.view.mapValues(s => s.asSimpleRef).toMap
     override protected val passedDefnsMap = defnSymsMap_.view.mapValues(_.asDefnRef).toMap
     
     val auxParams: List[Param] =
@@ -985,7 +1035,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
         else fun.annotations)
       LifterResult(newDefn, rewriter.extraDefns.toList)
     
-    // Definition with the auxiliary parameters merged into the second parameter list.
+    // Definition with the auxiliary parameters as a new first parameter list.
     private def mkAuxDefn: FunDefn =
       val newPList = PlainParamList(dupParams(auxParams))
       val (newPlists, syms, restSym) = fun.params match
@@ -998,13 +1048,13 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
         case Nil => lastWords("tried to make an aux defn for a function with no parameter list")
       val args = restSym match
         case Some(value) =>
-          val tail = Arg(S(SpreadKind.Eager), value.asPath) :: Nil
+          val tail = Arg(S(SpreadKind.Eager), value.asSimpleRef) :: Nil
           syms.foldLeft(tail):
-            case (acc, sym) => Arg(N, sym.asPath) :: acc
-        case None => syms.map(s => Arg(N, s.asPath))
+            case (acc, sym) => Arg(N, sym.asSimpleRef) :: acc
+        case None => syms.map(s => Arg(N, s.asSimpleRef))
       
-      val call = Call(Value.Ref(fun.sym, S(fun.dSym)), args ne_:: Nil)(true, true, false)
-      val bod = Return(call, false)
+      val call = Call(fun.sym.asMemberRef(fun.dSym), args ne_:: Nil)(true, true, false)
+      val bod = Return(call)
       
       FunDefn(
         N,
@@ -1012,7 +1062,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
         auxDsym,
         newPlists,
         bod
-      )(N, fun.annotations)
+      )(N, Annot.Inline :: fun.annotations)
     
     private val aux = Lazy[Defn](mkAuxDefn)
     
@@ -1022,7 +1072,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
         else c.copy(argss = argss)(c.isMlsFun, c.mayRaiseEffects, c.explicitTailCall).withLocOf(c)
       else
         Call(
-          Value.Ref(mainSym, S(mainDsym)),
+          mainSym.asMemberRef(mainDsym),
           (formatArgs ::: argss.head) ne_:: argss.tail
         )(
           isMlsFun = true,
@@ -1034,7 +1084,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       if isTrivial then lastWords("tried to rewrite a ref to a trivial function")
       aux.force // forces computation
       Call(
-        Value.Ref(auxSym, S(auxDsym)),
+        auxSym.asMemberRef(auxDsym),
         formatArgs ne_:: Nil
       )(
         isMlsFun = true,
@@ -1051,9 +1101,9 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       with ClsLikeRewrittenScope[ClsLikeDefn](obj.cls.isym):
     
     private val captureSym = TermSymbol(syntax.ImmutVal, S(obj.cls.isym), Tree.Ident(obj.nme + "$cap"))
-    override lazy val capturePath: Path = captureSym.asPath
+    override lazy val capturePath: Path = Select(Value.This(obj.cls.isym), captureSym.id)(S(captureSym))
     
-    private val passedSymsMap_ : Map[Local, (vs: VarSymbol, ts: TermSymbol)] = passedSymsOrdered.map: s =>
+    private val passedSymsMap_ : Map[ValueSymbol, (vs: VarSymbol, ts: TermSymbol)] = passedSymsOrdered.map: s =>
         s -> 
           (
             VarSymbol(Tree.Ident(s.nme)),
@@ -1082,9 +1132,9 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       ::: capturesOrdered.map(capSymsMap_(_).ts)
       ::: passedSymsOrdered.map(passedSymsMap_(_).ts)
     
-    override protected val passedSymsMap = passedSymsMap_.view.mapValues(_.ts.asLocalPath).toMap
-    override protected val capSymsMap = capSymsMap_.view.mapValues(_.ts.asPath).toMap
-    override protected val passedDefnsMap = defnSymsMap_.view.mapValues(_.ts.asDefnRef).toMap
+    override protected val passedSymsMap = passedSymsMap_.view.mapValues(x => LocalPath.privateSelfField(x.ts)).toMap
+    override protected val capSymsMap = capSymsMap_.view.mapValues(x => LocalPath.privateSelfField(x.ts).read).toMap
+    override protected val passedDefnsMap = defnSymsMap_.view.mapValues(x => DefnRef.PathRef(LocalPath.privateSelfField(x.ts).read)).toMap
     
     val auxParams: List[Param] =
       (reqDefnsOrdered.map(x => defnSymsMap_(x).vs)
@@ -1117,8 +1167,8 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       
       // Uses the symbols from pl1.
       def applyPlToPl(pl1: ParamList, pl2: ParamList): List[Arg] = (pl1.restParam, pl2.restParam) match
-        case (S(rp), S(_)) => pl1.params.foldRight(Arg(S(SpreadKind.Eager), rp.sym.asPath) :: Nil)(_.sym.asPath.asArg :: _)
-        case (N, N) => pl1.paramSyms.map(_.asPath.asArg)
+        case (S(rp), S(_)) => pl1.params.foldRight(Arg(S(SpreadKind.Eager), rp.sym.asSimpleRef) :: Nil)((p, ls) => p.sym.asSimpleRef.asArg :: ls)
+        case (N, N) => pl1.paramSyms.map(s => s.asSimpleRef.asArg)
         case _ => die
       
       // If class has a main param list, the aux list comes after it
@@ -1133,15 +1183,15 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       // or aux :: clsAuxArgs
       val argsList = appliedMainAndAuxArgs(appliedClsAuxArgs)
       
-      val ref = Value.Ref(obj.cls.sym, S(obj.cls.isym))
+      val ref = obj.cls.sym.asMemberRef(obj.cls.isym)
       val inst = Instantiate(false, ref, argsList)
-      val bod = Return(inst, false)
+      val bod = Return(inst)
       
       FunDefn(N, flattenedSym, flattenedDSym, allParamLists, bod)(N, annotations = Nil)
     
     private val flat = Lazy[Defn](mkFlattenedDefn)
     
-    def instObject = Instantiate(false, Value.Ref(cls.sym, S(cls.isym)), formatArgs :: Nil)
+    def instObject = Instantiate(false, cls.sym.asMemberRef(cls.isym), formatArgs :: Nil)
     
     // Rewrite a naked reference to a parameterized class constructor.
     // Returns a Call to the curried C$ wrapper partially applied with formatArgs.
@@ -1149,7 +1199,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       if isTrivial then lastWords("tried to rewrite a ref to a trivial class ctor")
       flat.force
       Call(
-        Value.Ref(flattenedSym, S(flattenedDSym)),
+        flattenedSym.asMemberRef(flattenedDSym),
         formatArgs ne_:: Nil
       )(
         isMlsFun = true,
@@ -1159,7 +1209,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     
     def rewriteInstantiate(inst: Instantiate, argss: List[List[Arg]])(k: Result => Block): Block =
       if obj.isObj then lastWords("tried to rewrite instantiate for an object")
-      val path = Value.Ref(cls.sym, S(cls.isym))
+      val path = cls.sym.asMemberRef(cls.isym)
       if isTrivial then
         if (inst.cls === path) && (inst.argss is argss) then k(inst)
         else k(inst.copy(cls = path, argss = argss).withLocOf(inst))
@@ -1172,16 +1222,32 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
     
     def rewriteCall(c: Call, argss: NELs[List[Arg]])(k: Result => Block)(using ctx: LifterCtxNew): Block =
       if obj.isObj then lastWords("tried to rewrite instantiate for an object")
-      val path = Value.Ref(cls.sym, S(cls.isym))
+      val path = cls.sym.asMemberRef(cls.isym)
+      val clsParamLists = cls.paramsOpt.toList ::: cls.auxParams
+      def callFlattenedCtor: Call =
+        flat.force
+        Call(
+          flattenedSym.asMemberRef(flattenedDSym),
+          (formatArgs :: argss).ne_!
+        )(
+          isMlsFun = true,
+          mayRaiseEffects = false,
+          explicitTailCall = c.explicitTailCall
+        ).withLoc(c.toLoc)
       if isTrivial then
         if c.argss is argss then k(c)
         else k(c.copy(argss = argss)(c.isMlsFun, c.mayRaiseEffects, c.explicitTailCall).withLocOf(c))
       else if cls.paramsOpt.isEmpty && cls.auxParams.isEmpty then
         // Paramless class: unreachable
         lastWords("Call to paramless class")
-      else
+      else if argss.lengthCompare(clsParamLists.length) === 0 then
         // Parameterized class: Same as Instantiate case
         k(Instantiate(false, path, argss.head :: formatArgs :: argss.tail).withLoc(c.toLoc))
+      else
+        // Unsaturated constructor calls must remain ordinary curried calls to
+        // the lifted wrapper; only saturated constructor applications may
+        // become Instantiate nodes after the global class-param flattening pass.
+        k(callFlattenedCtor)
     
     def rewriteImpl: LifterResult[ClsLikeDefn] =
       val rewriterCtor = new BlockRewriter
@@ -1189,21 +1255,21 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       val rewrittenCtor = rewriterCtor.rewrite(obj.cls.ctor)
       val rewrittenPrector = rewriterPreCtor.rewrite(obj.cls.preCtor)
       
-      val ctorWithCap = addExtraSyms(rewrittenCtor, captureSym, Nil, false)
+      val ctorWithCap = initCaptureField(rewrittenCtor)
       
       // Assign passed locals and captures
       val ctorWithPassed = passedSymsOrdered.foldRight(ctorWithCap):
         case (sym, acc) =>
           val (vs, ts) = passedSymsMap_(sym)
-          Assign(ts, vs.asPath, acc)
+          LocalPath.privateSelfField(ts).assign(vs.asPath, acc)
       val ctorWithCaps = capturesOrdered.foldRight(ctorWithPassed):
         case (sym, acc) =>
           val (vs, ts) = capSymsMap_(sym)
-          Assign(ts, vs.asPath, acc)
+          LocalPath.privateSelfField(ts).assign(vs.asPath, acc)
       val ctorWithDefns = reqDefnsOrdered.foldRight(ctorWithCaps):
         case (sym, acc) =>
           val (vs, ts) = defnSymsMap_(sym)
-          Assign(ts, vs.asPath, acc)
+          LocalPath.privateSelfField(ts).assign(vs.asPath, acc)
       
       val newAuxList = 
         if isTrivial then cls.auxParams

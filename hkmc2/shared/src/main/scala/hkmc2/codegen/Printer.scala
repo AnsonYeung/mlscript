@@ -17,13 +17,13 @@ import hkmc2.document.Document.{braced, bracedbk}
 
 /** `SymbolPrinter` is used for printing symbols that are not locally bound, so that they are consistent
   * with the debug-printed names shown in other parts of the compiler, such as showAsTreee. */
-class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
+class Printer(using Raise, ShowCfg, State, SymbolPrinter, Config):
   
   val showPurity =
     false
     // true
   
-  def print(l: Local)(using Scope): Document =
+  def print(l: Symbol)(using Scope): Document =
     // * Symbols that are not local symbols in scope should be printed using their dbgName
     // *  – these will appear like `x¹²` and will be globally unique.
     scope.lookup(l) match
@@ -42,7 +42,7 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
         .mkDocument(sep = doc" # ")
       val docDefault = dflt.fold(doc"")(e => doc" # else #{  # ${print(e)} #} ")
       doc"match ${print(scrut)} #{  # ${docCases}$docDefault #}  # ${print(rest)}"
-    case Return(res, implct) => if implct then print(res) else doc"return ${print(res)}"
+    case Return(res) => doc"return ${print(res)}"
     case Throw(exc) => doc"throw ${print(exc)}"
     case Label(label, loop, body, rest) =>
       val l2 = scope.allocateOrGetName(label)
@@ -57,18 +57,20 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
     case TryBlock(sub, finallyDo, rest) =>
       doc"try #{  # ${print(sub)} #}  # finally #{  # ${print(finallyDo)}; #  #} ${print(rest)}"
     case TryCatch(sub, catchVar, catchBody, rest) =>
-      val nme = scope.allocateName(catchVar)
+      val nme = catchVar match
+        case v: LocalVarSymbol => scope.allocateName(v)
+        case _: NoSymbol => "_"
       doc"try #{  # ${print(sub)} #}  # catch ($nme) #{  # ${print(catchBody)}; #  #} ${print(rest)}"
     case Assign(_: NoSymbol, rhs, rest) =>
       doc"do ${print(rhs)}; # ${print(rest)}"
-    case Assign(lhs, rhs, rest) =>
+    case Assign(lhs: (LocalVarSymbol | TermSymbol), rhs, rest) =>
       doc"set ${print(lhs)} = ${print(rhs)}; # ${print(rest)}"
-    case AssignField(lhs, nme, rhs, rest) =>
-      doc"set ${print(lhs)}.${nme.name} = ${print(rhs)}; # ${print(rest)}"
+    case asf @ AssignField(lhs, nme, rhs, rest) =>
+      doc"set ${print(lhs)}.${showMemberSymbol(nme.name, asf.symbol)} = ${print(rhs)}; # ${print(rest)}"
     case AssignDynField(lhs, fld, arrayIdx, rhs, rest) =>
       doc"set ${print(lhs)}${if arrayIdx then "." else "!"}${print(fld)} = ${print(rhs)}; # ${print(rest)}"
     case Define(defn, rest) =>
-      doc"define ${print(defn.sym)} as ${print(defn)}; # ${print(rest)}"
+      doc"${printFlags(defn)}define ${print(defn.sym)} as ${print(defn)}; # ${print(rest)}"
     case Scoped(syms, body) =>
       scope.nest.givenIn:
         import hkmc2.given_Ordering_Uid // Not sure why needed...
@@ -78,6 +80,18 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
     case End(_) => doc"end"
     case Unreachable(msg) => doc"unreachable /* ${msg} */"
     case _ => TODO(blk)
+  
+  def printFlags(defn: Defn)(using Scope): Document =
+    // val overrides = defn match
+    // case fun: FunDefn =>
+    //   fun.configOverride
+    // case cls: ClsLikeDefn =>
+    //   if cls.isStaged then doc"staged " else doc""
+    // case _ => doc""
+    // defn.configOverride.map: cfg =>
+    //   if cfg.staged then doc"staged " else doc""
+    if defn.annotations.isEmpty then doc""
+    else defn.annotations.map(_.show).mkDocument(doc" ") :: doc" # "
   
   def print(
       privateFields: Ls[TermSymbol],
@@ -97,7 +111,10 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
       case Some(value) => print(value) :: doc"; # "
       case None => doc""
     val docCtor = ctor match
-      case End(_) => doc""
+      case End(_) =>
+        ctorSym match
+        case S(ctorSym) => doc" # constructor ${print(ctorSym)}"
+        case N => doc""
       case _ => doc" # constructor${ctorSym.fold(doc"")(doc" " :: print(_))}${printParamLists(auxParams)} ${
         bracedbk(docPreCtor :: print(ctor))}"
     val mtds = methods.map(m => doc"method ${print(m.sym)} = " :: print(m)).mkDocument(sep = doc" # ")
@@ -107,6 +124,7 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
     && methods.isEmpty
     && preCtor.forall(_.isEmpty)
     && ctor.isEmpty
+    && ctorSym.isEmpty
     then doc""
     else doc" " :: braced(doc"${docPrivFlds}${docPubFlds}${docCtor}${docMethods}")
   
@@ -135,7 +153,7 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
       val docStaged = if cls.isStaged then doc"staged " else doc""
       val docBody = print(privateFields, publicFields, methods, auxParams, S(preCtor), ctor, ctorSym)
       val clsType = k.str
-      val docCls = doc"${docStaged}${clsType} ${print(isym)}${ctorParams}${docBody}"
+      val docCls = doc"${docStaged}${clsType}${parentSym.fold(doc"")(doc" extends " :: print(_))} ${print(isym)}${ctorParams}${docBody}"
       val docModule = mod match
         case Some(mod) =>
           val docStaged = if mod.isStaged then doc"staged " else doc""
@@ -144,7 +162,7 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
         case None => doc""
       doc"${docCls}${docModule}"
   
-  private def showSymbol(name: Str, sym: Opt[DefinitionSymbol[?]]): Document =
+  private def showMemberSymbol(name: Str, sym: Opt[MemberSymbol]): Document =
     sym.fold(doc"${name}﹖")(sym =>
       if summon[ShowCfg].debug then doc"‹${sym.toString}›" else summon[SymbolPrinter].printSymbol(sym))
   
@@ -155,16 +173,16 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
       else doc
   
   def print(value: Value)(using Scope): Document = value match
-    case Value.Ref(l: InnerSymbol, N) => doc"${print(l)}.this"
-    case Value.Ref(l, N) => print(l)
-    case Value.Ref(l, disamb) => showSymbol(l.nme, disamb)
-    case Value.This(sym) => doc"this"
+    case Value.SimpleRef(l) => print(l)
+    case Value.MemberRef(bms, disamb) => showMemberSymbol(bms.nme, S(disamb))
+    case Value.This(sym) if sym === State.globalThisSymbol => showMemberSymbol(sym.nme, S(sym.asDefnSym))
+    case Value.This(sym) => doc"${print(sym)}.this"
     case Value.Lit(lit) => doc"${lit.idStr}"
   
   def print(path: Path)(using Scope): Document = path match
     case sel @ Select(qual, name) =>
       val docQual = print(qual)
-      doc"${docQual}.${showSymbol(name.name, sel.symbol)}"
+      doc"${docQual}.${showMemberSymbol(name.name, sel.symbol)}"
     case DynSelect(qual, fld, arrayIdx) =>
       doc"${print(qual)}${if arrayIdx then "." else "!"}${print(fld)}"
     case x: Value => print(x)
@@ -195,7 +213,7 @@ class Printer(using Raise, ShowCfg, SymbolPrinter, Config):
       } }"
     case x: Path => print(x)
   
-  def print(imports: Ls[Local -> Str])(using Scope): Document =
+  def print(imports: Ls[ImportSymbol -> Str])(using Scope): Document =
     imports.map: (local, path) =>
         val docLocal = scope.allocateName(local)
         doc"import ${docLocal}; # "
