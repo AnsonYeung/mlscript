@@ -1,4 +1,4 @@
-#config(liftDefns: None)
+#config(liftDefns: None, effectHandlers: None)
 
 import "./Predef.mls"
 

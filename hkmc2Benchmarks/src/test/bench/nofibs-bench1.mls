@@ -2,8 +2,8 @@
 :silent
 
 // Comment to run the benchmarks
-:exit
-====================================================================================================
+// :exit
+// ====================================================================================================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/Benchmark.mls"
@@ -96,3 +96,4 @@ suite.add("constraints", () => constraints.main())
 
 runSuite(suite)
 writeResults(suite, "nofibs1.json")
+writeResultsCsv(suite, "nofibs1.csv")

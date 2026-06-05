@@ -73,7 +73,7 @@ object Config:
     baseDir = baseDir,
     sanityChecks = N, // TODO make the default S
     // sanityChecks = S(SanityChecks(light = true)),
-    effectHandlers = N,
+    effectHandlers = S(EffectHandlers(false, S(StackSafety(100)), doNotInstrumentTopLevelModCtor = false)),
     liftDefns = S(LiftDefns()),
     patMatConsequentSharingThreshold = default.patMatConsequentSharingThreshold, // minimum: 1
     target = CompilationTarget.JS,
@@ -142,6 +142,8 @@ object Config:
     // One specific scenario is Rendering.mls, which Runtime.mls depends on, and hence using stack safety will
     // reference Runtime.mls during construction of the Rendering module, causing a cyclic dependency error.
     doNotInstrumentTopLevelModCtor: Bool = false,
+    // Reset effects at start, this must be disabled for compile tests and enabled for diff tests
+    resetEffects: Bool = false,
   )
   
   case class StackSafety(stackLimit: Int)

@@ -380,7 +380,7 @@ class TailRecOpt(checkAnnotations: Bool)(using State, TL, Raise):
           case Some(pth) => Arg(N, pth)
           case None => Arg(N, Value.Lit(Tree.UnitLit(false)))
       val argsWithId = if funsLen > 1 then Value.Lit(Tree.IntLit(dSymIds(callee.dSym))).asArg :: args else args
-      Call(loopDefnPath, argsWithId ne_:: Nil)(CallMetadata.defaultMlsFun)
+      Call(loopDefnPath, argsWithId ne_:: Nil)(CallMetadata.mlsFunWithEffect)
     
     class FunRewriter(f: FunDefn) extends BlockTransformerShallow(SymbolSubst.Id):
       val params = f.allParamSyms

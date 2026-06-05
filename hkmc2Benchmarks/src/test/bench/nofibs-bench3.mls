@@ -3,8 +3,8 @@
 
 
 // Comment to run the benchmarks
-:exit
-====================================================================================================
+// :exit
+// ====================================================================================================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/Benchmark.mls"
@@ -51,8 +51,8 @@ suite.add("sphere", () => sphere.main())
 
 
 // need more stack
-// import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/treejoin.mls"
-// suite.add("treejoin", () => treejoin.main())
+import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/treejoin.mls"
+suite.add("treejoin", () => treejoin.main())
 
 
 
@@ -60,3 +60,4 @@ suite.add("sphere", () => sphere.main())
 
 runSuite(suite)
 writeResults(suite, "nofibs3.json")
+writeResultsCsv(suite, "nofibs3.csv")

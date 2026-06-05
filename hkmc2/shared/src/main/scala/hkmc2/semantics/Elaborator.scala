@@ -1063,20 +1063,13 @@ extends Importer:
           tree.toLoc :: Nil))
       error
     case LetLike(Keywrd(`set`), lhs, S(rhs), S(bod)) =>
-      // * Backtracking assignment
-      if ctx.potentiallyInstrumented then
-        raise(ErrorReport(
-          msg"Backtracking assignment is not supported with effect handlers enabled" ->
-            tree.toLoc :: Nil))
-        error
-      else
-        val lt = subterm(lhs)
-        val sym = TempSymbol(S(lt), "old")
-        Blk(
-          LetDecl(sym, Nil) :: DefineVar(sym, lt) :: Nil, Term.Try(Blk(
-            Term.Assgn(lt, subterm(rhs)) :: Nil,
-            subterm(bod),
-        ), Term.Assgn(lt, sym.ref())))
+      val lt = subterm(lhs)
+      val sym = TempSymbol(S(lt), "old")
+      Blk(
+        LetDecl(sym, Nil) :: DefineVar(sym, lt) :: Nil, Term.Try(Blk(
+          Term.Assgn(lt, subterm(rhs)) :: Nil,
+          subterm(bod),
+      ), Term.Assgn(lt, sym.ref())))
     case LetLike(Keywrd(Keyword.`set`), _, N, S(_)) =>
       raise:
         ErrorReport(msg"Expected a right-hand side for this assignment" -> tree.toLoc :: Nil)

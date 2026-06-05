@@ -3,8 +3,8 @@
 
 
 // Comment to run the benchmarks
-:exit
-====================================================================================================
+// :exit
+// ====================================================================================================
 
 
 import "../../../../hkmc2/shared/src/test/mlscript-compile/Benchmark.mls"
@@ -17,8 +17,8 @@ let suite = mkSuite()
 
 
 // need more stack space
-// import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm1.mls"
-// suite.add("cryptarithm1", () => cryptarithm1.main())
+import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm1.mls"
+suite.add("cryptarithm1", () => cryptarithm1.main())
 
 
 // =======================
@@ -143,9 +143,10 @@ suite.add("primetest", () => primetest.main())
 // =======================
 
 // need more stack
-// import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/puzzle.mls"
-// suite.add("puzzle", () => puzzle.main())
+import "../../../../hkmc2/shared/src/test/mlscript-compile/nofib/puzzle.mls"
+suite.add("puzzle", () => puzzle.main())
 
 
 runSuite(suite)
 writeResults(suite, "nofibs2.json")
+writeResultsCsv(suite, "nofibs2.csv")

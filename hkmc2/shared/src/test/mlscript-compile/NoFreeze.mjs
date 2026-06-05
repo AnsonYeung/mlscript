@@ -25,7 +25,14 @@ let NoFreeze1;
     return (new NoFreeze.Foo.class(0))
   }
   static bar() {
-    return runtime.safeCall(NoFreeze["foo"]())
+    let curDepth;
+    runtime.checkDepth();
+    if (runtime.curEffect === null) {
+      curDepth = runtime.stackDepth + 1;
+      runtime.stackDepth = curDepth;
+      return runtime.safeCall(NoFreeze["foo"]())
+    }
+    return runtime.unwind(NoFreeze.bar, -1, "NoFreeze.mls:7:3", null, NoFreeze, 1, 0, 0);
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "NoFreeze"];
