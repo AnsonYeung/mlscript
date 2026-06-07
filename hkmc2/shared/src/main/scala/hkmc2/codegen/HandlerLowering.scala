@@ -19,7 +19,7 @@ import hkmc2.Config.EffectHandlers
 
 object HandlerLowering:
 
-  val ExceptionToggle = true
+  val ExceptionToggle = false
 
   private val pcIdent: Tree.Ident = Tree.Ident("pc")
   private val nextIdent: Tree.Ident = Tree.Ident("next")
@@ -607,9 +607,10 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
     val segmentTailTransform = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block) = b match
         case StateTransition(res, uid) =>
-          val pc = blockBuilder.assign(pcVar, Value.Lit(Tree.IntLit(uid)))
+          val pc = blockBuilder
+            .staticif(ExceptionToggle, _.assign(pcVar, Value.Lit(Tree.IntLit(uid))))
           val pre = res match
-            case N => pc
+            case N => pc.staticif(!ExceptionToggle, _.assign(pcVar, Value.Lit(Tree.IntLit(uid))))
             case S(r) =>
               pc
                 .assignFieldN(paths.runtimePath, paths.resumeValueIdent, r)
@@ -620,10 +621,11 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
                     End(),
                     S(ctx.doUnwind(r.toLoc.fold(unit)(locToStr(_)), uid, vars)(using paths))
                   ))
+                .staticif(!ExceptionToggle, _.assign(pcVar, Value.Lit(Tree.IntLit(uid))))
           pre.continue(mainLoopLbl)
         case Return(c @ Call(fun, args)) if c.mayRaiseEffects =>
           blockBuilder
-            .assign(pcVar, Value.Lit(Tree.IntLit(-2)))
+            .staticif(ExceptionToggle, _.assign(pcVar, Value.Lit(Tree.IntLit(-2))))
             .rest(b)
         case _ => super.applyBlock(b)
 
@@ -642,7 +644,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             case StateTransition(S(res), uid) =>
               assert(uid === nextState)
               blockBuilder
-                .assign(pcVar, Value.Lit(Tree.IntLit(uid)))
+                .staticif(ExceptionToggle, _.assign(pcVar, Value.Lit(Tree.IntLit(uid))))
                 .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
                 .staticif(!ExceptionToggle, _
                   .ifthen(
@@ -654,7 +656,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
                 .break(lblSym)
             case Return(c @ Call(fun, args)) if c.mayRaiseEffects =>
               blockBuilder
-                .assign(pcVar, Value.Lit(Tree.IntLit(-2)))
+                .staticif(ExceptionToggle, _.assign(pcVar, Value.Lit(Tree.IntLit(-2))))
                 .rest(b)
             case _ => super.applyBlock(b)
         val transformed = transform.applyBlock(blk.blk)

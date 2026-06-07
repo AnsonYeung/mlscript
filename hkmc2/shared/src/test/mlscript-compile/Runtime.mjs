@@ -363,7 +363,7 @@ let Runtime1;
           tmp5 = runtime.safeCall(this$FunctionContFrame.saved.slice(tmp2, tmp4));
           return runtime.safeCall(f.apply(this$FunctionContFrame.saved.at(4), tmp5))
         });
-        return runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow))
+        return Runtime.doEffectCall(lambda)
       }
       get getLocals() {
         let debugInfo, i, cur, res, i1;
@@ -641,9 +641,27 @@ let Runtime1;
     tmp3 = tmp2 + "' was accessed without being called.";
     throw runtime.safeCall(globalThis.Error(tmp3))
   }
+  static doEffectCallNormal(body) {
+    return runtime.safeCall(body())
+  }
+  static doEffectCallException(body) {
+    return runtime.safeCall(Runtime.try_catch(body, Runtime.effectRethrow))
+  }
+  static doEffectCall(body) {
+    return Runtime.doEffectCallNormal(body)
+  }
+  static doEffectUnwindNormal() {
+    return null
+  }
+  static doEffectUnwindException() {
+    throw Runtime.EffectException
+  }
+  static doEffectUnwind() {
+    return Runtime.doEffectUnwindNormal()
+  }
   static try(f) {
     let res, scrut, tmp;
-    res = runtime.safeCall(Runtime.try_catch(f, Runtime.effectRethrow));
+    res = Runtime.doEffectCall(f);
     scrut = Runtime.curEffect !== null;
     if (scrut === true) {
       tmp = Runtime.curEffect;
@@ -684,7 +702,7 @@ let Runtime1;
           lambda = (undefined, function () {
             return Runtime.resume(tr.contTrace)(runtime.Unit)
           });
-          tmp3 = runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow));
+          tmp3 = Runtime.doEffectCall(lambda);
           v = tmp3;
           tr = Runtime.curEffect;
           continue lbl
@@ -931,12 +949,12 @@ let Runtime1;
     let scrut, tmp;
     scrut = saved.at(1) === -2;
     if (scrut === true) {
-      return Runtime.EffectException
+      Runtime.doEffectUnwind();
     }
     tmp = new Runtime.FunctionContFrame.class(null, saved);
     Runtime.curEffect.contTrace.last.next = tmp;
     Runtime.curEffect.contTrace.last = Runtime.curEffect.contTrace.last.next;
-    return Runtime.EffectException;
+    return Runtime.doEffectUnwind()
   }
   static mkEffect(handler, handlerFun) {
     let res, tmp;
@@ -945,7 +963,7 @@ let Runtime1;
     res.contTrace.last = res.contTrace;
     res.contTrace.lastHandler = res.contTrace;
     Runtime.curEffect = res;
-    throw Runtime.EffectException
+    return Runtime.doEffectUnwind()
   }
   static handleBlockImpl(cur, handler) {
     let handlerFrame;
@@ -965,7 +983,7 @@ let Runtime1;
   }
   static enterHandleBlock(handler, body) {
     let tmp, scrut;
-    tmp = runtime.safeCall(Runtime.try_catch(body, Runtime.effectRethrow));
+    tmp = Runtime.doEffectCall(body);
     scrut = Runtime.curEffect === null;
     if (scrut === true) {
       return tmp
@@ -980,7 +998,7 @@ let Runtime1;
         scrut = cur === nxt;
         if (scrut === true) {
           Runtime.curEffect = cur;
-          throw Runtime.EffectException
+          return Runtime.doEffectUnwind()
         }
         cur = nxt;
         continue lbl;
@@ -1023,7 +1041,7 @@ let Runtime1;
         tmp3 = Runtime.resume(cur.contTrace);
         return runtime.safeCall(cur.handlerFun(tmp3))
       });
-      tmp2 = runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow));
+      tmp2 = Runtime.doEffectCall(lambda);
       tmp = tmp2;
     } finally {
       Runtime.stackDepth = old;
@@ -1132,7 +1150,7 @@ let Runtime1;
           lambda = (undefined, function () {
             return Runtime.enterHandleBlock(Runtime.StackDelayHandler, f)
           });
-          result = runtime.safeCall(Runtime.try_catch(lambda, Runtime.effectRethrow));
+          result = Runtime.doEffectCall(lambda);
           scrut = Runtime.curEffect !== null;
           if (scrut === true) {
             throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
@@ -1147,7 +1165,7 @@ let Runtime1;
               lambda1 = (undefined, function () {
                 return runtime.safeCall(saved(runtime.Unit))
               });
-              tmp3 = runtime.safeCall(Runtime.try_catch(lambda1, Runtime.effectRethrow));
+              tmp3 = Runtime.doEffectCall(lambda1);
               result = tmp3;
               scrut2 = Runtime.curEffect !== null;
               if (scrut2 === true) {
