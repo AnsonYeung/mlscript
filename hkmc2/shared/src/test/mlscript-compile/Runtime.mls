@@ -65,7 +65,7 @@ private fun doEffectCallNormal(body) = body()
 private fun doEffectCallException(body) = try_catch(body, effectRethrow)
 
 @annotations.inline
-private fun doEffectCall(body) = doEffectCallNormal(body)
+private fun doEffectCall(body) = doEffectCallException(body)
 
 @annotations.inline
 private fun doEffectUnwindNormal() = null
@@ -74,7 +74,7 @@ private fun doEffectUnwindNormal() = null
 private fun doEffectUnwindException() = throw EffectException
 
 @annotations.inline
-private fun doEffectUnwind() = doEffectUnwindNormal()
+private fun doEffectUnwind() = doEffectUnwindException()
 
 class EffectHandle(_reified) with
   val reified = _reified

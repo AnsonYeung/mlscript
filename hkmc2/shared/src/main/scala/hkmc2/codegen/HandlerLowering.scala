@@ -19,7 +19,7 @@ import hkmc2.Config.EffectHandlers
 
 object HandlerLowering:
 
-  val ExceptionToggle = false
+  val ExceptionToggle = true
 
   private val pcIdent: Tree.Ident = Tree.Ident("pc")
   private val nextIdent: Tree.Ident = Tree.Ident("next")
