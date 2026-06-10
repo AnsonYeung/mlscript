@@ -853,6 +853,38 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
               t.toLoc :: Nil,
               source = Diagnostic.Source.Compilation)
         conclude(State.runtimeSymbol.asSimpleRef.selSN("raisePrintStackEffect").withLocOf(baseF))
+      case t if instantiatedResolvedBms.exists(_ is ctx.builtins.internals.beginUnwind) =>
+        if allArgs.length > 1 then
+          subTerm(baseF)(conclude)
+        else
+          if HandlerLowering.ExceptionToggle then
+            Throw(State.runtimeSymbol.asSimpleRef.selSN("EffectException"))
+          else
+            Return(unit)
+      case t if instantiatedResolvedBms.exists(_ is ctx.builtins.internals.effectfulCallToInternal) =>
+        if allArgs.length > 1 then
+          subTerm(baseF)(conclude)
+        else
+          lowerArgs(arg): loweredArg =>
+            loweredArg match
+            case Arg(N, p) :: Nil =>
+              if HandlerLowering.ExceptionToggle then
+                val tmp = loweringCtx.registerTempSymbol(N)
+                val err = new TempSymbol(N, "e")
+                TryCatch(
+                  Assign(tmp, Call(p, Nil ne_:: Nil)(false, true, false), End()),
+                  err,
+                  Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("effectRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(true, true, false), End()),
+                  k(tmp.asSimpleRef)
+                )
+              else
+                k(Call(p, Nil ne_:: Nil)(false, true, false))
+            case _ =>
+              fail:
+                ErrorReport(
+                  msg"Unsupported form for internal function." ->
+                  t.toLoc :: Nil,
+                  source = Diagnostic.Source.Compilation)
       case t if instantiatedResolvedBms.exists(_ is ctx.builtins.scope.locally) =>
         // scope.locally only applies to the innermost call; extra args are applied on top
         if allArgs.length > 1 then

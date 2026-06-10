@@ -271,6 +271,9 @@ object Elaborator:
         val not_impl = assumeObject("not_impl")
       object debug extends VirtualModule(assumeBuiltinMod("debug")):
         val printStack = assumeObject("printStack")
+      object internals extends VirtualModule(assumeBuiltinMod("internals")):
+        val effectfulCallToInternal = assumeObject("effectfulCallToInternal")
+        val beginUnwind = assumeObject("beginUnwind")
       object annotations extends VirtualModule(assumeBuiltinMod("annotations")):
         val untyped = assumeObject("untyped")
         val tailrec = assumeObject("tailrec")

@@ -317,7 +317,7 @@ let Runtime1;
         this.saved = saved;
       }
       resume(value) {
-        let i, f, argListsLength, currentArgList, scrut, argListLength, tmp, tmp1, lambda;
+        let i, f, argListsLength, currentArgList, scrut, argListLength, tmp, tmp1, tmp2, tmp3, tmp4, tmp5;
         i = 0;
         f = this.saved.at(0);
         argListsLength = this.saved.at(5);
@@ -330,22 +330,22 @@ let Runtime1;
           runtime.safeCall(globalThis.console.log("cannot resume getters"));
         }
         lbl: while (true) {
-          let scrut1, argListLength1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10;
-          tmp2 = argListsLength - 1;
-          scrut1 = i < tmp2;
+          let scrut1, argListLength1, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tmp14;
+          tmp6 = argListsLength - 1;
+          scrut1 = i < tmp6;
           if (scrut1 === true) {
             argListLength1 = this.saved.at(currentArgList);
-            tmp3 = currentArgList + 1;
-            tmp4 = currentArgList + 1;
-            tmp5 = tmp4 + argListLength1;
-            tmp6 = runtime.safeCall(this.saved.slice(tmp3, tmp5));
-            tmp7 = runtime.safeCall(f.apply(this.saved.at(4), tmp6));
-            f = tmp7;
-            tmp8 = argListLength1 + 1;
-            tmp9 = currentArgList + tmp8;
-            currentArgList = tmp9;
-            tmp10 = i + 1;
-            i = tmp10;
+            tmp7 = currentArgList + 1;
+            tmp8 = currentArgList + 1;
+            tmp9 = tmp8 + argListLength1;
+            tmp10 = runtime.safeCall(this.saved.slice(tmp7, tmp9));
+            tmp11 = runtime.safeCall(f.apply(this.saved.at(4), tmp10));
+            f = tmp11;
+            tmp12 = argListLength1 + 1;
+            tmp13 = currentArgList + tmp12;
+            currentArgList = tmp13;
+            tmp14 = i + 1;
+            i = tmp14;
             continue lbl
           }
           break;
@@ -354,16 +354,11 @@ let Runtime1;
         tmp = currentArgList + argListLength;
         tmp1 = tmp + 2;
         Runtime.resumeIdx = tmp1;
-        const this$FunctionContFrame = this;
-        lambda = (undefined, function () {
-          let tmp2, tmp3, tmp4, tmp5;
-          tmp2 = currentArgList + 1;
-          tmp3 = currentArgList + 1;
-          tmp4 = tmp3 + argListLength;
-          tmp5 = runtime.safeCall(this$FunctionContFrame.saved.slice(tmp2, tmp4));
-          return runtime.safeCall(f.apply(this$FunctionContFrame.saved.at(4), tmp5))
-        });
-        return Runtime.doEffectCall(lambda)
+        tmp2 = currentArgList + 1;
+        tmp3 = currentArgList + 1;
+        tmp4 = tmp3 + argListLength;
+        tmp5 = runtime.safeCall(this.saved.slice(tmp2, tmp4));
+        return runtime.safeCall(f.apply(this.saved.at(4), tmp5))
       }
       get getLocals() {
         let debugInfo, i, cur, res, i1;
@@ -641,27 +636,9 @@ let Runtime1;
     tmp3 = tmp2 + "' was accessed without being called.";
     throw runtime.safeCall(globalThis.Error(tmp3))
   }
-  static doEffectCallNormal(body) {
-    return runtime.safeCall(body())
-  }
-  static doEffectCallException(body) {
-    return runtime.safeCall(Runtime.try_catch(body, Runtime.effectRethrow))
-  }
-  static doEffectCall(body) {
-    return Runtime.doEffectCallNormal(body)
-  }
-  static doEffectUnwindNormal() {
-    return null
-  }
-  static doEffectUnwindException() {
-    throw Runtime.EffectException
-  }
-  static doEffectUnwind() {
-    return Runtime.doEffectUnwindNormal()
-  }
   static try(f) {
     let res, scrut, tmp;
-    res = Runtime.doEffectCall(f);
+    res = runtime.safeCall(f());
     scrut = Runtime.curEffect !== null;
     if (scrut === true) {
       tmp = Runtime.curEffect;
@@ -692,18 +669,16 @@ let Runtime1;
     tr = Runtime.curEffect;
     v = null;
     lbl: while (true) {
-      let scrut, tmp2, lambda, tmp3;
+      let scrut, tmp2;
       if (tr instanceof Runtime.EffectSig.class) {
         scrut = tr.handler === Runtime.PrintStackEffect;
         if (scrut === true) {
+          let inlinedVal;
           tmp2 = Runtime.showStackTrace("Stack Trace:", tr, debug, tr.handlerFun);
           runtime.safeCall(globalThis.console.log(tmp2));
           Runtime.curEffect = null;
-          lambda = (undefined, function () {
-            return Runtime.resume(tr.contTrace)(runtime.Unit)
-          });
-          tmp3 = Runtime.doEffectCall(lambda);
-          v = tmp3;
+          inlinedVal = Runtime.resume(tr.contTrace)(runtime.Unit);
+          v = inlinedVal;
           tr = Runtime.curEffect;
           continue lbl
         }
@@ -949,12 +924,12 @@ let Runtime1;
     let scrut, tmp;
     scrut = saved.at(1) === -2;
     if (scrut === true) {
-      Runtime.doEffectUnwind();
+      return runtime.Unit
     }
     tmp = new Runtime.FunctionContFrame.class(null, saved);
     Runtime.curEffect.contTrace.last.next = tmp;
     Runtime.curEffect.contTrace.last = Runtime.curEffect.contTrace.last.next;
-    return Runtime.doEffectUnwind()
+    return runtime.Unit;
   }
   static mkEffect(handler, handlerFun) {
     let res, tmp;
@@ -963,7 +938,7 @@ let Runtime1;
     res.contTrace.last = res.contTrace;
     res.contTrace.lastHandler = res.contTrace;
     Runtime.curEffect = res;
-    return Runtime.doEffectUnwind()
+    return runtime.Unit
   }
   static handleBlockImpl(cur, handler) {
     let handlerFrame;
@@ -983,7 +958,7 @@ let Runtime1;
   }
   static enterHandleBlock(handler, body) {
     let tmp, scrut;
-    tmp = Runtime.doEffectCall(body);
+    tmp = runtime.safeCall(body());
     scrut = Runtime.curEffect === null;
     if (scrut === true) {
       return tmp
@@ -998,7 +973,7 @@ let Runtime1;
         scrut = cur === nxt;
         if (scrut === true) {
           Runtime.curEffect = cur;
-          return Runtime.doEffectUnwind()
+          return runtime.Unit
         }
         cur = nxt;
         continue lbl;
@@ -1007,7 +982,7 @@ let Runtime1;
     }
   }
   static handleEffect(cur) {
-    let prevHandlerFrame, scrut, handlerFrame, saved, old, scrut1, scrut2, scrut3, tmp, tmp1, lambda, tmp2;
+    let prevHandlerFrame, scrut, handlerFrame, saved, old, scrut1, scrut2, scrut3, tmp, tmp1;
     prevHandlerFrame = cur.contTrace;
     lbl: while (true) {
       let scrut4, scrut5;
@@ -1034,15 +1009,14 @@ let Runtime1;
     Runtime.curEffect = null;
     old = Runtime.stackDepth;
     try {
-      tmp1 = Runtime.stackDepth + 2;
-      Runtime.stackDepth = tmp1;
-      lambda = (undefined, function () {
-        let tmp3;
-        tmp3 = Runtime.resume(cur.contTrace);
-        return runtime.safeCall(cur.handlerFun(tmp3))
-      });
-      tmp2 = Runtime.doEffectCall(lambda);
-      tmp = tmp2;
+      {
+        let inlinedVal, tmp2;
+        tmp1 = Runtime.stackDepth + 2;
+        Runtime.stackDepth = tmp1;
+        tmp2 = Runtime.resume(cur.contTrace);
+        inlinedVal = runtime.safeCall(cur.handlerFun(tmp2));
+        tmp = inlinedVal;
+      }
     } finally {
       Runtime.stackDepth = old;
     }
@@ -1137,7 +1111,7 @@ let Runtime1;
     return runtime.Unit;
   }
   static runStackSafe(limit, f) {
-    let old, old1, old2, result, scrut, tmp, tmp1, tmp2, lambda;
+    let old, old1, old2, result, scrut, tmp, tmp1, tmp2;
     old = Runtime.stackLimit;
     try {
       Runtime.stackLimit = limit;
@@ -1146,36 +1120,35 @@ let Runtime1;
         Runtime.stackDepth = 1;
         old2 = Runtime.stackHandler;
         try {
-          Runtime.stackHandler = Runtime.StackDelayHandler;
-          lambda = (undefined, function () {
-            return Runtime.enterHandleBlock(Runtime.StackDelayHandler, f)
-          });
-          result = Runtime.doEffectCall(lambda);
-          scrut = Runtime.curEffect !== null;
-          if (scrut === true) {
-            throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
-          }
-          lbl: while (true) {
-            let scrut1, saved, scrut2, lambda1, tmp3;
-            scrut1 = Runtime.stackResume !== null;
-            if (scrut1 === true) {
-              saved = Runtime.stackResume;
-              Runtime.stackResume = null;
-              Runtime.stackDepth = 1;
-              lambda1 = (undefined, function () {
-                return runtime.safeCall(saved(runtime.Unit))
-              });
-              tmp3 = Runtime.doEffectCall(lambda1);
-              result = tmp3;
-              scrut2 = Runtime.curEffect !== null;
-              if (scrut2 === true) {
-                throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
-              }
-              continue lbl;
+          {
+            let inlinedVal;
+            Runtime.stackHandler = Runtime.StackDelayHandler;
+            inlinedVal = Runtime.enterHandleBlock(Runtime.StackDelayHandler, f);
+            result = inlinedVal;
+            scrut = Runtime.curEffect !== null;
+            if (scrut === true) {
+              throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
             }
-            break;
+            lbl: while (true) {
+              let scrut1, saved, scrut2;
+              scrut1 = Runtime.stackResume !== null;
+              if (scrut1 === true) {
+                let inlinedVal1;
+                saved = Runtime.stackResume;
+                Runtime.stackResume = null;
+                Runtime.stackDepth = 1;
+                inlinedVal1 = runtime.safeCall(saved(runtime.Unit));
+                result = inlinedVal1;
+                scrut2 = Runtime.curEffect !== null;
+                if (scrut2 === true) {
+                  throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
+                }
+                continue lbl;
+              }
+              break;
+            }
+            tmp2 = result;
           }
-          tmp2 = result;
         } finally {
           Runtime.stackHandler = old2;
         }
