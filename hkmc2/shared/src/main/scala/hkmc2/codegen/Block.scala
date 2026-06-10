@@ -105,6 +105,13 @@ sealed abstract class Block extends Product:
           |${finallyDo.showDbg}
           |}
           |${rest.showDbg}""".stripMargin
+    case TryCatch(sub, catchVar, catchBody, rest) =>
+      s"""|Try {
+          |${sub.showDbg}
+          |} catch (${catchVar.showDbg}) {
+          |${catchBody.showDbg}
+          |}
+          |${rest.showDbg}""".stripMargin
     case Assign(lhs, rhs, rest) =>
       s"""|Assign(${lhs.showDbg} = ${rhs.showDbg})
           |${rest.showDbg}""".stripMargin
@@ -161,6 +168,7 @@ sealed abstract class Block extends Product:
       val rest = rst.definedVars
       if defn.isOwned then rest else rest + defn.sym
     case TryBlock(sub, fin, rst) => sub.definedVars ++ fin.definedVars ++ rst.definedVars
+    case TryCatch(sub, catchVar, catchBody, rst) => sub.definedVars ++ (catchBody.definedVars.filterNot(_ is catchVar)) ++ rst.definedVars
     case Label(lbl, _, bod, rst) => bod.definedVars ++ rst.definedVars
     case Scoped(syms, body) => body.definedVars ++ syms
   

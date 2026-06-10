@@ -307,6 +307,12 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
           msg"`try`-`finally` blocks are not currently supported with effect handlers enabled." ->
           N :: Nil,
           source = Diagnostic.Source.Compilation))
+      case TryCatch(sub, catchVar, catchBody, rest) =>
+        containsError = true
+        Lowering.fail(ErrorReport(
+          msg"`try`-`catch` blocks are not currently supported with effect handlers enabled." ->
+          N :: Nil,
+          source = Diagnostic.Source.Compilation))
       case Throw(_) => blk
       case Scoped(_, body) => go(body) // PreHandlerLowering
 
