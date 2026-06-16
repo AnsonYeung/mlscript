@@ -104,7 +104,9 @@ object Config:
   case class StackSafety(stackLimit: Int)
   object StackSafety:
     val default: StackSafety = StackSafety(
-      stackLimit = 1000,
+      // Theoretical default:
+      // stackLimit = 125902,
+      stackLimit = 10000,
     )
   
   case class LiftDefns() // there may be other settings in the future, having it as a case class now

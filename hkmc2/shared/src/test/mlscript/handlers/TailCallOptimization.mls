@@ -37,7 +37,8 @@ hi(0)
 //│ runtime.resetEffects();
 //│ hi = function hi(n) {
 //│   loopLabel: while (true) {
-//│     runtime.stackDepth = runtime.stackDepth + 1;
+//│     let curDepth;
+//│     curDepth = runtime.stackDepth + 18;
 //│     runtime.checkDepth();
 //│     if (runtime.curEffect === null) {
 //│       let scrut, tmp2;
@@ -46,6 +47,7 @@ hi(0)
 //│         return 0
 //│       }
 //│       tmp2 = n - 1;
+//│       runtime.stackDepth = curDepth + 1;
 //│       n = tmp2;
 //│       continue loopLabel;
 //│     }
@@ -55,7 +57,7 @@ hi(0)
 //│ $_stack$_safe$_body$_ = (undefined, function () {
 //│   return hi(0)
 //│ });
-//│ tmp1 = runtime.runStackSafe(1000, $_stack$_safe$_body$_);
+//│ tmp1 = runtime.runStackSafe(10000, $_stack$_safe$_body$_);
 //│ if (runtime.curEffect === null) { return tmp1 }
 //│ return runtime.topLevelEffect(false);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

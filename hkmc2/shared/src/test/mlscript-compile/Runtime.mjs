@@ -657,7 +657,7 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
             Runtime.curEffect = null;
             old = Runtime.stackDepth;
             try {
-              tmp1 = Runtime.stackDepth + 2;
+              tmp1 = Runtime.stackDepth + 100;
               Runtime.stackDepth = tmp1;
               tmp2 = Runtime.resume(param0.contTrace);
               tmp3 = runtime.safeCall(param0.handlerFun(tmp2));
@@ -1086,7 +1086,7 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
         Runtime.curEffect = null;
         old = Runtime.stackDepth;
         try {
-          tmp1 = Runtime.stackDepth + 3;
+          tmp1 = Runtime.stackDepth + 50;
           Runtime.stackDepth = tmp1;
           tmp2 = runtime.safeCall(cont.resume(value));
           tmp = tmp2;

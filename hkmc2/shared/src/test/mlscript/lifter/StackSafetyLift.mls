@@ -15,7 +15,7 @@ sum(100)
 
 // preserve tail calls
 // MUST see "return hi(tmp1)" in the output
-:stackSafe 6
+:stackSafe
 :effectHandlers
 :expect 0
 :sir
@@ -27,9 +27,9 @@ hi(0)
 //│ let tmp, ‹stack safe body›;
 //│ do runtime⁰.resetEffects﹖();
 //│ define hi⁰ as fun hi¹(n) {
-//│   let stackDelayRes;
-//│   set runtime⁰.stackDepth﹖ = +⁰(runtime⁰.stackDepth﹖, 1);
-//│   set stackDelayRes = runtime⁰.checkDepth﹖();
+//│   let curDepth;
+//│   set curDepth = +⁰(runtime⁰.stackDepth﹖, 18);
+//│   do runtime⁰.checkDepth﹖();
 //│   match runtime⁰.curEffect﹖
 //│     null =>
 //│       let scrut, tmp1;
@@ -40,6 +40,7 @@ hi(0)
 //│         else
 //│           let res;
 //│           set tmp1 = -⁰(n, 1);
+//│           set runtime⁰.stackDepth﹖ = +⁰(curDepth, 1);
 //│           return hi¹(tmp1)
 //│       end
 //│     else
@@ -49,7 +50,7 @@ hi(0)
 //│ define ‹stack safe body› as fun ‹stack safe body›⁰() {
 //│   return hi¹(0)
 //│ };
-//│ set tmp = runtime⁰.runStackSafe﹖(6, ‹stack safe body›⁰);
+//│ set tmp = runtime⁰.runStackSafe﹖(10000, ‹stack safe body›⁰);
 //│ match runtime⁰.curEffect﹖
 //│   null =>
 //│     return tmp
@@ -64,6 +65,7 @@ hi(0)
 :stackSafe
 :effectHandlers
 :expect 50005000
+:ssjs
 fun sum(n) =
   if n === 0 then 0
   else
@@ -73,10 +75,9 @@ sum(10000)
 //│ let tmp, ‹stack safe body›;
 //│ do runtime⁰.resetEffects﹖();
 //│ define sum⁰ as fun sum¹(n) {
-//│   let curDepth, stackDelayRes;
-//│   set runtime⁰.stackDepth﹖ = +⁰(runtime⁰.stackDepth﹖, 1);
-//│   set curDepth = runtime⁰.stackDepth﹖;
-//│   set stackDelayRes = runtime⁰.checkDepth﹖();
+//│   let curDepth;
+//│   set curDepth = +⁰(runtime⁰.stackDepth﹖, 19);
+//│   do runtime⁰.checkDepth﹖();
 //│   match runtime⁰.curEffect﹖
 //│     null =>
 //│       let scrut, tmp1, tmp2, pc;
@@ -100,15 +101,15 @@ sum(10000)
 //│                 else
 //│                   let res;
 //│                   set tmp1 = -⁰(n, 1);
-//│                   set res = sum¹(tmp1);
-//│                   set runtime⁰.stackDepth﹖ = curDepth;
-//│                   set runtime⁰.resumeValue﹖ = res;
+//│                   set runtime⁰.stackDepth﹖ = +⁰(curDepth, 1);
+//│                   set runtime⁰.resumeValue﹖ = sum¹(tmp1);
 //│                   match runtime⁰.curEffect﹖
 //│                     null =>
 //│                       break brk0
 //│                     else
 //│                       let res1;
-//│                       return runtime⁰.unwind﹖(sum¹, 1, "StackSafetyLift.mls:70:9", null, null, 1, 1, n, 0)
+//│                       set runtime⁰.stackDepth﹖ = +⁰(curDepth, 9);
+//│                       return runtime⁰.unwind﹖(sum¹, 1, "StackSafetyLift.mls:72:9", null, null, 1, 1, n, 0)
 //│                   end
 //│               end
 //│             set pc = 1;
@@ -122,13 +123,13 @@ sum(10000)
 //│         end
 //│       end
 //│     else
-//│       return runtime⁰.unwind﹖(sum¹, -1, "StackSafetyLift.mls:67:1", null, null, 1, 1, n, 0)
+//│       return runtime⁰.unwind﹖(sum¹, -1, "StackSafetyLift.mls:69:1", null, null, 1, 1, n, 0)
 //│   end
 //│ };
 //│ define ‹stack safe body› as fun ‹stack safe body›¹() {
 //│   return sum¹(10000)
 //│ };
-//│ set tmp = runtime⁰.runStackSafe﹖(1000, ‹stack safe body›¹);
+//│ set tmp = runtime⁰.runStackSafe﹖(10000, ‹stack safe body›¹);
 //│ match runtime⁰.curEffect﹖
 //│   null =>
 //│     return tmp
@@ -136,6 +137,53 @@ sum(10000)
 //│     set tmp = runtime⁰.topLevelEffect﹖(false);
 //│     return tmp
 //│ end
+//│ —————————————| JS (sanitized) |—————————————————————————————————————————————————————————————————————
+//│ let sum1, tmp1, $_stack$_safe$_body$_1;
+//│ runtime.checkCall(runtime.resetEffects());
+//│ sum1 = function sum(n) {
+//│   runtime.checkArgs("sum", 1, true, arguments.length);
+//│   let curDepth;
+//│   curDepth = runtime.stackDepth + 19;
+//│   runtime.checkCall(runtime.checkDepth());
+//│   if (runtime.curEffect === null) {
+//│     let scrut, tmp2, tmp3, pc;
+//│     if (runtime.resumePc === -1) {
+//│       pc = 0;
+//│     } else {
+//│       pc = runtime.resumePc;
+//│       runtime.resumePc = -1;
+//│     }
+//│     switch (pc) {
+//│       case 0:
+//│         scrut = n === 0;
+//│         if (scrut === true) {
+//│           return 0
+//│         }
+//│         tmp2 = n - 1;
+//│         runtime.stackDepth = curDepth + 1;
+//│         runtime.resumeValue = runtime.checkCall(sum1(tmp2));
+//│         if (runtime.curEffect === null) {
+//│           pc = 1;
+//│         } else {
+//│           runtime.stackDepth = curDepth + 9;
+//│           return runtime.checkCall(runtime.unwind(sum1, 1, "StackSafetyLift.mls:72:9", null, null, 1, 1, n, 0))
+//│         }
+//│       case 1:
+//│         tmp3 = runtime.resumeValue;
+//│         return n + tmp3;
+//│     }
+//│   } else {
+//│     return runtime.checkCall(runtime.unwind(sum1, -1, "StackSafetyLift.mls:69:1", null, null, 1, 1, n, 0))
+//│   }
+//│ };
+//│ $_stack$_safe$_body$_1 = (undefined, function () {
+//│   runtime.checkArgs("", 0, true, arguments.length);
+//│   return runtime.checkCall(sum1(10000))
+//│ });
+//│ tmp1 = runtime.checkCall(runtime.runStackSafe(10000, $_stack$_safe$_body$_1));
+//│ if (runtime.curEffect === null) {
+//│   block$res3 = tmp1;
+//│ } else { block$res3 = runtime.checkCall(runtime.topLevelEffect(false)); }
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 50005000
 
@@ -149,7 +197,7 @@ sum(10000)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
 
 :effectHandlers
-:stackSafe 6
+:stackSafe
 let ctr = 0
 fun dummy(x) = x
 fun foo(f) = 
@@ -188,7 +236,7 @@ abstract class Eff with
 
 // functions and lambdas inside handlers
 :effectHandlers
-:stackSafe 6
+:stackSafe
 :expect 50005000
 fun foo(h) = h.perform()
 handle h = Eff with
@@ -203,7 +251,7 @@ foo(h)
 
 // function call and defn inside handler
 :effectHandlers
-:stackSafe 6
+:stackSafe
 :expect 50005000
 handle h = Eff with
   fun perform()(resume) =
@@ -251,7 +299,7 @@ fun max(a, b) = if a < b then b else a
 
 
 :sir
-:stackSafe 42
+:stackSafe
 fun hi(n) = n
 hi(0)
 //│ /!!!\ Option ':stackSafe' requires ':effectHandlers' to be set
@@ -260,7 +308,7 @@ hi(0)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 0
 
-:stackSafe 42
+:stackSafe
 hi(0)
 //│ /!!!\ Option ':stackSafe' requires ':effectHandlers' to be set
 //│ = 0

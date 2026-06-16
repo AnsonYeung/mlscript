@@ -413,7 +413,7 @@ fun handleEffect(cur) =
 
   // handle the effect
   set curEffect = null
-  let tmp = set stackDepth += 2 in cur.handlerFun(resume(cur.contTrace))
+  let tmp = set stackDepth += 100 in cur.handlerFun(resume(cur.contTrace))
   if curEffect !== null then
     set cur = curEffect
     // relink the saved frames
@@ -442,7 +442,7 @@ fun resumeContTrace(contTrace, value) =
   while
     cont is FunctionContFrame then
       set curEffect = null
-      set value = set stackDepth += 3 in cont.resume(value)
+      set value = set stackDepth += 50 in cont.resume(value)
       if curEffect !== null do
         set value = curEffect
       if value is EffectSig then

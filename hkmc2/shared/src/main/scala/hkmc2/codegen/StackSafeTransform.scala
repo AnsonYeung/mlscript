@@ -22,18 +22,19 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
   private def op(op: String, a: Path, b: Path) =
     Call(State.builtinOpsMap(op).asSimpleRef, (a.asArg :: b.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun)
 
+  def genInc(curDepth: LocalVarSymbol, r: Result): Block => Block = r match
+    case Call(fun, argss) =>
+      blockBuilder
+        .assignFieldN(runtimePath, STACK_DEPTH_IDENT, op("+", curDepth.asSimpleRef, intLit(argss.last.size)))
+    case _ =>
+      blockBuilder
+  
   // Increases the stack depth, assigns the call to a value, then decreases the stack depth
   // then binds that value to a desired block
-  def extractRes(res: Result, isTailCall: Bool, f: Result => Block, sym: Assignable, curDepth: => LocalVarSymbol): Block =
-    if isTailCall then Return(res)
-    else
-      blockBuilder
-        .assign(sym, res)
-        .assignFieldN(runtimePath, STACK_DEPTH_IDENT, curDepth.asSimpleRef)
-        .rest:
-          sym match
-          case sym: LocalVarSymbol => f(sym.asSimpleRef)
-          case NoSymbol => f(Value.Lit(Tree.UnitLit(false)))
+  def extractRes(res: Result, f: Result => Block, sym: Assignable, curDepth: LocalVarSymbol): Block =
+    blockBuilder
+      .chain(genInc(curDepth, res))
+      .rest(f(res))
   
   def wrapStackSafe(body: Block, resSym: Assignable, rest: Block) =
     val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
@@ -42,7 +43,7 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
       Define(bodFun, Assign(resSym, Call(runStackSafePath, (intLit(depthLimit).asArg :: bodSym.asMemberRef(bodSym.asPrincipal.get).asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), rest))
     )
 
-  def extractResTopLevel(res: Result, isTailCall: Bool, f: Result => Block, sym: Assignable, curDepth: => LocalVarSymbol) =
+  def extractResTopLevel(res: Result, f: Result => Block, sym: Assignable, curDepth: LocalVarSymbol) =
     sym match
     case sym: LocalVarSymbol => wrapStackSafe(Ret(res), sym, f(sym.asSimpleRef))
     case NoSymbol => wrapStackSafe(Ret(res), sym, f(Value.Lit(Tree.UnitLit(false))))
@@ -61,14 +62,10 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
         case _: FunDefn | _: ValDefn => super.applyDefn(defn)(k)
 
       override def applyBlock(b: Block): Block = b match
-        case Return(res @ HandlerLowering.EffectfulResult()) =>
-          val tmp = TempSymbol(N, "res")
-          super.applyResult(res): res =>
-            Scoped(Set.single(tmp), extract(res, true, Return(_), tmp, curDepth))
         // Optimization to avoid generation of unnecessary variables
         case Assign(lhs, r @ HandlerLowering.EffectfulResult(), rest) =>
           super.applyResult(r): r =>
-            extract(r, false, _ => applyBlock(rest), lhs, curDepth)
+            extract(r, _ => applyBlock(rest), lhs, curDepth)
         case _ => super.applyBlock(b)
         
       override def applyHandler(hdr: Handler): Handler = lastWords("HandleBlock in stack safe transformation")
@@ -77,7 +74,7 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
         r match
         case r @ HandlerLowering.EffectfulResult() =>
           val tmp = TempSymbol(N, "res")
-          Scoped(Set.single(tmp), extract(r, false, k, tmp, curDepth))
+          Scoped(Set.single(tmp), extract(r, k, tmp, curDepth))
         case _ => super.applyResult(r)(k)
       
       override def applyLam(lam: Lambda): Lambda = lastWords("Lambda in stack safe transformation")
@@ -126,16 +123,11 @@ class StackSafeTransform(depthLimit: Int, paths: HandlerPaths, stackSafetyMap: S
   def rewriteBlk(blk: Block, fnOrCls: FnOrCls) =
     (stackSafetyMap.get(fnOrCls), isTrivial(blk)) match
     case (S((increment, doUnwindBlk)), false) =>
-      var usedDepth = false
-      lazy val curDepth =
-        usedDepth = true
-        TempSymbol(None, "curDepth")
+      val curDepth = TempSymbol(N, "curDepth")
       val newBody = transform(blk, curDepth)
-      val resSym = TempSymbol(None, "stackDelayRes")
       val addStackSafeEffect = blk => blockBuilder
-        .assignFieldN(runtimePath, STACK_DEPTH_IDENT, op("+", stackDepthPath, intLit(increment)))
-        .staticif(usedDepth, _.assignScoped(curDepth, stackDepthPath))
-        .assignScoped(resSym, Call(checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+        .assignScoped(curDepth, op("+", stackDepthPath, intLit(increment)))
+        .assign(NoSymbol, Call(checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
         .ifthen(
           paths.curEffect,
           Case.Lit(Tree.UnitLit(true)),

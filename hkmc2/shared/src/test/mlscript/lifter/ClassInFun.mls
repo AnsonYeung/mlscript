@@ -168,7 +168,7 @@ f().foo()
 
 // handler
 
-:stackSafe 6
+:stackSafe
 :effectHandlers
 fun sum(n) =
   if n == 0 then 0

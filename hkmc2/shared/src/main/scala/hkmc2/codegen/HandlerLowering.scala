@@ -72,10 +72,12 @@ object HandlerLowering:
       ).map(_.asArg) ne_:: Nil)(CallMetadata.mlsFunWithEffect))
   
   // argLists: length-encoded argument list used for resumption.
+  // lastArgLen: used for calculation of how much stack will be used
   // currentLocals: All locals to be saved and reloaded, this cannot include any variables in outer scopes
   // currentStackSafetySym: The symbol to be used for stack safety
   private case class ResumeInfo(
     argLists: List[Path],
+    lastArgLen: Int,
     currentLocals: List[LocalVarSymbol],
     currentStackSafetySym: FnOrCls,
   )
@@ -544,7 +546,8 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       // TODO: properly support spread argument by calculating the correct length.
       val rtArgLists = intLit(fun.params.length) :: fun.params.flatMap: pl =>
         intLit(pl.params.length) :: pl.params.map(p => p.sym.asSimpleRef)
-      val newCtx = HandlerCtx.FunctionLike(FunctionCtx(funcPath, thisPath, ResumeInfo(rtArgLists, sortedVars, L(fun.sym)),
+      val lastLen = fun.params.lastOption.fold(0)(_.allParams.size)
+      val newCtx = HandlerCtx.FunctionLike(FunctionCtx(funcPath, thisPath, ResumeInfo(rtArgLists, lastLen, sortedVars, L(fun.sym)),
         DebugInfo(debugNme, if opt.debug then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty))
       val bod2 = translateBlock(fun.body, newCtx, scopedVars)
       val fun2 = if fun.body is bod2 then fun else
@@ -608,7 +611,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
     val parts = partitionBlock(b)
     stackSafetyMap += ctx.resumeInfo.currentStackSafetySym ->
       (
-        1,
+        15 + scopedVars.size + ctx.resumeInfo.lastArgLen,
         ctx.doUnwind(ctx.resumeInfo.currentStackSafetySym.fold(_.toLoc, _.toLoc).fold(unit)(locToStr(_)), -1, Nil)(using paths)
       )
     if parts.states.size <= 1 && !parts.containsError then
