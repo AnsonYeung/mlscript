@@ -50,7 +50,7 @@ hi(0)
 //│ define ‹stack safe body› as fun ‹stack safe body›⁰() {
 //│   return hi¹(0)
 //│ };
-//│ set tmp = runtime⁰.runStackSafe﹖(10000, ‹stack safe body›⁰);
+//│ set tmp = runtime⁰.runStackSafe﹖(50000, ‹stack safe body›⁰);
 //│ match runtime⁰.curEffect﹖
 //│   null =>
 //│     return tmp
@@ -129,7 +129,7 @@ sum(10000)
 //│ define ‹stack safe body› as fun ‹stack safe body›¹() {
 //│   return sum¹(10000)
 //│ };
-//│ set tmp = runtime⁰.runStackSafe﹖(10000, ‹stack safe body›¹);
+//│ set tmp = runtime⁰.runStackSafe﹖(50000, ‹stack safe body›¹);
 //│ match runtime⁰.curEffect﹖
 //│   null =>
 //│     return tmp
@@ -180,7 +180,7 @@ sum(10000)
 //│   runtime.checkArgs("", 0, true, arguments.length);
 //│   return runtime.checkCall(sum1(10000))
 //│ });
-//│ tmp1 = runtime.checkCall(runtime.runStackSafe(10000, $_stack$_safe$_body$_1));
+//│ tmp1 = runtime.checkCall(runtime.runStackSafe(50000, $_stack$_safe$_body$_1));
 //│ if (runtime.curEffect === null) {
 //│   block$res3 = tmp1;
 //│ } else { block$res3 = runtime.checkCall(runtime.topLevelEffect(false)); }

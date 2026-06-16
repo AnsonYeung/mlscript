@@ -57,7 +57,7 @@ hi(0)
 //│ $_stack$_safe$_body$_ = (undefined, function () {
 //│   return hi(0)
 //│ });
-//│ tmp1 = runtime.runStackSafe(10000, $_stack$_safe$_body$_);
+//│ tmp1 = runtime.runStackSafe(50000, $_stack$_safe$_body$_);
 //│ if (runtime.curEffect === null) { return tmp1 }
 //│ return runtime.topLevelEffect(false);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
