@@ -61,7 +61,7 @@ lambda1 = (undefined, function (scope29$cap, cont, m, marker) {
 lambda = (undefined, function (l) {
   let tmp, tmp1;
   tmp = l.localName + "=";
-  tmp1 = Rendering.render(l.value);
+  tmp1 = runtime.safeCall(Rendering.render(l.value));
   return tmp + tmp1
 });
 lambda$1 = (undefined, function (Runtime2) {
@@ -1128,12 +1128,12 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
     tmp = Runtime.stackDepth >= Runtime.stackLimit;
     if (tmp === true) {
       tmp1 = Runtime.stackHandler !== null;
-    } else {
-      tmp1 = false;
+      if (tmp1 === true) {
+        return runtime.safeCall(Runtime.stackHandler.delay())
+      }
+      return runtime.Unit;
     }
-    if (tmp1 === true) {
-      return runtime.safeCall(Runtime.stackHandler.delay())
-    }
+    tmp1 = false;
     return runtime.Unit;
   }
   static runStackSafe(limit, f) {
