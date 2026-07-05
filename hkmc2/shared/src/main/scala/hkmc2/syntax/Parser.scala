@@ -717,7 +717,10 @@ abstract class Parser(
             case ((v, r), acc) => Quoted(LetLike(new Keywrd(`let`).withLoc(S(l0)), v, S(Unquoted(r)), S(Unquoted(acc))))
         case (IDENT("if", _), l0) :: _ =>
           consume
-          val term = simpleExprImpl(prec, allowNewlines = false)
+          // A quoted conditional is parsed as a complete conditional expression, independently
+          // of the precedence of the context in which the quote occurs. In particular, a quoted
+          // conditional used as a lambda RHS must still consume its `then` branch.
+          val term = simpleExprImpl(Keyword.`if`.rightPrecOrMin, allowNewlines = false)
           yeetSpaces match
             case (IDENT("else", _), l1) :: _ =>
               consume
@@ -1115,6 +1118,17 @@ abstract class Parser(
         infixRules.getKwAlt(kw, S(l0)) match
           case S(subRule) =>
             consume
+            /* // * Disabled for the sake of consistency
+            // These operators used to follow the symbolic-operator path, which accepts an RHS
+            // on the next line. Preserve that behavior now that they are parsed as keywords.
+            // Example:
+            //    foo |
+            //    bar
+            if (kw is Keyword.`|`) || (kw is Keyword.`&`) then
+              yeetSpaces match
+                case (_: NEWLINE_COMMA, _) :: _ => consume
+                case _ =>
+            */
             if verbose then printDbg(s"$$ proceed with rule: ${subRule.name}")
             subRule.exprAlt match
               case S(exprAlt) =>
@@ -1144,7 +1158,13 @@ abstract class Parser(
     if prec < AppPrec && !Keyword.all.contains(id) =>
       val res = exprCont(Jux(acc, expr(AppPrec, allowNewlines = allowNewlines)), prec, allowNewlines = allowNewlines)
       exprJux(res, prec, allowNewlines = allowNewlines)
-    case (br @ BRACKETS(_: Indent_Curly, toks), l0) :: _
+    // case (br @ BRACKETS(_: Indent_Curly, toks), l0) :: _
+    case (br @ BRACKETS(Curly, toks), l0) :: _
+    if prec <= AppPrec =>
+      consume
+      val res = rec(toks, S(br.innerLoc), br.describe).concludeWith(_.blockMaybeIndented)
+      exprCont(Reft(acc, Block(res).withLoc(S(l0))), prec, allowNewlines = allowNewlines)
+    case (br @ BRACKETS(Indent, toks), l0) :: _
     if prec < AppPrec && (toks.headOption match
       case S((IDENT(nme, sym), _)) => !sym && !Keyword.all.contains(nme)
       case _ => true
@@ -1160,6 +1180,3 @@ abstract class Parser(
     case Nil =>
       printDbg(s"stops at the end of input")
       acc  
-
-
-

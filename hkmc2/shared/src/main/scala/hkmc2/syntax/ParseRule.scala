@@ -331,6 +331,18 @@ class ParseRules(using State):
         ) { case (name, body) => Region(name, body) }
     .map { case (kw, r) => r.mkLocWith(kw) }
     ,
+    keepKw(`try`):
+      ParseRule("`try` keyword")(
+        exprOrBlk(
+          ParseRule("`try` body"):
+            discardKw(`finally`):
+              ParseRule("`finally` keyword")(
+                Expr(ParseRule("`finally` body")(end(())))((body, _: Unit) => body),
+                Blk(ParseRule("`finally` block")(end(())))((body, _: Unit) => body)
+              )
+        ) { case (name, body) => TryFinally(name, body) }*)
+    .map { case (kw, r) => r.mkLocWith(kw) }
+    ,
     keepKw(`outer`):
       ParseRule("outer binding operator")(
         Expr(
@@ -384,6 +396,8 @@ class ParseRules(using State):
           discard
         *)
     ) { case (kw, body) => Tree.PrefixApp(kw, body) },
+    prefixed(`|`),
+    prefixed(`&`),
     prefixed(`drop`),
     prefixed(`not`),
     prefixed(`new!`),
@@ -469,6 +483,8 @@ class ParseRules(using State):
     makeInfixRule(`or`),
     makeInfixRule(`is`),
     makeInfixRule(`as`),
+    makeInfixRule(`|`),
+    makeInfixRule(`&`),
     makeInfixRule(`then`),
     makeInfixRule(`:`),
     makeInfixRule(`extends`),
