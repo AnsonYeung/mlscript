@@ -16,6 +16,7 @@ import semantics.*
 import semantics.Elaborator.ctx
 import semantics.Elaborator.State
 import hkmc2.Config.EffectHandlers
+import hkmc2.codegen.handlers.StraightLineCodegen
 
 object HandlerLowering:
 
@@ -25,10 +26,10 @@ object HandlerLowering:
   private val nextIdent: Tree.Ident = Tree.Ident("next")
   private val lastIdent: Tree.Ident = Tree.Ident("last")
   private val contTraceIdent: Tree.Ident = Tree.Ident("contTrace")
-  private def unit = Value.Lit(Tree.UnitLit(true))
-  private def intLit(i: BigInt) = Value.Lit(Tree.IntLit(i))
+  def unit = Value.Lit(Tree.UnitLit(true))
+  def intLit(i: BigInt) = Value.Lit(Tree.IntLit(i))
 
-  private def locToStr(loc: Loc) =
+  def locToStr(loc: Loc) =
     val (line, _, col) = loc.origin.fph.getLineColAt(loc.spanStart)
     Value.Lit(Tree.StrLit(s"${loc.origin.fileName.last}:${line + loc.origin.startLineNum - 1}:$col"))
   
@@ -41,7 +42,7 @@ object HandlerLowering:
   
   type FnOrCls = Either[BlockMemberSymbol, DefinitionSymbol[? <: ClassLikeDef] & InnerSymbol]
 
-  private enum HandlerCtx:
+  enum HandlerCtx:
     case FunctionLike(ctx: FunctionCtx)
     case Ctor
     case ModCtor(trulyNested: Bool)
@@ -58,7 +59,7 @@ object HandlerLowering:
   
   // currentFun: path to the current function for resumption
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
-  private case class FunctionCtx(currentFun: Path, thisPath: Option[Path], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool):
+  case class FunctionCtx(currentFun: Path, thisPath: Option[Path], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool):
     def unwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
       Call(paths.unwindPath, (
         currentFun ::
@@ -76,13 +77,13 @@ object HandlerLowering:
   // argLists: length-encoded argument list used for resumption.
   // currentLocals: All locals to be saved and reloaded, this cannot include any variables in outer scopes
   // currentStackSafetySym: The symbol to be used for stack safety
-  private case class ResumeInfo(
+  case class ResumeInfo(
     argLists: List[Path],
     currentLocals: List[LocalVarSymbol],
     currentStackSafetySym: FnOrCls,
   )
   
-  private case class DebugInfo(
+  case class DebugInfo(
     debugNme: Str,
     debugInfoPath: Path,
   )
@@ -94,6 +95,52 @@ object HandlerLowering:
       case _ => false
   
   type StateId = BigInt
+  
+  class IdAllocator:
+    var id: Int = 0
+    def apply() =
+      val tmp = id
+      id += 1
+      tmp
+  
+  // blk: the block of code within this state
+  case class BlockPartition(blk: Block, resumable: Bool)
+  case class PartitionedBlock(
+    entry: StateId,
+    states: Map[StateId, BlockPartition],
+    allocId: IdAllocator,
+    needsStackSafety: Bool,
+    containsError: Bool
+  )
+  
+  class SharedState(using Elaborator.State):
+    val estate = summon[Elaborator.State]
+    def freshTmp(dbgNme: Str = "tmp") = new TempSymbol(N, dbgNme)
+    def freshLabel(nme: Str) = new LabelSymbol(N, nme)
+    // First assign res to resumeValue, then jump to pc, possibly unwinding.
+    object StateTransition:
+      private val transitionSymbol = freshTmp("transition")
+      private val resultSymbol = freshTmp("result")
+      def apply(res: Opt[Result], uid: StateId) =
+        val pre = res match
+          case N => blockBuilder.assign(transitionSymbol, unit)
+          case S(r) => blockBuilder.assign(resultSymbol, r)
+        pre.ret(Value.Lit(Tree.IntLit(uid)))
+      def unapply(blk: Block) = blk match
+        case Assign(`transitionSymbol`, _, Return(Value.Lit(Tree.IntLit(uid)))) =>
+          S((N, uid))
+        case Assign(`resultSymbol`, res, Return(Value.Lit(Tree.IntLit(uid)))) =>
+          S((S(res), uid))
+        case _ => N
+  
+  case class FlattenCtx(
+    parts: PartitionedBlock,
+    ctx: FunctionCtx,
+    pcVar: LocalVarSymbol,
+    vars: List[LocalVarSymbol],
+    postTransform: ((Opt[Result], StateId) => Block) => BlockTransformer,
+    fallbackPostTransform: BlockTransformer,
+  )
 
 import HandlerLowering.*
 
@@ -122,8 +169,8 @@ class HandlerPaths(using Elaborator.State):
 
 class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise, Elaborator.State, Elaborator.Ctx, Config):
   
-  private def freshTmp(dbgNme: Str = "tmp") = new TempSymbol(N, dbgNme)
-  private def freshLabel(nme: Str) = new LabelSymbol(N, nme)
+  val hctx = SharedState()
+  import hctx._
   
   private def rtThrowMsg(msg: Str) = Throw(
     Instantiate(mut = false, State.globalThisSymbol.asThis.selN(Tree.Ident("Error")),
@@ -140,44 +187,11 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
               case _ => N
         .map((fun, _))
       case _ => N
-  
-  // First assign res to resumeValue, then jump to pc, possibly unwinding.
-  object StateTransition:
-    private val transitionSymbol = freshTmp("transition")
-    private val resultSymbol = freshTmp("result")
-    def apply(res: Opt[Result], uid: StateId) =
-      val pre = res match
-        case N => blockBuilder.assign(transitionSymbol, unit)
-        case S(r) => blockBuilder.assign(resultSymbol, r)
-      pre.ret(Value.Lit(Tree.IntLit(uid)))
-    def unapply(blk: Block) = blk match
-      case Assign(`transitionSymbol`, _, Return(Value.Lit(Tree.IntLit(uid)))) =>
-        S((N, uid))
-      case Assign(`resultSymbol`, res, Return(Value.Lit(Tree.IntLit(uid)))) =>
-        S((S(res), uid))
-      case _ => N
 
   abstract class LazyId extends Lazy[StateId]:
     def isUsed: Bool = !isEmpty
     def transitionOrBlk(blk: => Block) =
       if isEmpty then blk else StateTransition(N, force_!)
-  
-  private class IdAllocator:
-    var id: Int = 0
-    def apply() =
-      val tmp = id
-      id += 1
-      tmp
-  
-  // blk: the block of code within this state
-  private case class BlockPartition(blk: Block, resumable: Bool)
-  private case class PartitionedBlock(
-    entry: StateId,
-    states: Map[StateId, BlockPartition],
-    allocId: IdAllocator,
-    needsStackSafety: Bool,
-    containsError: Bool
-  )
   
   private def partitionBlock(blk: Block): PartitionedBlock =
     val result = mutable.HashMap.empty[StateId, BlockPartition]
@@ -445,58 +459,6 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       .toList
       .map(locals(_))
 
-  private def computeEdges(parts: PartitionedBlock): Map[StateId, List[StateId]] =
-    val edges = mutable.ListBuffer.empty[(StateId, StateId)]
-    def findEdges(uid: StateId, b: Block) =
-      new BlockTraverser:
-        override def applyBlock(b: Block): Unit = b match
-          case StateTransition(_, uid2) => edges.addOne((uid, uid2))
-          case _ => super.applyBlock(b)
-        applyBlock(b)
-    for (uid, blk) <- parts.states do
-      findEdges(uid, blk.blk)
-    edges.groupBy(_._1).map:
-      case uid -> ids => uid -> ids.map:
-          case (a, b) => b
-        .toList
-        .distinct
-
-  // Given a directed graph, computes the "straight line" segments of the graph, i.e. partitions it
-  // into segments such that the out-degree of all elements in each segment is 1, except
-  // for the last element. Note that the partitioning is not necessarily unique and this does
-  // not necessarily produce a "maximal" partitioning. (I actually suspect that producing a
-  // maximal partitioning is NP-hard...)
-  //
-  // I do have some ideas to improve this though, but those can be done later.
-  private def computeStraightLines(entry: StateId, edges: Map[StateId, List[StateId]]): List[List[StateId]] =
-    val visited = mutable.HashSet.empty[StateId]
-    val ret = mutable.ListBuffer.empty[List[StateId]]
-    // Algorithm: Perform a DFS and accumulate the current straight-line segment as we visit nodes.
-    // Once we reach a node that has an out degree of != 1, we end the current straight line segment.
-    def dfs(state: StateId, acc: List[StateId]): Unit =
-      var curAcc = acc
-      def concludeSegment =
-        ret.addOne(curAcc)
-        curAcc = List.empty
-      if !visited.contains(state) then
-        // Not yet visited: Add this node to the current segment.
-        curAcc = state :: curAcc
-        visited.add(state)
-        edges.get(state) match
-        case Some(nexts) =>
-          // If this state has an out degree of != 1, then end the current segment.
-          if nexts.size != 1 then
-            concludeSegment
-          for n <- nexts do dfs(n, curAcc)
-        case None => concludeSegment
-      // If this state was visited from a node u with an out-degree of 1, but this state
-      // has already been previously visited, then we must conclude the current segment,
-      // ending at the node u.
-      else if !curAcc.isEmpty then
-        concludeSegment
-    dfs(entry, List.empty)
-    ret.sortBy(x => x.headOption.getOrElse(BigInt(-1))).toList
-
   private def lifterReport(using Line, FileName)(msgs: Ls[Message -> Opt[Loc]])(using Name) =
     if opt.softLifterError then
       WarningReport(msgs, source = Diagnostic.Source.Compilation)
@@ -601,9 +563,6 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
     val curDepth = freshTmp("curDepth")
     val mainLoopLbl = freshLabel("main")
 
-    val edges = computeEdges(parts)
-    val straightLines = computeStraightLines(parts.entry, edges)
-
     def postTransform(transition: (Opt[Result], BigInt) => Block) = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block) = b match
         case StateTransition(S(res), uid) if needsStackSafety =>
@@ -633,68 +592,22 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(id), vars)(using paths)))
           .assign(pcVar, intLit(id)))
         .continue(mainLoopLbl)
-    // Note: `line` has the last state as the head, and the first state at the end
-    def straightLineToArms(line: List[StateId]): Block => Block =
-      def transformState(state: StateId) =
-        val blk = parts.states(state)
-        val lblSym = LabelSymbol(N, "brk" + state.toString())
-        val nextState = edges(state).head
-        val transform = postTransform:
-          case (N, uid) =>
-            assert(uid === nextState)
-            Break(lblSym)
-          case (S(res), uid) =>
-            assert(uid === nextState)
-            blockBuilder
-              .staticif(ExceptionToggle, _.assign(pcVar, intLit(uid)))
-              .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-              .staticif(!ExceptionToggle, _
-                .ifthen(
-                  paths.curEffect,
-                  Case.Lit(Tree.UnitLit(true)),
-                  End(),
-                  S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(uid), vars)(using paths))
-                ))
-              .break(lblSym)
-        val transformed = transform.applyBlock(blk.blk)
-        Label(
-          lblSym, false, transformed,
-          Assign(pcVar, intLit(nextState), End())
-          // End()
-        )
-      line match
-        case head :: next =>
-          val headTransformed = fallbackPostTransform.applyBlock(parts.states(head).blk)
-          val initial: Block => Block = blk =>
-            Match(
-              pcVar.asSimpleRef,
-              Case.Lit(Tree.IntLit(head)) -> headTransformed :: Nil,
-              N,
-              blk
-            )
-          next.foldLeft(initial):
-            // Applying this function to a block b will result in b appearing in the tail
-            // of the sequence of match blocks
-            case (acc, uid) => 
-              val transformed = transformState(uid)
-              blk =>
-              Match(
-                pcVar.asSimpleRef,
-                Case.Lit(Tree.IntLit(uid)) -> transformed :: Nil,
-                N,
-                acc(blk)
-              )
-        case Nil => id
-      
-      
-
+    
+    val flattenCtx = FlattenCtx(
+      parts,
+      ctx,
+      pcVar,
+      vars,
+      postTransform,
+      fallbackPostTransform
+    )
+    
     var mainBody =
       if oneState then
         fallbackPostTransform.applyBlock(parts.states.head._2.blk)
       else
-        val matches = straightLines.map(straightLineToArms).foldLeft[Block](End()):
-          case (acc, f) => f(acc)
-        Label(mainLoopLbl, true, matches, End())
+        val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx)
+        Label(mainLoopLbl, true, straightLineCg.generate(parts, ctx), End())
         
     val getSavedTmp = freshTmp("saveOffset")
     def getSaved(off: BigInt): (Block => Block, Path) =
