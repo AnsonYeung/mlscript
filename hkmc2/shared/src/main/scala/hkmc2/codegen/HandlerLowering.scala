@@ -324,7 +324,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
     val replaceStaleLabels = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block): Block = b match
         case Break(label) if labelIds(label)._2.isUsed => StateTransition(N, labelIds(label)._2.force_!)
-        case Continue(label) if labelIds(label)._1.isUsed => StateTransition(N, labelIds(label)._2.force_!)
+        case Continue(label) if labelIds(label)._1.isUsed => StateTransition(N, labelIds(label)._1.force_!)
         case _ => super.applyBlock(b)
     val newMap = Map.from(result.map: (id, part) =>
       id -> BlockPartition(replaceStaleLabels.applyBlock(part.blk), part.resumable))
@@ -718,7 +718,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
         .assign(NoSymbol, PureCall(paths.checkDepthPath, Nil))
         .staticif(!ExceptionToggle, _
           .ifthen(paths.curEffect, Case.Lit(Tree.UnitLit(true)), End(), S(
-            ctx.doUnwind(ctx.resumeInfo.currentStackSafetySym.fold(_.toLoc, _.toLoc).fold(unit)(locToStr(_)), 
+            ctx.doUnwind(ctx.resumeInfo.currentStackSafetySym.fold(_.toLoc, _.toLoc).fold(unit)(locToStr(_)),
             if oneState then intLit(-1) else pcVar.asSimpleRef, vars)(using paths))))
         .assign(curDepth, Call(plus, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
         .rest(mainBody)
@@ -736,6 +736,8 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
         S(restoreVars.assignFieldN(paths.runtimePath, new Tree.Ident("resumePc"), intLit(-1)).end),
         mainBody
       )
+    else if ExceptionToggle then
+      mainBody = Assign(pcVar, intLit(parts.entry), mainBody)
     
     val extraVars = if needsStackSafety then Set(pcVar, curDepth) else Set.single(pcVar)
     Scoped(
