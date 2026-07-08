@@ -1152,6 +1152,7 @@ extension (k: Block => Block)
   
   def assign(l: Assignable, r: Result) = k.chain(Assign(l, r, _))
   def assignScoped(l: LocalVarSymbol, r: Result) = k.scopedVars(Set.single(l)).assign(l, r)
+  def assignFieldS(s: Select, rhs: Result) = k.chain(AssignField(s.qual, s.name, rhs, _)(s.symbol))
   def assignFieldN(lhs: Path, nme: Tree.Ident, rhs: Result) = k.chain(AssignField(lhs, nme, rhs, _)(N))
   def break(l: LabelSymbol): Block = k.rest(Break(l))
   def continue(l: LabelSymbol): Block = k.rest(Continue(l))

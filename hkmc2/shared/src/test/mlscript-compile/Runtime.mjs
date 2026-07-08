@@ -401,14 +401,28 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
       toString() { return runtime.render(this); }
       static [definitionMetadata] = ["object", "PrintStackEffect"];
     });
-    Runtime.FunctionContFrame = function FunctionContFrame(next, saved) {
-      return globalThis.Object.freeze(new FunctionContFrame.class(next, saved));
+    Runtime.FunctionContFrame = function FunctionContFrame(next) {
+      return globalThis.Object.freeze(new FunctionContFrame.class(next));
     };
     (class FunctionContFrame {
       static {
         Runtime.FunctionContFrame.class = this
       }
+      constructor(next) {
+        this.next = next;
+      }
+      toString() { return runtime.render(this); }
+      static [definitionMetadata] = ["class", "FunctionContFrame", ["next"]];
+    });
+    Runtime.FunctionContFrameImpl = function FunctionContFrameImpl(next, saved) {
+      return globalThis.Object.freeze(new FunctionContFrameImpl.class(next, saved));
+    };
+    (class FunctionContFrameImpl extends Runtime.FunctionContFrame.class {
+      static {
+        Runtime.FunctionContFrameImpl.class = this
+      }
       constructor(next, saved) {
+        super(next);
         this.next = next;
         this.saved = saved;
       }
@@ -505,7 +519,7 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
         return loc;
       }
       toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["class", "FunctionContFrame", ["next", "saved"]];
+      static [definitionMetadata] = ["class", "FunctionContFrameImpl", ["next", "saved"]];
     });
     Runtime.HandlerContFrame = function HandlerContFrame(next, nextHandler, handler) {
       return globalThis.Object.freeze(new HandlerContFrame.class(next, nextHandler, handler));
@@ -1005,10 +1019,15 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
     if (scrut === true) {
       return runtime.Unit
     }
-    tmp = new Runtime.FunctionContFrame.class(null, saved);
+    tmp = new Runtime.FunctionContFrameImpl.class(null, saved);
     Runtime.curEffect.contTrace.last.next = tmp;
     Runtime.curEffect.contTrace.last = Runtime.curEffect.contTrace.last.next;
     return runtime.Unit;
+  }
+  static unwindFramed(frame) {
+    Runtime.curEffect.contTrace.last.next = frame;
+    Runtime.curEffect.contTrace.last = frame;
+    return runtime.Unit
   }
   static mkEffect(handler, handlerFun) {
     let res, tmp;
