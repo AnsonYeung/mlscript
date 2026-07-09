@@ -25,6 +25,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
     val baseName = ctx.debugInfo.debugNme
     val clsSym = new BlockMemberSymbol(s"$baseName$$Cont", Nil, true)
     val clsDSym = new ClassSymbol(Tree.DummyTypeDef(syntax.Cls), Tree.Ident(s"$baseName$$Cont"))
+    val savedVars = flattenCtx.vars ++ ctx.resumeInfo.allArgs
     val transformedBody =
       new BlockTransformerShallow(SymbolSubst.Id):
         private def transformEffectful(lhs: LocalVarSymbol, r: Result, sid: StateId, rst: Block): Block =
@@ -36,7 +37,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
               Case.Lit(Tree.UnitLit(true)),
               End(),
               S(
-                Assign(callTmpVar, Instantiate(true, clsSym.asMemberRef(clsDSym), (intLit(sid).asArg :: flattenCtx.vars.map(_.asSimpleRef.asArg)) :: Nil)(InstantiateMetadata.empty),
+                Assign(callTmpVar, Instantiate(true, clsSym.asMemberRef(clsDSym), (intLit(sid).asArg :: savedVars.map(_.asSimpleRef.asArg)) :: Nil)(InstantiateMetadata.empty),
                 Return(Call(paths.unwindFramedPath, (callTmpVar.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
               )))
             .rest(rst)
@@ -84,12 +85,11 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       Select(Value.This(clsDSym), ts.id)(S(ts))(false)
     // Allocate before actual variables to reserve the name
     val pc = allocFieldWithName(VarSymbol(Tree.Ident("pc")), "pc")
-    val savedVars = flattenCtx.vars ++ ctx.resumeInfo.allArgs
     val savedVarsFields = savedVars.map(allocField)
     val params = VarSymbol(Tree.Ident("pc")) :: savedVars.map(vs => VarSymbol(Tree.Ident(vs.nme)))
     val initFields = (params zip (pc :: savedVarsFields)).foldRight[Block](End()): (p, rst) =>
         Define(ValDefn(p._2._2, p._2._1, p._1.asSimpleRef)(N, Nil), rst)
-    val resumeBody = genResumeBody(parts, ctx, allocatedVars, allocatedFields, fieldFromTS)
+    val resumeBody = genResumeBody(parts, ctx, allocatedVars, allocatedFields, fieldFromTS, clsDSym)
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
     val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, PlainParamList(Param.simple(ctx.rVar) :: Nil) :: Nil, resumeBody)(N, Nil)
@@ -117,17 +117,22 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
     ctx: FunctionCtx,
     allocatedVars: collection.Map[LocalVarSymbol, Str],
     allocatedFields: collection.Map[Str, (BlockMemberSymbol, TermSymbol)],
-    fieldFromTS: TermSymbol => Select
+    fieldFromTS: TermSymbol => Select,
+    clsDSym: ClassSymbol,
   ): Block =
     val loopLbl = LabelSymbol(N, "handlerLoop")
     val pcField = fieldFromTS(allocatedFields("pc")._2)
     val postTransform = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block): Block = b match
         case StateTransition(S(res), uid) =>
-          blockBuilder
-            .assign(ctx.rVar, res)
-            .assignFieldS(pcField, intLit(uid))
-            .continue(loopLbl)
+          applyResult(res): r2 =>
+            blockBuilder
+              .assign(ctx.rVar, r2)
+              .assignFieldS(pcField, intLit(uid))
+              .ifthen(paths.curEffect, Case.Lit(Tree.UnitLit(true)), End(), S(
+                Return(Call(paths.unwindFramedPath, (Value.This(clsDSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+              ))
+              .continue(loopLbl)
         case StateTransition(N, uid) =>
           blockBuilder
             .assignFieldS(pcField, intLit(uid))
@@ -147,9 +152,14 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
         case Value.SimpleRef(sym: LocalVarSymbol) if allocatedVars.contains(sym) =>
           k(fieldFromTS(allocatedFields(allocatedVars(sym))._2))
         case _ => super.applyPath(p)(k)
+      override def applySimpleSymbol(sym: SimpleSymbol): SimpleSymbol =
+        sym match
+        case s: LocalVarSymbol if allocatedVars.contains(s) =>
+          lastWords("VarSymbol occurs in unexpected places and is not replaced")
+        case _ => sym
     val refresher = new SymbolRefresher(Map.empty)
     val arms = parts.states.iterator
       .map: (sid, part) =>
         Case.Lit(Tree.IntLit(sid)) -> postTransform.applyBlock(part.blk)
       .toList
-    refresher(Scoped(flattenCtx.scopedVars ++ ctx.resumeInfo.allArgs, Label(loopLbl, true, Match(pcField, arms, N, End()), End())))
+    refresher(Scoped(flattenCtx.scopedVars, Label(loopLbl, true, Match(pcField, arms, N, End()), End())))
