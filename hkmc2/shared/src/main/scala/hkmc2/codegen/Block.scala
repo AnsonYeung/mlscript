@@ -473,6 +473,7 @@ object AssignField:
   def apply(lhs: Path, nme: Tree.Ident, rhs: Result, rest: Block)(symbol: Opt[MemberSymbol]): Block = rest match
     case Scoped(syms, body) => Scoped(syms, AssignField(lhs, nme, rhs, body)(symbol))
     case _ => new AssignField(lhs, nme, rhs, rest)(symbol)
+  def apply(s: Select, rhs: Result, rest: Block): Block = AssignField(s.qual, s.name, rhs, rest)(s.symbol)
 object AssignDynField:
   def apply(lhs: Path, fld: Path, arrayIdx: Bool, rhs: Result, rest: Block): Block = rest match
     case Scoped(syms, body) => Scoped(syms, AssignDynField(lhs, fld, arrayIdx, rhs, body))
@@ -1064,9 +1065,9 @@ case class Record(mut: Bool, elems: Ls[RcdArg]) extends Result
 
 
 sealed abstract class Path extends TrivialResult:
-  def selN(id: Tree.Ident): Path = Select(this, id)(N)(false)
-  def sel(id: Tree.Ident, sym: DefinitionSymbol[?]): Path = Select(this, id)(S(sym))(false)
-  def selSN(id: Str): Path = selN(new Tree.Ident(id))
+  def selN(id: Tree.Ident): Select = Select(this, id)(N)(false)
+  def sel(id: Tree.Ident, sym: DefinitionSymbol[?]): Select = Select(this, id)(S(sym))(false)
+  def selSN(id: Str): Select = selN(new Tree.Ident(id))
   def asArg = Arg(spread = N, this)
   def targetSymbol: Opt[DefinitionSymbol[?]] = this match
     case ref: Value.MemberRef => S(ref.disamb)

@@ -13,31 +13,32 @@ import hkmc2.codegen.HandlerLowering.*
 import hkmc2.codegen.HandlerPaths
 import hkmc2.Config.EffectHandlers
 
-class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCtx):
+class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCtx)(using TL):
   import hctx.*
   given Elaborator.State = estate
   given Config = cfg
   
   def generate(b: Block, parts: PartitionedBlock, ctx: FunctionCtx): Block =
-    val needsStackSafety = parts.needsStackSafety && hctx.opt.stackSafety.isDefined
     val curDepth = VarSymbol(Tree.Ident("curDepth"))
     val callTmpVar = VarSymbol(Tree.Ident("callTmp"))
     val baseName = ctx.debugInfo.debugNme
     val clsSym = new BlockMemberSymbol(s"$baseName$$Cont", Nil, true)
     val clsDSym = new ClassSymbol(Tree.DummyTypeDef(syntax.Cls), Tree.Ident(s"$baseName$$Cont"))
     val savedVars = flattenCtx.vars ++ ctx.resumeInfo.allArgs
+    def instCont(uid: Path) =
+      Instantiate(true, clsSym.asMemberRef(clsDSym), (ctx.thisPath.map(_.asArg) ++: (uid.asArg :: savedVars.map(_.asSimpleRef.asArg))) :: Nil)(InstantiateMetadata.empty)
     val transformedBody =
       new BlockTransformerShallow(SymbolSubst.Id):
         private def transformEffectful(lhs: LocalVarSymbol, r: Result, sid: StateId, rst: Block): Block =
           blockBuilder
-            .staticif(needsStackSafety, _.assignFieldN(paths.runtimePath, paths.stackDepthIdent, curDepth.asSimpleRef))
+            .staticif(flattenCtx.needsStackSafety, _.assignFieldN(paths.runtimePath, paths.stackDepthIdent, curDepth.asSimpleRef))
             .assign(lhs, r)
             .ifthen(
               paths.curEffect,
               Case.Lit(Tree.UnitLit(true)),
               End(),
               S(
-                Assign(callTmpVar, Instantiate(true, clsSym.asMemberRef(clsDSym), (intLit(sid).asArg :: savedVars.map(_.asSimpleRef.asArg)) :: Nil)(InstantiateMetadata.empty),
+                Assign(callTmpVar, instCont(intLit(sid)),
                 Return(Call(paths.unwindFramedPath, (callTmpVar.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
               )))
             .rest(rst)
@@ -85,15 +86,17 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       Select(Value.This(clsDSym), ts.id)(S(ts))(false)
     // Allocate before actual variables to reserve the name
     val pc = allocFieldWithName(VarSymbol(Tree.Ident("pc")), "pc")
-    val savedVarsFields = savedVars.map(allocField)
-    val params = VarSymbol(Tree.Ident("pc")) :: savedVars.map(vs => VarSymbol(Tree.Ident(vs.nme)))
-    val initFields = (params zip (pc :: savedVarsFields)).foldRight[Block](End()): (p, rst) =>
+    val selfField = ctx.thisPath.map(_ => allocFieldWithName(VarSymbol(Tree.Ident("this")), "this"))
+    val selfParam = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this")))
+    val allFields = selfField ++: (pc :: savedVars.map(allocField))
+    val params = selfParam ++: (VarSymbol(Tree.Ident("pc")) :: savedVars.map(vs => VarSymbol(Tree.Ident(vs.nme))))
+    val initFields = (params zip allFields).foldRight[Block](End()): (p, rst) =>
         Define(ValDefn(p._2._2, p._2._1, p._1.asSimpleRef)(N, Nil), rst)
-    val resumeBody = genResumeBody(parts, ctx, allocatedVars, allocatedFields, fieldFromTS, clsDSym)
+    val resumeBody = genResumeBody(parts, ctx, selfField.map(f => fieldFromTS(f._2)), allocatedVars, allocatedFields, fieldFromTS, clsDSym)
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
     val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, PlainParamList(Param.simple(ctx.rVar) :: Nil) :: Nil, resumeBody)(N, Nil)
-    ctx.companionClass = S(ClsLikeDefn(
+    ctx.contClass = S(ClsLikeDefn(
       N,
       clsDSym,
       clsSym,
@@ -110,11 +113,23 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       N,
       N,
     )(N, Nil))
-    Scoped(Set.single(callTmpVar), transformedBody)
+    var scoped: Set[ScopedSymbol] = Set.single(callTmpVar)
+    var mainBody = transformedBody
+    if flattenCtx.needsStackSafety then
+      scoped += curDepth
+      mainBody = blockBuilder
+        .assign(NoSymbol, Call(paths.checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+        .ifthen(paths.curEffect, Case.Lit(Tree.UnitLit(true)), End(), S(
+          Assign(callTmpVar, instCont(intLit(parts.entry)),
+            Return(Call(paths.unwindFramedPath, (callTmpVar.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun)))))
+        .assign(curDepth, Call(paths.plus, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+        .rest(mainBody)
+    Scoped(scoped, mainBody)
   
   def genResumeBody(
     parts: PartitionedBlock,
     ctx: FunctionCtx,
+    selfField: Option[Path],
     allocatedVars: collection.Map[LocalVarSymbol, Str],
     allocatedFields: collection.Map[Str, (BlockMemberSymbol, TermSymbol)],
     fieldFromTS: TermSymbol => Select,
@@ -151,6 +166,8 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       override def applyPath(p: Path)(k: Path => Block): Block = p match
         case Value.SimpleRef(sym: LocalVarSymbol) if allocatedVars.contains(sym) =>
           k(fieldFromTS(allocatedFields(allocatedVars(sym))._2))
+        case Value.This(s) if ctx.thisPath.contains(p) =>
+          k(selfField.get)
         case _ => super.applyPath(p)(k)
       override def applySimpleSymbol(sym: SimpleSymbol): SimpleSymbol =
         sym match

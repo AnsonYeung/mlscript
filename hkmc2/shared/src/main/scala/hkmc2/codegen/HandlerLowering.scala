@@ -61,9 +61,9 @@ object HandlerLowering:
   
   // currentFun: path to the current function for resumption
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
-  case class FunctionCtx(currentFun: Path, thisPath: Option[Path], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool)(using State):
+  case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool)(using State):
     val rVar = VarSymbol(Tree.Ident("resumeVar"))
-    var companionClass: Opt[ClsLikeDefn] = N
+    var contClass: Opt[ClsLikeDefn] = N
     def unwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
       Call(paths.unwindPath, (
         currentFun ::
@@ -77,8 +77,8 @@ object HandlerLowering:
       ).map(_.asArg) ne_:: Nil)(CallMetadata.mlsFunWithEffect)
     def doUnwind(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
       Return(unwindCall(loc, state, restoreList)(using paths))
-    def addCompanion(b: Block): Block =
-      companionClass match
+    def addContCompanion(b: Block): Block =
+      contClass match
       case N => b
       case S(cd: ClsLikeDefn) => Scoped(Set.single(cd.sym), Define(cd, b))
   
@@ -155,11 +155,13 @@ object HandlerLowering:
     scopedVars: collection.Set[ScopedSymbol], // All
     postTransform: ((Opt[Result], StateId) => Block) => BlockTransformer,
     fallbackPostTransform: BlockTransformer,
+    needsStackSafety: Bool,
   )
 
 import HandlerLowering.*
 
 class HandlerPaths(using Elaborator.State):
+  val plus = State.builtinOpsMap("+").asSimpleRef
   val runtimePath: Path = State.runtimeSymbol.asSimpleRef
   val contClsPath: Path = runtimePath.selSN("FunctionContFrame").selSN("class")
   val mkEffectPath: Path = runtimePath.selSN("mkEffect")
@@ -169,7 +171,7 @@ class HandlerPaths(using Elaborator.State):
   val illegalEffectPath: Path = runtimePath.selSN("illegalEffect")
   val enterHandleBlockPath: Path = runtimePath.selSN("enterHandleBlock")
   val stackDepthIdent = new Tree.Ident("stackDepth")
-  val stackDepthPath: Path = runtimePath.selN(stackDepthIdent)
+  val stackDepthPath: Select = runtimePath.selN(stackDepthIdent)
   val checkDepthPath: Path = runtimePath.selN(Tree.Ident("checkDepth"))
   val runStackSafePath: Path = runtimePath.selN(Tree.Ident("runStackSafe"))
   val fnLocalsPath: Path = runtimePath.selSN("FnLocalsInfo").selSN("class")
@@ -496,7 +498,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
   private def translateBlock(blk: Block, h: HandlerCtx, scopedVars: collection.Set[ScopedSymbol]): Block =
     given HandlerCtx = h
 
-    def translateFunLike(fun: FunDefn, funcPath: Path, thisPath: Option[Path], debugNme: Str) =
+    def translateFunLike(fun: FunDefn, funcPath: Path, thisPath: Option[Value.This], debugNme: Str) =
       val scopedVars = fun.body.scopedVars
       val varList = scopedVars.collect:
         case sym: LocalVarSymbol => sym
@@ -530,24 +532,24 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
           if h.currentBlockIsTrulyNested then
             raise(lifterReport(msg"Unexpected nested function: lambdas may not function correctly." -> fun.sym.toLoc :: Nil))
           val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(fun, fun.sym.asMemberRef(fun.dSym), N, fun.sym.nme)
-          ctx.ctx.addCompanion(if opt.debug then Scoped(Set.single(debugInfoSym), Assign(debugInfoSym, Tuple(false, debugInfo), k(fun2))) else k(fun2))
+          ctx.ctx.addContCompanion(if opt.debug then Scoped(Set.single(debugInfoSym), Assign(debugInfoSym, Tuple(false, debugInfo), k(fun2))) else k(fun2))
         case defn @ ClsLikeDefn(owner, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, methods, privateFields, publicFields, preCtor, ctor, companion, bufferable) =>
           if h.currentBlockIsTrulyNested then
             raise(lifterReport(msg"Unexpected nested class: lambdas may not function correctly." -> isym.toLoc :: Nil))
           val debugInfos = mutable.ArrayBuffer.empty[(TempSymbol, List[Arg])]
-          val newCompanions = mutable.ArrayBuffer.empty[ClsLikeDefn]
+          val newContCompanions = mutable.ArrayBuffer.empty[ClsLikeDefn]
           val newMtds = methods.map: f =>
             val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(f, isym.asThis.sel(new Tree.Ident(f.sym.nme), f.dSym),
               S(isym.asThis), s"${sym.nme}#${f.sym.nme}")
             debugInfos += debugInfoSym -> debugInfo
-            newCompanions ++= ctx.ctx.companionClass
+            newContCompanions ++= ctx.ctx.contClass
             fun2
           val companion2 = companion.map: bod =>
             val newMtds = bod.methods.map: f =>
               val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(f, bod.isym.asThis.sel(new Tree.Ident(f.sym.nme), f.dSym),
                 S(bod.isym.asThis), s"${sym.nme}.${f.sym.nme}")
               debugInfos += debugInfoSym -> debugInfo
-              newCompanions ++= ctx.ctx.companionClass
+              newContCompanions ++= ctx.ctx.contClass
               fun2
             // We cannot use this bc there is no subblock transform...
             // val newCtor = translateTrivialOrTopLevel(bod.ctor)
@@ -560,10 +562,12 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
             ClsLikeBody(bod.isym, newMtds, bod.privateFields, bod.publicFields, newCtor, bod.annotations)
           val c2 = ClsLikeDefn(owner, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, newMtds, privateFields, publicFields,
             translateCtorLike(preCtor, isym.asThis, false), translateCtorLike(ctor, isym.asThis, false), companion2, bufferable)(defn.configOverride, defn.annotations)
+          var r = k(c2)
           if opt.debug then
-            Scoped(debugInfos.map(_._1).toSet, debugInfos.foldRight(k(c2)): (elem, blk) =>
+            r = Scoped(debugInfos.iterator.map(_._1).toSet, debugInfos.foldRight(r): (elem, blk) =>
               Assign(elem._1, Tuple(false, elem._2), blk))
-          else k(c2)
+          r = Scoped(newContCompanions.iterator.map(_.sym).toSet, newContCompanions.foldRight(r)(Define(_, _)))
+          r
         case _ => super.applyDefn(defn)(k)
     val b = preTransform.applyBlock(blk)
     if !h.currentBlockIsTrulyNested then
@@ -622,7 +626,8 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       vars,
       scopedVars,
       postTransform,
-      fallbackPostTransform
+      fallbackPostTransform,
+      needsStackSafety,
     )
     
     if DoubleCompilation then
@@ -643,13 +648,12 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       (addOne, DynSelect(paths.runtimePath.selSN("resumeArr"), getSavedTmp.asSimpleRef, true))
 
     val resumeArrIndexed = DynSelect(paths.runtimePath.selSN("resumeArr"), getSavedTmp.asSimpleRef, true)
-    val plus = State.builtinOpsMap("+").asSimpleRef
     val preRestore = blockBuilder
         .assign(pcVar, paths.resumePc)
         .scopedVars(Set(getSavedTmp))
     val restoreVars = vars.zipWithIndex.foldLeft(preRestore):
       case (builder, (local, idx)) => builder
-        .assign(getSavedTmp, if idx == 0 then paths.resumeIdx else Call(plus, (getSavedTmp.asSimpleRef.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+        .assign(getSavedTmp, if idx == 0 then paths.resumeIdx else Call(paths.plus, (getSavedTmp.asSimpleRef.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
         .assign(local, resumeArrIndexed)
     
     if needsStackSafety then
@@ -659,7 +663,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
           .ifthen(paths.curEffect, Case.Lit(Tree.UnitLit(true)), End(), S(
             ctx.doUnwind(ctx.resumeInfo.currentStackSafetySym.fold(_.toLoc, _.toLoc).fold(unit)(locToStr(_)),
             if oneState then intLit(-1) else pcVar.asSimpleRef, vars)(using paths))))
-        .assign(curDepth, Call(plus, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+        .assign(curDepth, Call(paths.plus, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
         .rest(mainBody)
     
     if ExceptionToggle then
