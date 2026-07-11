@@ -44,7 +44,12 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
             .rest(rst)
         override def applyResult(r: Result)(k: Result => Block): Block =
           parts.resultMap.get(Identity(r)) match
-          case N => super.applyResult(r)(k)
+          case N => r match
+            case EffectfulResult() =>
+              blockBuilder
+                .staticif(flattenCtx.needsStackSafety, _.assignFieldN(paths.runtimePath, paths.stackDepthIdent, curDepth.asSimpleRef))
+                .rest(super.applyResult(r)(k))
+            case _ => super.applyResult(r)(k)
           case S(sid) =>
             super.applyResult(r): r2 =>
               transformEffectful(callTmpVar, r2, sid, k(callTmpVar.asSimpleRef))
@@ -53,7 +58,11 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
             parts.resultMap.get(Identity(rhs)) match
             case N => super.applyBlock(b)
             case S(sid) => transformEffectful(lhs, rhs, sid, applyBlock(rest))
+          case Scoped(_, bod) => applyBlock(bod)
           case _ => super.applyBlock(b)
+        override def applyScopedBlock(b: Block): Block = b match
+          case Scoped(_, bod) => applyBlock(bod)
+          case _ => super.applyScopedBlock(b)
       .applyBlock(b)
     val blockedFieldNames = Set.single("next")
     val allocatedFields = mutable.HashMap.empty[Str, (BlockMemberSymbol, TermSymbol)]
@@ -113,10 +122,10 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       N,
       N,
     )(N, Nil))
-    var scoped: Set[ScopedSymbol] = Set.single(callTmpVar)
+    var scoped: Iterator[ScopedSymbol] = flattenCtx.scopedVars.iterator ++ Iterator.single(callTmpVar)
     var mainBody = transformedBody
     if flattenCtx.needsStackSafety then
-      scoped += curDepth
+      scoped = scoped ++ Iterator.single(curDepth)
       mainBody = blockBuilder
         .assign(NoSymbol, Call(paths.checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
         .ifthen(paths.curEffect, Case.Lit(Tree.UnitLit(true)), End(), S(
@@ -124,7 +133,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
             Return(Call(paths.unwindFramedPath, (callTmpVar.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun)))))
         .assign(curDepth, Call(paths.plus, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
         .rest(mainBody)
-    Scoped(scoped, mainBody)
+    Scoped(scoped.toSet, mainBody)
   
   def genResumeBody(
     parts: PartitionedBlock,
