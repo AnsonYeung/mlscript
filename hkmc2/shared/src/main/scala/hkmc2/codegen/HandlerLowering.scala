@@ -511,7 +511,7 @@ class HandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Raise,
       // TODO: properly support spread argument by calculating the correct length.
       val rtArgLists = intLit(fun.params.length) :: fun.params.flatMap: pl =>
         intLit(pl.params.length) :: pl.params.map(p => p.sym.asSimpleRef)
-      val allArgs = fun.params.flatMap(pl => pl.params.map(_.sym))
+      val allArgs = fun.params.flatMap(pl => pl.paramSyms)
       val newCtx: HandlerCtx.FunctionLike = HandlerCtx.FunctionLike(FunctionCtx(funcPath, thisPath, ResumeInfo(rtArgLists, sortedVars, allArgs, L(fun.sym)),
         DebugInfo(debugNme, if opt.debug then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty))
       val bod2 = translateBlock(fun.body, newCtx, scopedVars)
