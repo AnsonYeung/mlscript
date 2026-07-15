@@ -410,6 +410,7 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
       }
       constructor(next) {
         this.next = next;
+        this.isContCls = true;
       }
       toString() { return runtime.render(this); }
       static [definitionMetadata] = ["class", "FunctionContFrame", ["next"]];
@@ -1155,39 +1156,49 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
     cont = contTrace.next;
     handlerCont = contTrace.nextHandler;
     lbl: while (true) {
-      let old, scrut, scrut1, scrut2, tmp, tmp1, tmp2;
-      if (cont instanceof Runtime.FunctionContFrame.class) {
-        Runtime.curEffect = null;
-        old = Runtime.stackDepth;
-        try {
-          tmp1 = Runtime.stackDepth + 3;
-          Runtime.stackDepth = tmp1;
-          tmp2 = runtime.safeCall(cont.resume(value));
-          tmp = tmp2;
-        } finally {
-          Runtime.stackDepth = old;
-        }
-        value = tmp;
-        scrut = Runtime.curEffect !== null;
-        if (scrut === true) {
-          value = Runtime.curEffect;
-        }
-        if (value instanceof Runtime.EffectSig.class) {
-          value.contTrace.last.next = cont.next;
-          value.contTrace.lastHandler.nextHandler = handlerCont;
-          scrut1 = contTrace.last !== cont;
-          if (scrut1 === true) {
-            value.contTrace.last = contTrace.last;
+      let old, scrut, scrut1, scrut2, tmp, tmp1, tmp2, tmp3, tmp4;
+      tmp = cont !== null;
+      if (tmp === true) {
+        tmp1 = cont.isContCls;
+        if (tmp1 === true) {
+          Runtime.curEffect = null;
+          old = Runtime.stackDepth;
+          try {
+            tmp3 = Runtime.stackDepth + 3;
+            Runtime.stackDepth = tmp3;
+            tmp4 = runtime.safeCall(cont.resume(value));
+            tmp2 = tmp4;
+          } finally {
+            Runtime.stackDepth = old;
           }
-          scrut2 = handlerCont !== null;
-          if (scrut2 === true) {
-            value.contTrace.lastHandler = contTrace.lastHandler;
-            return value
+          value = tmp2;
+          scrut = Runtime.curEffect !== null;
+          if (scrut === true) {
+            value = Runtime.curEffect;
           }
-          return value;
+          if (value instanceof Runtime.EffectSig.class) {
+            value.contTrace.last.next = cont.next;
+            value.contTrace.lastHandler.nextHandler = handlerCont;
+            scrut1 = contTrace.last !== cont;
+            if (scrut1 === true) {
+              value.contTrace.last = contTrace.last;
+            }
+            scrut2 = handlerCont !== null;
+            if (scrut2 === true) {
+              value.contTrace.lastHandler = contTrace.lastHandler;
+              return value
+            }
+            return value;
+          }
+          cont = cont.next;
+          continue lbl;
         }
-        cont = cont.next;
-        continue lbl;
+        if (handlerCont instanceof Runtime.HandlerContFrame.class) {
+          cont = handlerCont.next;
+          handlerCont = handlerCont.nextHandler;
+          continue lbl
+        }
+        return value;
       }
       if (handlerCont instanceof Runtime.HandlerContFrame.class) {
         cont = handlerCont.next;

@@ -1,5 +1,7 @@
 package hkmc2
 
+import scala.reflect.Selectable.reflectiveSelectable
+
 import org.scalatest.{funsuite, ParallelTestExecution}
 import org.scalatest.concurrent.{TimeLimitedTests, Signaler}
 
@@ -29,7 +31,7 @@ abstract class TimeOutTests
       // * which would be a much bigger pain to make receptive to "gentle" interruption.
       // * It would feel extremely wrong to intersperse the pure type checker algorithms
       // * with ugly `Thread.isInterrupted` checks everywhere...
-      try testThread.stop()
+      try testThread.applyDynamic("stop")()
       catch _ =>
         // * Thread.stop() is no longer supported in recent JVMs,
         // * and unfortunately there is no good alternative other than terminating the entire process.

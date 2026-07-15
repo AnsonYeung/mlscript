@@ -169,6 +169,7 @@ object FatalEffect
 object PrintStackEffect
 
 data class FunctionContFrame(next) with
+  val isContCls = true
   virtual fun resume(value)
 
 data class FunctionContFrameImpl(next, saved) extends FunctionContFrame(next) with
@@ -462,7 +463,7 @@ fun resumeContTrace(contTrace, value) =
   let cont = contTrace.next
   let handlerCont = contTrace.nextHandler
   while
-    cont is FunctionContFrame then
+    cont !== null && cont.isContCls then
       set curEffect = null
       set value = set stackDepth += 3 in cont.resume(value)
       if curEffect !== null do

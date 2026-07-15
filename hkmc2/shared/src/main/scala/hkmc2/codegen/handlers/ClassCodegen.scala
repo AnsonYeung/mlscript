@@ -64,7 +64,8 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
           case Scoped(_, bod) => applyBlock(bod)
           case _ => super.applyScopedBlock(b)
       .applyBlock(b)
-    val blockedFieldNames = Set.single("next")
+    // val blockedFieldNames = Set.single("next")
+    val blockedFieldNames = Set.empty[String]
     val allocatedFields = mutable.HashMap.empty[Str, (BlockMemberSymbol, TermSymbol)]
     val allocatedVars = mutable.HashMap.empty[LocalVarSymbol, Str]
     def genFTS(name: Str): TermSymbol =
@@ -95,12 +96,15 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       Select(Value.This(clsDSym), ts.id)(S(ts))(false)
     // Allocate before actual variables to reserve the name
     val pc = allocFieldWithName(VarSymbol(Tree.Ident("pc")), "pc")
+    val isContCls = allocFieldWithName(VarSymbol(Tree.Ident("isContCls")), "isContCls")
+    val next = allocFieldWithName(VarSymbol(Tree.Ident("next")), "next")
     val selfField = ctx.thisPath.map(_ => allocFieldWithName(VarSymbol(Tree.Ident("this")), "this"))
     val selfParam = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this")))
-    val allFields = selfField ++: (pc :: savedVars.map(allocField))
+    val allFields = isContCls :: next :: selfField ++: (pc :: savedVars.map(allocField))
     val params = selfParam ++: (VarSymbol(Tree.Ident("pc")) :: savedVars.map(vs => VarSymbol(Tree.Ident(vs.nme))))
-    val initFields = (params zip allFields).foldRight[Block](End()): (p, rst) =>
-        Define(ValDefn(p._2._2, p._2._1, p._1.asSimpleRef)(N, Nil), rst)
+    val allFieldsInit = Value.Lit(Tree.BoolLit(true)) :: Value.Lit(Tree.UnitLit(true)) :: params.map(_.asSimpleRef)
+    val initFields = (allFieldsInit zip allFields).foldRight[Block](End()): (p, rst) =>
+        Define(ValDefn(p._2._2, p._2._1, p._1)(N, Nil), rst)
     val resumeBody = genResumeBody(parts, ctx, selfField.map(f => fieldFromTS(f._2)), allocatedVars, allocatedFields, fieldFromTS, clsDSym)
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
@@ -113,11 +117,11 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       syntax.Cls,
       S(PlainParamList(params.map(Param.simple(_)))),
       Nil,
-      S(paths.contClsPath),
+      N,
       resumeMtd :: Nil,
       Nil,
       allocatedFields.values.toList,
-      Assign.discard(Call(estate.superSymbol.asSimpleRef, (unit.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun), End()),
+      End(),
       initFields,
       N,
       N,
