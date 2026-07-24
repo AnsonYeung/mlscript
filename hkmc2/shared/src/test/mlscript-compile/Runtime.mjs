@@ -691,6 +691,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
       [prettyPrint]() { return this.toString(); }
       static [definitionMetadata] = ["class", "CustomStackError", ["stack"]];
     });
+    Runtime.enterHandleBlockGenerator = RuntimeJS.enterHandleBlockGenerator;
     (class AsyncEffectMarker {
       static {
         new this

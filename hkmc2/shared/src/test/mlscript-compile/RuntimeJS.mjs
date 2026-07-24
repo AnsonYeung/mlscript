@@ -24,6 +24,10 @@ const RuntimeJS = {
   },
   short_or(lhs, rhs) {
     return lhs || rhs();
+  },
+  *enterHandleBlockGenerator(tag, bod) {
+    console.log("TEST");
+    throw "HI";
   }
 }
 

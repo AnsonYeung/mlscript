@@ -130,7 +130,12 @@ object Config:
   
   case class SanityChecks(light: Bool, checkUnreachable: Bool)
   
+  enum EffectHandlerStrategy:
+    case IfCheck
+    case Generator
+
   case class EffectHandlers(
+    strategy: EffectHandlerStrategy,
     debug: Bool,
     stackSafety: Opt[StackSafety],
     // Whether we check `Instantiate` nodes for effects. Currently, effects cannot be raised in constructors.
@@ -509,7 +514,8 @@ object ConfigParser:
   
   private def parseEffectHandlers(tree: Tree, current: Opt[Config.EffectHandlers])(using Raise): Opt[Config.EffectHandlers] = tree match
     case Call("EffectHandlers", args) =>
-      val base = current.getOrElse(Config.EffectHandlers(debug = false, stackSafety = N))
+      val base = current.getOrElse(Config.EffectHandlers(strategy = EffectHandlerStrategy.IfCheck, debug = false, stackSafety = N))
+      val strategy = base.strategy
       var debug = base.debug
       var stackSafety = base.stackSafety
       var checkInstantiateEffect = base.checkInstantiateEffect
@@ -528,7 +534,7 @@ object ConfigParser:
           setFrom(value)(parseBool)(v => doNotInstrumentTopLevelModCtor = v)
         case other =>
           unsupported("EffectHandlers", other)
-      S(Config.EffectHandlers(debug, stackSafety, checkInstantiateEffect, softLifterError, doNotInstrumentTopLevelModCtor))
+      S(Config.EffectHandlers(strategy, debug, stackSafety, checkInstantiateEffect, softLifterError, doNotInstrumentTopLevelModCtor))
     case _ =>
       expect("EffectHandlers(...)")(tree)
       N

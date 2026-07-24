@@ -8,6 +8,7 @@ import hkmc2.Config
 import hkmc2.semantics.Elaborator.{Ctx, State}
 import hkmc2.semantics.SymbolPrinter
 import hkmc2.utils.TL
+import hkmc2.codegen.handlers.GeneratorHandlerLowering
 
 class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
   
@@ -47,7 +48,11 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
         blockPass(Lifter(_).transform)(prog)
       else prog
     runPass("HandlerLowering"): prog =>
-      HandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
+      config.effectHandlers match
+      case S(strategy = Config.EffectHandlerStrategy.Generator) =>
+        GeneratorHandlerLowering().applyProgram(prog)
+      case _ =>
+        HandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
     runPass("AsyncLowering")(AsyncLowering().transform)
     runPass("Flattening")(blockPass(_.flattened))
     runPass("BufferableTransform")(BufferableTransform().transform)

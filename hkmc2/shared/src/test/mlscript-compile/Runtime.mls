@@ -392,6 +392,8 @@ fun enterHandleBlock(handler, body) =
   else
     handleBlockImpl(curEffect, handler)
 
+val enterHandleBlockGenerator = RuntimeJS.enterHandleBlockGenerator
+
 fun handleEffects(cur) =
   while cur is
     EffectSig then
