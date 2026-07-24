@@ -6,32 +6,60 @@ abstract class Effect with
   fun perform(arg: Str): Str
 
 
+:soir
 handle h = Effect with
   fun perform()(k) = "b"
+//│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
+//│ let h, handleBlock$, Handler$h$;
+//│ define Handler$h$ as class Handler$h$⁰ extends Effect⁰ {
+//│   method perform⁰ = fun perform¹() {
+//│     return "b"
+//│   }
+//│ };
+//│ set h = new mut Handler$h$⁰();
+//│ @generator
+//│ define handleBlock$ as fun handleBlock$⁰() {
+//│   return runtime⁰.Unit⁰
+//│ };
+//│ return runtime⁰.enterHandleBlockGenerator﹖(h, handleBlock$⁰)
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+//│ =  {}
 
 :expect 42
 handle h = Effect with
   fun perform()(k) = k(42)
 h.perform()
-//│ = 42
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '42', got: ' {}'
+//│ =  {}
 
 :expect "b"
 handle h = Effect with
   fun perform(arg)(k) = "b"
 h.perform("k")
-//│ = "b"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"b"', got: ' {}'
+//│ =  {}
 
 :expect "k"
 handle h = Effect with
   fun perform(arg)(k) = arg
 h.perform("k")
-//│ = "k"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"k"', got: ' {}'
+//│ =  {}
 
 :expect "k"
 handle h = Effect with
   fun perform(arg)(k) = k(arg)
 h.perform("k")
-//│ = "k"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"k"', got: ' {}'
+//│ =  {}
 
 :expect "hi"
 fun foo(e) = e.perform("hi")
@@ -40,8 +68,10 @@ handle h = Effect with
     print(arg)
     k(arg)
 foo(h)
-//│ > hi
-//│ = "hi"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"hi"', got: ' {}'
+//│ =  {}
 
 fun foo(e) = e.perform("hi")
 
@@ -51,8 +81,10 @@ handle h = Effect with
     print(arg)
     k(arg)
 (() => h.perform("Hello") + " World!")()
-//│ > Hello
-//│ = "Hello World!"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"Hello World!"', got: ' {}'
+//│ =  {}
 
 :expect "54321"
 :sjs
@@ -70,7 +102,7 @@ in
   h.perform("5")
 result
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let result, h7, handleBlock$7, Handler$h$15, cpsCont$15;
+//│ let result, h7, handleBlock$7, Handler$h$15;
 //│ result = "";
 //│ (class Handler$h$14 extends Effect1 {
 //│   static {
@@ -79,49 +111,35 @@ result
 //│   constructor() {
 //│     super();
 //│   }
-//│   perform(k, arg) {
-//│     let Handler$h$perform;
-//│     Handler$h$perform = function Handler$h$perform(k1, k2) {
-//│       let v, cpsCont$06;
-//│       cpsCont$06 = function cpsCont$0(retVal) {
-//│         v = retVal;
-//│         result = result + arg;
-//│         return k1(v)
-//│       };
-//│       return k2(cpsCont$06, arg)
-//│     };
-//│     return new runtime.Suspend(k, this, Handler$h$perform)
+//│   *perform(arg) {
+//│     let tmp, v, tmp1;
+//│     tmp = yield this;
+//│     tmp1 = runtime.safeCall(tmp(arg));
+//│     v = yield * tmp1;
+//│     result = result + arg;
+//│     return v
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Handler$h$"];
 //│ });
 //│ h7 = new Handler$h$15();
-//│ handleBlock$7 = (undefined, function (k) {
-//│   let cpsCont$12;
-//│   cpsCont$12 = function cpsCont$12(retVal) {
-//│     let cpsCont$9;
-//│     cpsCont$9 = function cpsCont$9(retVal1) {
-//│       let cpsCont$6;
-//│       cpsCont$6 = function cpsCont$6(retVal2) {
-//│         let cpsCont$31;
-//│         cpsCont$31 = function cpsCont$3(retVal3) {
-//│           return h7.perform(k, "5")
-//│         };
-//│         return h7.perform(cpsCont$31, "4")
-//│       };
-//│       return h7.perform(cpsCont$6, "3")
-//│     };
-//│     return h7.perform(cpsCont$9, "2")
-//│   };
-//│   return h7.perform(cpsCont$12, "1")
+//│ handleBlock$7 = (undefined, function *() {
+//│   let tmp;
+//│   runtime.safeCall(h7.perform("1"));
+//│   runtime.safeCall(h7.perform("2"));
+//│   runtime.safeCall(h7.perform("3"));
+//│   runtime.safeCall(h7.perform("4"));
+//│   tmp = runtime.safeCall(h7.perform("5"));
+//│   return yield * tmp
 //│ });
-//│ cpsCont$15 = function cpsCont$15(retVal) {
-//│   return runtime.cpsId(result)
-//│ };
-//│ return runtime.cpsHandlerImpl(cpsCont$15, h7, handleBlock$7)
+//│ runtime.enterHandleBlockGenerator(h7, handleBlock$7);
+//│ return result
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-//│ = "54321"
-//│ result = "54321"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"54321"', got: '""'
+//│ = ""
+//│ result = ""
 
 
 // Tuple matches will not be instrumented
@@ -129,22 +147,23 @@ result
 :effectHandlers
 fun f() = case [...x, y, z] then x
 //│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
-//│ define f⁰ as fun f¹(k) {
+//│ @generator
+//│ define f⁰ as fun f¹() {
 //│   let lambda;
-//│   @private
-//│   define lambda as fun lambda⁰(k1, caseScrut) {
+//│   @generator @private
+//│   define lambda as fun lambda⁰(caseScrut) {
 //│     let middleElements;
 //│     match caseScrut
 //│       Array(2+) =>
 //│         set middleElements = runtime⁰.Tuple⁰.slice⁰(caseScrut, 0, 2);
 //│         do runtime⁰.Tuple⁰.get⁰(caseScrut, -2);
 //│         do runtime⁰.Tuple⁰.get⁰(caseScrut, -1);
-//│         return k1(middleElements)
+//│         return middleElements
 //│       else
 //│         throw new globalThis⁰.Error⁰("match error")
 //│     end
 //│   };
-//│   return k(lambda⁰)
+//│   return lambda⁰
 //│ };
 //│ end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
@@ -155,8 +174,10 @@ handle h = Effect with
     print(arg)
     "b"
 h.perform("t")
-//│ > t
-//│ = "b"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"b"', got: ' {}'
+//│ =  {}
 
 :expect 3
 handle h = Effect with
@@ -169,9 +190,10 @@ if false || h.perform("hello") then
   3
 else
   0
-//│ > hello
-//│ > hello
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '3', got: ' {}'
+//│ =  {}
 
 :expect "Hello World!"
 fun foo(h) =
@@ -190,15 +212,10 @@ print("mainbody start")
 let result = foo(h) + " World!"
 print("mainbody end")
 result
-//│ > mainbody start
-//│ > Entering foo
-//│ > handler called
-//│ > handler called
-//│ > Exiting foo
-//│ > mainbody end
-//│ > handler finished
-//│ > handler finished
-//│ = "Hello World!"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"Hello World!"', got: ' {}'
+//│ =  {}
 
 :expect "Hello World!"
 fun foo(h) =
@@ -227,19 +244,10 @@ print("mainbody start")
 let result = foobar(h)
 print("mainbody end")
 result
-//│ > mainbody start
-//│ > Entering foobar
-//│ > Entering bar
-//│ > Entering foo
-//│ > handler called
-//│ > handler called
-//│ > Exiting foo
-//│ > Exiting bar
-//│ > Exiting foobar
-//│ > mainbody end
-//│ > handler finished
-//│ > handler finished
-//│ = "Hello World!"
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '"Hello World!"', got: ' {}'
+//│ =  {}
 
 // Float out definitions
 handle h = Effect with
@@ -247,7 +255,7 @@ handle h = Effect with
 if true do
   fun f() = 3
   print(f())
-//│ > 3
+//│ =  {}
 
 module A with
   data class Effect(x) with
@@ -257,14 +265,26 @@ module A with
 handle h = A.Effect(3) with
   fun perform()(k) = 0
 h.perform()
-//│ = 0
+//│ =  {}
 
 fun f(perform) =
   handle h = Effect with
     fun perform(arg)(k) = arg
   perform()
 f(() => 3)
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
+//│ ═══[RUNTIME ERROR] ReferenceError: yield is not defined
+//│     at REPL65:1:1043
+//│     at ContextifyScript.runInThisContext (node:vm:137:12)
+//│     at REPLServer.defaultEval (node:repl:600:22)
+//│     at bound (node:domain:433:15)
+//│     at REPLServer.runBound [as eval] (node:domain:444:12)
+//│     at REPLServer.onLine (node:repl:935:10)
+//│     at REPLServer.emit (node:events:508:28)
+//│     at REPLServer.emit (node:domain:489:12)
+//│     at [_onLine] [as _onLine] (node:internal/readline/interface:465:12)
+//│     at [_normalWrite] [as _normalWrite] (node:internal/readline/interface:647:22)
 
 abstract class Cell with
   fun getVal(): Int
@@ -279,9 +299,8 @@ handle h = Cell with
 print(h.getVal())
 h.setVal(1)
 print(h.getVal())
-//│ > 0
-//│ > 1
-//│ x = 1
+//│ =  {}
+//│ x = 0
 
 
 abstract class Eff with
@@ -295,7 +314,10 @@ fun fact(e, factvalue) =
 handle h = Eff with
   fun get()(k) = k(1)
 fact(h, 5)
-//│ = 120
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '120', got: ' {}'
+//│ =  {}
 
 abstract class StackDelay with
   fun raise(): ()
@@ -316,7 +338,10 @@ fun sum(depth, x) =
     x + sum(new_depth, x - 1)
   else 0
 sum(0, 100)
-//│ = 5050
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '5050', got: ' {}'
+//│ =  {}
 
 // stack safe recursion
 :expect 450015000
@@ -330,21 +355,9 @@ fun sum(depth, x) =
   else 0
 sum(0, 30000)
 //│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at cpsCont$0 (REPL87:1:1332)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│     at cpsCont$0 (REPL87:1:1524)
-//│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
-//│ ═══[RUNTIME ERROR] Expected: '450015000', got: 'undefined'
+//│ ═══[RUNTIME ERROR] Expected: '450015000', got: ' {}'
+//│ =  {}
 
 :re
 fun sum(x) =
@@ -352,7 +365,7 @@ fun sum(x) =
     x + sum(x - 1)
   else 0
 sum(10000)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
+//│ ═══[RUNTIME ERROR] ReferenceError: yield is not defined
 
 :expect 2
 fun foo(h) =
@@ -366,7 +379,10 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
-//│ = 2
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '2', got: ' {}'
+//│ =  {}
 
 :expect 3
 fun foo(h) =
@@ -380,7 +396,10 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
-//│ = 3
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '3', got: ' {}'
+//│ =  {}
 
 :expect 123
 fun foo(h) =
@@ -406,7 +425,10 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h) 
-//│ = 123
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
+//│ ═══[RUNTIME ERROR] Expected: '123', got: ' {}'
+//│ =  {}
 
 :fixme
 :expect 123
@@ -433,8 +455,8 @@ fun foo(h) =
 handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
-//│ = 123
-//│ FAILURE: Unexpected lack of error to fix
+//│ ═══[RUNTIME ERROR] Expected: '123', got: ' {}'
+//│ =  {}
 
 // Access superclass fields
 handle h1 = Object with
@@ -444,4 +466,4 @@ class A with
 handle h2 = A with
   fun perf()(k) = k(this.x)
 h2.perf()
-//│ = 2
+//│ =  {}

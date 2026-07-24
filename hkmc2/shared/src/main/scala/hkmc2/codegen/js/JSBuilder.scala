@@ -398,7 +398,8 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
             
           case FunDefn(params = Nil) =>
             lastWords("cannot generate function with no parameter list")
-          case FunDefn(own, sym, dSym, ps :: pss, bod) =>
+          case fd @ FunDefn(own, sym, dSym, ps :: pss, bod) =>
+            val generatorMod = if fd.annotations.contains(Annot.Generator) then "*" else ""
             val result = pss.foldRight(bod):
               case (ps, block) =>
                 Return(Lambda(ps, block)(Nil))
@@ -418,14 +419,14 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
               // * Maybe the function's internal name was already bound in scope;
               // * in that case, we can't really use it as an inner name, as this would result in unintended capture.
               case S(otherSym: FreeSymbol) if (otherSym isnt sym) && bod.freeVars.contains(otherSym) =>
-                doc"${varName} = function ($params) ${ braced(bodyDoc) };"
+                doc"${varName} = function $generatorMod($params) ${ braced(bodyDoc) };"
               case _ =>
-                doc"${varName} = function ${sym.nme}($params) ${ braced(bodyDoc) };"
+                doc"${varName} = function $generatorMod${sym.nme}($params) ${ braced(bodyDoc) };"
             else
               // * In JS, `let x = (0, function (args) {...})` makes the function anonymous;
               // * otherwise, using `let x = function (args) {...}` would name the function `x`,
               // * which is not meaningful, here.
-              doc"${scope.lookup_!(sym, dSym.toLoc)} = (undefined, function ($params) ${ braced(bodyDoc) });"
+              doc"${scope.lookup_!(sym, dSym.toLoc)} = (undefined, function $generatorMod($params) ${ braced(bodyDoc) });"
             
           case ClsLikeDefn(ownr, isym, sym, ctorSym, kind, paramsOpt, auxParams, par, mtds,
               privFlds, pubFlds, preCtor, ctor, modo, bufferable)
@@ -454,12 +455,13 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
             def mkMethods(mtds: Ls[FunDefn], mtdPrefix: Str, owner: InnerSymbol)(using Scope): Document =
               mtds.map:
                 case td @ FunDefn(params = ps :: pss, body = bod) =>
+                  val generatorMod = if td.annotations.contains(Annot.Generator) then "*" else ""
                   val result = pss.foldRight(bod):
                     case (ps, block) =>
                       Return(Lambda(ps, block)(Nil))
                   val (params, bodyDoc) = scope.nest.givenIn:
                     setupFunction(S(td.sym.nme), ps, result, isLambda = false)
-                  doc" # $mtdPrefix${mkMethodName(td, owner)}($params) ${ braced(bodyDoc) }"
+                  doc" # $mtdPrefix$generatorMod${mkMethodName(td, owner)}($params) ${ braced(bodyDoc) }"
                 case td @ FunDefn(params = Nil, body = bod) =>
                   doc" # ${mtdPrefix}get ${mkMethodName(td, owner)}() ${ braced(body(bod, endSemi = true)) }"
               .mkDocument(doc"")

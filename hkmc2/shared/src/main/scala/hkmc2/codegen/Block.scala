@@ -954,6 +954,7 @@ case class CallMetadata(
   annotations: Ls[Annot],
 ):
   lazy val explicitTailCall: Bool = annotations.contains(Annot.TailCall)
+  lazy val isNative: Bool = annotations.contains(Annot.Native)
 
 object CallMetadata:
   val defaultMlsFun = CallMetadata(true, false, Nil)

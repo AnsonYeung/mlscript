@@ -27,6 +27,7 @@ enum Annot extends AutoLocated:
   case TailRec
   case TailCall
   case Native
+  case Generator
   case Inline
   case NoInline
   // Whether the function is guaranteed to not raise effects.
@@ -71,6 +72,7 @@ enum Annot extends AutoLocated:
     case MayNotRaiseEffects => doc"@mayNotRaiseEffects"
     case Trm(trm) => doc"@${trm.show}"
     case Config(_) => doc"@config(...)"
+    case Generator => doc"@generator"
   
   def mkClone(using State): Annot = this match
     case Untyped => Untyped
