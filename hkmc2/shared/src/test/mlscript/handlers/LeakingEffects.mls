@@ -25,7 +25,7 @@ fun main() =
 main()
 while
   do print(xs)
-  let f = xs.pop()
+  let f = @native xs.pop()
   f !== () then
     set count += 1
     f(count)

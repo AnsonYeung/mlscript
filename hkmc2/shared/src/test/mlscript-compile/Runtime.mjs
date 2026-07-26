@@ -692,7 +692,6 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
       static [definitionMetadata] = ["class", "CustomStackError", ["stack"]];
     });
     Runtime.enterHandleBlockGenerator = RuntimeJS.enterHandleBlockGenerator;
-    Runtime.enterHandleBlockGeneratorTopLevel = RuntimeJS.enterHandleBlockGeneratorTopLevel;
     Runtime.handlerTopLevelCall = RuntimeJS.handlerTopLevelCall;
     (class AsyncEffectMarker {
       static {
