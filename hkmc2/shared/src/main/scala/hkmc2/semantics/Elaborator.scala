@@ -300,6 +300,7 @@ object Elaborator:
         val compile = assumeObject("compile")
         val buffered = assumeObject("buffered")
         val bufferable = assumeObject("bufferable")
+        val raiseEffects = assumeObject("raiseEffects")
         val mayNotRaiseEffects = assumeObject("mayNotRaiseEffects")
       object handlers extends VirtualModule(assumeBuiltinMod("handlers")):
         val await = assumeObject("await").asTrm.get
@@ -630,6 +631,8 @@ extends Importer:
             return S(Annot.Generator)
           case ctx.builtins.annotations.async =>
             return S(Annot.Async)
+          case ctx.builtins.annotations.raiseEffects =>
+            return S(Annot.RaiseEffects)
           case ctx.builtins.annotations.mayNotRaiseEffects =>
             return S(Annot.MayNotRaiseEffects)
           case _ => ()

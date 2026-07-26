@@ -279,6 +279,7 @@ declare module annotations with
   object compile
   object buffered
   object bufferable
+  object raiseEffects
   object mayNotRaiseEffects
   object generator
   object async

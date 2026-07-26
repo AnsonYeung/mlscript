@@ -71,21 +71,21 @@ in
   h.perform("5")
 result
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let result, h7, handleBlock$7, Handler$h$perform5, Handler$h$15, Handler$h$perform$4;
+//│ let result, h7, handleBlock$7, Handler$h$perform3, Handler$h$15, Handler$h$perform$4;
 //│ runtime.resetEffects();
 //│ Handler$h$perform$4 = function Handler$h$perform$(arg) {
 //│   return (k) => {
-//│     return Handler$h$perform5(arg, k)
+//│     return Handler$h$perform3(arg, k)
 //│   }
 //│ };
-//│ Handler$h$perform5 = function Handler$h$perform(arg, k) {
+//│ Handler$h$perform3 = function Handler$h$perform(arg, k) {
 //│   let v, pc;
 //│   if (runtime.resumePc === -1) {
 //│     runtime.resumeValue = runtime.safeCall(k(arg));
 //│     if (runtime.curEffect === null) {
 //│       pc = 1;
 //│     } else {
-//│       return runtime.unwind(Handler$h$perform5, 1, "Effects.mls:63:13", null, null, 1, 2, arg, k, 0)
+//│       return runtime.unwind(Handler$h$perform3, 1, "Effects.mls:63:13", null, null, 1, 2, arg, k, 0)
 //│     }
 //│   } else {
 //│     pc = runtime.resumePc;
@@ -95,7 +95,7 @@ result
 //│       if (runtime.curEffect === null) {
 //│         pc = 1;
 //│       } else {
-//│         return runtime.unwind(Handler$h$perform5, 1, "Effects.mls:63:13", null, null, 1, 2, arg, k, 0)
+//│         return runtime.unwind(Handler$h$perform3, 1, "Effects.mls:63:13", null, null, 1, 2, arg, k, 0)
 //│       }
 //│     }
 //│   }
@@ -112,9 +112,6 @@ result
 //│   }
 //│   constructor() {
 //│     super();
-//│     if (runtime.curEffect !== null) {
-//│       runtime.illegalEffect("in a constructor");
-//│     }
 //│   }
 //│   perform(arg) {
 //│     let Handler$h$perform$here;
@@ -480,28 +477,28 @@ handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.475: 	    module A with
+//│ ║  l.472: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.471: 	    module A with
+//│ ║  l.468: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.467: 	    module A with
+//│ ║  l.464: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.463: 	    module A with
+//│ ║  l.460: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.463: 	    module A with
+//│ ║  l.460: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.467: 	    module A with
+//│ ║  l.464: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.471: 	    module A with
+//│ ║  l.468: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.475: 	    module A with
+//│ ║  l.472: 	    module A with
 //│ ╙──       	           ^
 //│ = 123
 

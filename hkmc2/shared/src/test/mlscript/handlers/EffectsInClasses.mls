@@ -28,9 +28,6 @@ data class Lol(h) with
 //│       tmp = runtime.illegalEffect("in a constructor");
 //│     }
 //│     Predef.print(tmp);
-//│     if (runtime.curEffect !== null) {
-//│       runtime.illegalEffect("in a constructor");
-//│     }
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Lol", ["h"]];

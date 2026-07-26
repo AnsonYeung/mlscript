@@ -102,8 +102,19 @@ object HandlerLowering:
   )
 
   object EffectfulResult:
-    def unapply(r: Result)(using Config): Bool = r match
-      case c: Call if c.metadata.mayRaiseEffects => true
+    def unapply(r: Result)(using Config, State): Bool = r match
+      case c: Call if c.metadata.mayRaiseEffects =>
+        if c.metadata.isNative then return false
+        if c.metadata.annotations.contains(Annot.RaiseEffects) then return true
+        c.fun match
+          case Value.MemberRef(_, c: ClassCtorSymbol) => false
+          case s: Select if s.symbol.map(x => x.isInstanceOf[ClassCtorSymbol]).getOrElse(false) => config.checkInstantiateEffect
+          case s: Select if s.name.name === "toString" => false
+          case s: Select if s.symbol.isEmpty =>
+            true
+          case Select(Value.MemberRef(bms, disamb), _) if bms.nme === "Predef" => false
+          case Value.RefLike(State.superSymbol) => config.checkInstantiateEffect
+          case _ => true
       case _: Instantiate if config.checkInstantiateEffect => true
       case _ => false
   
