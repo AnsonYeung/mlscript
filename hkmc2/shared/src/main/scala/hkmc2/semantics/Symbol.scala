@@ -252,6 +252,8 @@ class VarSymbol(val id: Ident)(using State) extends LocalVarSymbol(id.name) with
   // override def toString: Str = s"$name@$uid"
   override def subst(using s: SymbolSubst): VarSymbol = s.mapVarSym(this)
 
+object BuiltinSymbol:
+  val specialNonPure = Set("super", "yield", "yield*")
 class BuiltinSymbol
     (val nme: Str, val binary: Bool, val unary: Bool, val nullary: Bool, val functionLike: Bool)(using State)
     extends Symbol:
@@ -260,7 +262,7 @@ class BuiltinSymbol
   
   def subst(using sub: SymbolSubst): BuiltinSymbol = sub.mapBuiltInSym(this)
   
-  def isPure: Bool = nme =/= "super" // * For now, all other builtins are pure
+  def isPure: Bool = !BuiltinSymbol.specialNonPure.contains(nme)  // * For now, all other builtins are pure
   
   // * A basic approximation of builtin operator types
   lazy val signature : semantics.flow.Producer =

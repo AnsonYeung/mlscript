@@ -17,6 +17,7 @@ import semantics.Elaborator.ctx
 import semantics.Elaborator.State
 import hkmc2.Config.EffectHandlers
 import hkmc2.Diagnostic.Source
+import hkmc2.codegen.HandlerLowering.EffectfulResult
 
 
 object CpsHandlerLowering:
@@ -262,22 +263,8 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: EffectHandlers)(using TL, Rai
           msg"This call is not CPS-transformed because it has more than one argument list." -> c.toLoc :: Nil,
           source = Source.Compilation))
         false
-      else if c.metadata.annotations.contains(Annot.Native) then
-        false
       else
-        c.fun match
-          case Value.MemberRef(_, c: ClassCtorSymbol) => false
-          case s: Select if s.symbol.map(x => x.isInstanceOf[ClassCtorSymbol]).getOrElse(false) => false 
-          case s: Select if s.name.name === "toString" => false
-          case s: Select if s.symbol.isEmpty => 
-            /*raise(WarningReport(
-              msg"Ambiguous call." -> c.toLoc :: Nil,
-              source = Source.Compilation))
-            */
-            true
-          case Select(Value.MemberRef(bms, disamb), _) if bms.nme === "Predef" => false
-          case Value.RefLike(State.superSymbol) => false
-          case _ => true
+        EffectfulResult.unapply(c)
         
     
     override def applyPath(p: Path)(k: Path => Block): Block = p match

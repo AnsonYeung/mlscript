@@ -85,8 +85,22 @@ object HandlerLowering:
   )
 
   object EffectfulResult:
-    def unapply(r: Result)(using Config): Bool = r match
-      case c: Call if c.metadata.mayRaiseEffects => true
+    def unapply(r: Result)(using Config, State): Bool = r match
+      case c: Call if c.metadata.mayRaiseEffects =>
+        if c.metadata.isNative then return false
+        c.fun match
+          case Value.MemberRef(_, c: ClassCtorSymbol) => false
+          case s: Select if s.symbol.map(x => x.isInstanceOf[ClassCtorSymbol]).getOrElse(false) => false
+          case s: Select if s.name.name === "toString" => false
+          case s: Select if s.symbol.isEmpty => 
+            /*raise(WarningReport(
+              msg"Ambiguous call." -> c.toLoc :: Nil,
+              source = Source.Compilation))
+            */
+            true
+          case Select(Value.MemberRef(bms, disamb), _) if bms.nme === "Predef" => false
+          case Value.RefLike(State.superSymbol) => false
+          case _ => true
       case _: Instantiate if config.checkInstantiateEffect => true
       case _ => false
   

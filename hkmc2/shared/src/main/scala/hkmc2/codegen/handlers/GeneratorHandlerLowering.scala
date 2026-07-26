@@ -5,16 +5,19 @@ import hkmc2.semantics.*
 import hkmc2.codegen.*, hkmc2.utils.*, shorthands.*
 
 import hkmc2.codegen.HandlerLowering.EffectfulResult
+import hkmc2.syntax.Tree
 
-class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx) extends BlockTransformer(SymbolSubst.Id):
+class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx, TL) extends BlockTransformer(SymbolSubst.Id):
 
-  val yieldStar = Elaborator.State.builtinOpsMap("yield *")
+  val yieldStar = Elaborator.State.builtinOpsMap("yield*")
   val yieldOp = Elaborator.State.builtinOpsMap("yield")
+  val unit = Value.Lit(Tree.UnitLit(true))
 
   var scopedTmp: List[LocalVarSymbol] = Nil
 
   private def freshTmp(nme: Str = "tmp") = TempSymbol(N, nme)
   private def getCurScopedTmp = scopedTmp.head
+  private def isMainBlock = scopedTmp.sizeIs == 1
 
   private inline def nestScope[T](inline thunk: LocalVarSymbol => T): T =
     val t = freshTmp()
@@ -22,6 +25,27 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx) e
     val r = thunk(t)
     scopedTmp = scopedTmp.tail
     r
+  
+  private def runtimeYield(p: Path): Result =
+    Call(
+      yieldOp.asSimpleRef,
+      (p.asArg :: Nil) ne_:: Nil
+    )(CallMetadata.defaultFun)
+    
+  private def callRuntimeMethod(mtd: Str, argss: List[Arg]) =
+    Call(
+      Elaborator.State.runtimeSymbol.asSimpleRef.selSN(mtd), argss ne_:: Nil
+    )(CallMetadata.defaultMlsFun)
+  
+  private def runtimeYieldStar(p: Path): Result =
+    Call(
+      yieldStar.asSimpleRef,
+      (p.asArg :: Nil) ne_:: Nil
+    )(CallMetadata.defaultFun)
+  
+  override def applyMainBlock(main: Block): Block =
+    nestScope: t =>
+      Scoped(Set.single(t), super.applyMainBlock(main))
 
   override def applyFunDefn(fun: FunDefn): FunDefn =
     FunDefn(
@@ -33,28 +57,30 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx) e
         Scoped(Set.single(t), applyScopedBlock(fun.body))
     )(fun.configOverride, Annot.Generator :: fun.annotations)
   
-  override def applyResult(r: Result)(k: Result => Block): Block = r match
-    case Call(Value.MemberRef(Elaborator.ctx.builtins.runtime.suspend, _), (Arg(N, tag) :: Arg(N, bodRef) :: Nil) :: Nil) =>
-      val tmp = getCurScopedTmp
+  override def applyResult(r: Result)(k: Result => Block): Block =
+    val tmp = getCurScopedTmp
+    r match
+    case Call(Value.MemberRef(Elaborator.ctx.builtins.runtime.suspend, _), args :: Nil) =>
       Assign(
         tmp,
-        Call(
-          yieldOp.asSimpleRef,
-          (tag.asArg :: Nil) ne_:: Nil
-        )(CallMetadata.defaultFun),
-        k(Call(bodRef, (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+        Tuple(false, args),
+        k(runtimeYield(tmp.asSimpleRef))
       )
     case c @ Call(Value.MemberRef(Elaborator.ctx.builtins.runtime.handle_suspension, _), argss) =>
-      val funcName = if scopedTmp.isEmpty then "enterHandleBlockGeneratorTopLevel" else "enterHandleBlockGenerator"
-      k(Call(Elaborator.State.runtimeSymbol.asSimpleRef.selSN(funcName), argss)(CallMetadata.mlsFunWithEffect))
+      applyResult(Call(Elaborator.State.runtimeSymbol.asSimpleRef.selSN("enterHandleBlockGenerator"), argss)(CallMetadata.mlsFunWithEffect))(k)
     case EffectfulResult() => r match
       case c: Call if !c.metadata.isNative =>
-        val tmp = getCurScopedTmp
-        Assign(
-          tmp,
-          c,
-          k(Call(yieldStar.asSimpleRef, (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
-        )
+        if isMainBlock then
+          blockBuilder
+            .assign(tmp, c)
+            .assign(tmp, callRuntimeMethod("handlerTopLevelCall", tmp.asSimpleRef.asArg :: Nil))
+            .rest(k(tmp.asSimpleRef))
+        else
+          Assign(
+            tmp,
+            c,
+            k(runtimeYieldStar(tmp.asSimpleRef))
+          )
       case _ => super.applyResult(r)(k)
     case _ => super.applyResult(r)(k)
     

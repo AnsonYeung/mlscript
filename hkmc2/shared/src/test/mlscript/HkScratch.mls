@@ -4,29 +4,3 @@
 // :pt
 // :elt
 
-:global
-:effectHandlers
-// :d
-// :todo
-
-class Effect
-
-
-:rewriteWhile
-:stackSafe 1000
-:expect 10000
-fun dummy = ()
-fun f(h) =
-  let n = 0
-  while n < 200 do
-    h.perform()
-    set n += 1
-  n
-handle h = Object with
-  fun perform()(k) =
-    k()
-f(h)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
-//│ ═══[RUNTIME ERROR] Expected: '10000', got: '200'
-//│ = 200
