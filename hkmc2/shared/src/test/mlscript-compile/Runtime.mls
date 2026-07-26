@@ -400,7 +400,6 @@ fun enterHandleBlock(handler, body) =
     handleBlockImpl(curEffect, handler)
 
 val enterHandleBlockGenerator = RuntimeJS.enterHandleBlockGenerator
-val enterHandleBlockGeneratorTopLevel = RuntimeJS.enterHandleBlockGeneratorTopLevel
 val handlerTopLevelCall = RuntimeJS.handlerTopLevelCall
 
 fun handleEffects(cur) =

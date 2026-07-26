@@ -20,5 +20,12 @@ fun g() =
       2
   a
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let g; g = function g(k) { if (true === true) { return k(1) } return k(2); };
+//│ let g;
+//│ g = function *g() {
+//│   let scrut, tmp;
+//│   tmp = always_true();
+//│   scrut = yield* tmp;
+//│   if (scrut === true) { tmp = f(); yield* tmp; return 1 }
+//│   return 2;
+//│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

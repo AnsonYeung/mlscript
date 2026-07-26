@@ -56,20 +56,18 @@ f()
 :re
 fun f() = () => return 3
 f()()
-//│ = Suspend(fun cpsId, ‹non-local return effect›, fun)
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] Top level effect unhandled
 
 :re
 fun f(): () -> Int = () => return () => 3
 f()()
-//│ = Suspend(fun cpsId, ‹non-local return effect›, fun)
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] Top level effect unhandled
 
 
 :e
 return 100
 //│ ╔══[COMPILATION ERROR] Return statements are not allowed outside of functions.
-//│ ║  l.70: 	return 100
+//│ ║  l.68: 	return 100
 //│ ╙──      	^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -78,14 +76,14 @@ if true do
   while false do
     let f = () => return 100
 //│ ╔══[COMPILATION ERROR] Return statements are not allowed outside of functions.
-//│ ║  l.79: 	    let f = () => return 100
+//│ ║  l.77: 	    let f = () => return 100
 //│ ╙──      	                  ^^^^^^^^^^
 
 :e
 fun f() =
   type A = return "lol"
 //│ ╔══[COMPILATION ERROR] Return statements are not allowed in this context.
-//│ ║  l.86: 	  type A = return "lol"
+//│ ║  l.84: 	  type A = return "lol"
 //│ ╙──      	           ^^^^^^^^^^^^
 
 
@@ -111,8 +109,9 @@ fun f() =
     return 100
   4
 f()
-//│ ═══[RUNTIME ERROR] Expected: '100', got: '4'
-//│ = 4
+//│ > let f7, tmp8;try { f7 = function *f() {   runtime.checkArgs("f", 0, true, arguments.length);   let nonLocalRetHandler$f, handleBlock$, $_non$_local$_return$_effect$_10, tmp9;   globalThis.Object.freeze(class $_non$_local$_return$_effect$_9 extends runtime.NonLocalReturn {     static {       $_non$_local$_return$_effect$_10 = this     }     constructor() {       super();     }     get ret$__checkNotMethod() { runtime.deboundMethod("ret", "\u2039non-local return effect\u203A"); }     *ret(value) {       runtime.checkArgs("ret", 1, true, arguments.length);       let $_non$_local$_return$_effect$_ret, tmp10;       $_non$_local$_return$_effect$_ret = (undefined, function *(resume) {         runtime.checkArgs("\\u2039non-local return effect\\u203Aret", 1, true, arguments.length);         return value       });       tmp10 = globalThis.Object.freeze([         this,         $_non$_local$_return$_effect$_ret       ]);       return yield tmp10     }     toString() { return runtime.render(this); }     static [definitionMetadata] = ["class", "‹non-local return effect›"];   });   nonLocalRetHandler$f = new $_non$_local$_return$_effect$_10();   handleBlock$ = (undefined, function *() {     runtime.checkArgs("", 0, true, arguments.length);     let A1, tmp10;     globalThis.Object.freeze(class A {       static {         new this       }       constructor() {         A1 = this;         tmp10 = runtime.safeCall(nonLocalRetHandler$f.ret(100));         yield* tmp10;         Object.defineProperty(this, "class", {           value: A         });         globalThis.Object.freeze(this);       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["object", "A"];     });     return 4   });   tmp9 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalRetHandler$f, handleBlock$));   return yield* tmp9 }; tmp8 = runtime.checkCall(f7()); block$res12 = runtime.checkCall(runtime.handlerTopLevelCall(tmp8));; undefined } catch (e) { console.log('\u200B' + e + '\u200B'); }
+//│ ═══[COMPILATION ERROR] [Uncaught SyntaxError] Unexpected strict mode reserved word
+//│ ═══[RUNTIME ERROR] Expected: '100', got: 'undefined'
 
 // ctor cannot raise effect, so error is expected.
 :fixme
@@ -122,8 +121,9 @@ fun f() =
     return 100
   new A
 f()
-//│ ═══[RUNTIME ERROR] Expected: '100', got: 'A'
-//│ = A
+//│ > let f8, tmp9;try { f8 = function *f() {   runtime.checkArgs("f", 0, true, arguments.length);   let nonLocalRetHandler$f, handleBlock$, $_non$_local$_return$_effect$_11, tmp10;   globalThis.Object.freeze(class $_non$_local$_return$_effect$_10 extends runtime.NonLocalReturn {     static {       $_non$_local$_return$_effect$_11 = this     }     constructor() {       super();     }     get ret$__checkNotMethod() { runtime.deboundMethod("ret", "\u2039non-local return effect\u203A"); }     *ret(value) {       runtime.checkArgs("ret", 1, true, arguments.length);       let $_non$_local$_return$_effect$_ret, tmp11;       $_non$_local$_return$_effect$_ret = (undefined, function *(resume) {         runtime.checkArgs("\\u2039non-local return effect\\u203Aret", 1, true, arguments.length);         return value       });       tmp11 = globalThis.Object.freeze([         this,         $_non$_local$_return$_effect$_ret       ]);       return yield tmp11     }     toString() { return runtime.render(this); }     static [definitionMetadata] = ["class", "‹non-local return effect›"];   });   nonLocalRetHandler$f = new $_non$_local$_return$_effect$_11();   handleBlock$ = (undefined, function *() {     runtime.checkArgs("", 0, true, arguments.length);     let A2, tmp11;     globalThis.Object.freeze(class A1 {       static {         A2 = this       }       constructor() {         tmp11 = runtime.safeCall(nonLocalRetHandler$f.ret(100));         yield* tmp11;       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["class", "A"];     });     return globalThis.Object.freeze(new A2())   });   tmp10 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalRetHandler$f, handleBlock$));   return yield* tmp10 }; tmp9 = runtime.checkCall(f8()); block$res13 = runtime.checkCall(runtime.handlerTopLevelCall(tmp9));; undefined } catch (e) { console.log('\u200B' + e + '\u200B'); }
+//│ ═══[COMPILATION ERROR] [Uncaught SyntaxError] Unexpected strict mode reserved word
+//│ ═══[RUNTIME ERROR] Expected: '100', got: 'undefined'
 
 :fixme
 :expect 100
@@ -132,8 +132,9 @@ fun f() =
     (() => return 100)()
   4
 f()
-//│ ═══[RUNTIME ERROR] Expected: '100', got: '4'
-//│ = 4
+//│ > let f9, tmp10;try { f9 = function *f() {   runtime.checkArgs("f", 0, true, arguments.length);   let nonLocalRetHandler$f, handleBlock$, $_non$_local$_return$_effect$_12, tmp11;   globalThis.Object.freeze(class $_non$_local$_return$_effect$_11 extends runtime.NonLocalReturn {     static {       $_non$_local$_return$_effect$_12 = this     }     constructor() {       super();     }     get ret$__checkNotMethod() { runtime.deboundMethod("ret", "\u2039non-local return effect\u203A"); }     *ret(value) {       runtime.checkArgs("ret", 1, true, arguments.length);       let $_non$_local$_return$_effect$_ret, tmp12;       $_non$_local$_return$_effect$_ret = (undefined, function *(resume) {         runtime.checkArgs("\\u2039non-local return effect\\u203Aret", 1, true, arguments.length);         return value       });       tmp12 = globalThis.Object.freeze([         this,         $_non$_local$_return$_effect$_ret       ]);       return yield tmp12     }     toString() { return runtime.render(this); }     static [definitionMetadata] = ["class", "‹non-local return effect›"];   });   nonLocalRetHandler$f = new $_non$_local$_return$_effect$_12();   handleBlock$ = (undefined, function *() {     runtime.checkArgs("", 0, true, arguments.length);     let A3, tmp12;     globalThis.Object.freeze(class A2 {       static {         new this       }       constructor() {         A3 = this;         let lambda;         lambda = (undefined, function *() {           runtime.checkArgs("", 0, true, arguments.length);           let tmp13;           tmp13 = runtime.safeCall(nonLocalRetHandler$f.ret(100));           return yield* tmp13         });         tmp12 = runtime.safeCall(lambda());         yield* tmp12;         Object.defineProperty(this, "class", {           value: A2         });         globalThis.Object.freeze(this);       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["object", "A"];     });     return 4   });   tmp11 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalRetHandler$f, handleBlock$));   return yield* tmp11 }; tmp10 = runtime.checkCall(f9()); block$res14 = runtime.checkCall(runtime.handlerTopLevelCall(tmp10));; undefined } catch (e) { console.log('\u200B' + e + '\u200B'); }
+//│ ═══[COMPILATION ERROR] [Uncaught SyntaxError] Unexpected strict mode reserved word
+//│ ═══[RUNTIME ERROR] Expected: '100', got: 'undefined'
 
 :fixme
 :expect 100
@@ -143,5 +144,6 @@ fun f() =
   new A
   4
 f()
-//│ ═══[RUNTIME ERROR] Expected: '100', got: '4'
-//│ = 4
+//│ > let f10, tmp11;try { f10 = function *f() {   runtime.checkArgs("f", 0, true, arguments.length);   let nonLocalRetHandler$f, handleBlock$, $_non$_local$_return$_effect$_13, tmp12;   globalThis.Object.freeze(class $_non$_local$_return$_effect$_12 extends runtime.NonLocalReturn {     static {       $_non$_local$_return$_effect$_13 = this     }     constructor() {       super();     }     get ret$__checkNotMethod() { runtime.deboundMethod("ret", "\u2039non-local return effect\u203A"); }     *ret(value) {       runtime.checkArgs("ret", 1, true, arguments.length);       let $_non$_local$_return$_effect$_ret, tmp13;       $_non$_local$_return$_effect$_ret = (undefined, function *(resume) {         runtime.checkArgs("\\u2039non-local return effect\\u203Aret", 1, true, arguments.length);         return value       });       tmp13 = globalThis.Object.freeze([         this,         $_non$_local$_return$_effect$_ret       ]);       return yield tmp13     }     toString() { return runtime.render(this); }     static [definitionMetadata] = ["class", "‹non-local return effect›"];   });   nonLocalRetHandler$f = new $_non$_local$_return$_effect$_13();   handleBlock$ = (undefined, function *() {     runtime.checkArgs("", 0, true, arguments.length);     let A4, tmp13;     globalThis.Object.freeze(class A3 {       static {         A4 = this       }       constructor() {         let lambda;         lambda = (undefined, function *() {           runtime.checkArgs("", 0, true, arguments.length);           let tmp14;           tmp14 = runtime.safeCall(nonLocalRetHandler$f.ret(100));           return yield* tmp14         });         tmp13 = runtime.safeCall(lambda());         yield* tmp13;       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["class", "A"];     });     globalThis.Object.freeze(new A4());     return 4   });   tmp12 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalRetHandler$f, handleBlock$));   return yield* tmp12 }; tmp11 = runtime.checkCall(f10()); block$res15 = runtime.checkCall(runtime.handlerTopLevelCall(tmp11));; undefined } catch (e) { console.log('\u200B' + e + '\u200B'); }
+//│ ═══[COMPILATION ERROR] [Uncaught SyntaxError] Unexpected strict mode reserved word
+//│ ═══[RUNTIME ERROR] Expected: '100', got: 'undefined'

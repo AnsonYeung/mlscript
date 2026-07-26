@@ -15,5 +15,22 @@ fun f() =
   set x = g()
   return x
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let f; f = function f(k) { if (0 === 0) { return k(0) } return k(0); };
+//│ let f;
+//│ f = function *f() {
+//│   let tmp;
+//│   if (0 === 0) {
+//│     tmp = g();
+//│     yield* tmp;
+//│     tmp = g();
+//│     yield* tmp;
+//│   }
+//│   tmp = g();
+//│   yield* tmp;
+//│   tmp = g();
+//│   yield* tmp;
+//│   tmp = g();
+//│   yield* tmp;
+//│   tmp = g();
+//│   return yield* tmp
+//│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

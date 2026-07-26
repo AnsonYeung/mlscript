@@ -15,8 +15,8 @@ fun foo(h): module M =
     A
 //│ —————————————| JS (sanitized) |—————————————————————————————————————————————————————————————————————
 //│ let foo;
-//│ foo = function foo(k, h) {
-//│   runtime.checkArgs("foo", 2, true, arguments.length);
+//│ foo = function *foo(h) {
+//│   runtime.checkArgs("foo", 1, true, arguments.length);
 //│   let A2, A3;
 //│   if (false === true) {
 //│     globalThis.Object.freeze(class A {
@@ -26,7 +26,7 @@ fun foo(h): module M =
 //│       toString() { return runtime.render(this); }
 //│       static [definitionMetadata] = ["class", "A"];
 //│     });
-//│     return runtime.checkCall(k(A2))
+//│     return A2
 //│   }
 //│   globalThis.Object.freeze(class A1 {
 //│     static {
@@ -35,7 +35,7 @@ fun foo(h): module M =
 //│     toString() { return runtime.render(this); }
 //│     static [definitionMetadata] = ["class", "A"];
 //│   });
-//│   return runtime.checkCall(k(A3));
+//│   return A3;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ FAILURE: Unexpected lack of error to fix

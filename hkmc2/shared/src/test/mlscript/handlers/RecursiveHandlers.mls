@@ -36,8 +36,7 @@ handle h = Object with
     [x, k(())]
 h.write(1)
 h.write(2)
-//│ = [10, [1, [10, [2, ()]]]]
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] Top level effect unhandled
 
 handle h = Object with
   fun write(x)(k) =
@@ -46,19 +45,9 @@ handle h = Object with
     [x, k(())]
 h.write(1)
 h.write(2)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
-//│ ═══[RUNTIME ERROR] Error: Function expected 1 argument but got 0
-//│     at Runtime.checkArgs (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:750:41)
-//│     at Handler$h$write.lambda (REPL25:1:724)
-//│     at Runtime.enterHandleBlock (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:1098:28)
-//│     at Predef.enterHandleBlock (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Predef.mjs:314:37)
-//│     at Handler$h$write (REPL25:1:884)
-//│     at Runtime.handlerTrampoline (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:819:48)
-//│     at Runtime.cpsHandlerImpl (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:834:20)
-//│     at REPL25:1:2535
-//│     at ContextifyScript.runInThisContext (node:vm:138:12)
-//│     at defaultEval (node:repl:610:24)
+//│ >  {}
+//│ >  {}
+//│ = [1, [2, ()]]
 
 handle h = Object with
   fun write(x)(k) = enterHandleBlock of this, () =>
@@ -66,19 +55,7 @@ handle h = Object with
     [x, k(())]
 h.write(1)
 h.write(2)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
-//│ ═══[RUNTIME ERROR] Error: Function expected 1 argument but got 0
-//│     at Runtime.checkArgs (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:750:41)
-//│     at Handler$h$write.lambda (REPL28:1:630)
-//│     at Runtime.enterHandleBlock (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:1098:28)
-//│     at Predef.enterHandleBlock (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Predef.mjs:314:37)
-//│     at Handler$h$write (REPL28:1:1973)
-//│     at Runtime.handlerTrampoline (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:819:48)
-//│     at Runtime.cpsHandlerImpl (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:834:20)
-//│     at REPL28:1:2793
-//│     at ContextifyScript.runInThisContext (node:vm:138:12)
-//│     at defaultEval (node:repl:610:24)
+//│ =  {}
 
 // deep handler
 :todo
@@ -95,10 +72,10 @@ handle h2 = Effect with
   h2.perform(3)
 ]
 //│ ╔══[COMPILATION ERROR] Name not found: h2
-//│ ║  l.89: 	      then h2.perform(arg - 1) + " " + arg
+//│ ║  l.66: 	      then h2.perform(arg - 1) + " " + arg
 //│ ╙──      	           ^^
 //│ ╔══[COMPILATION ERROR] Illegal position for prefix keyword 'else'.
-//│ ║  l.90: 	      else "0"
+//│ ║  l.67: 	      else "0"
 //│ ╙──      	      ^^^^
 //│ > –––
 //│ > performing 2
@@ -177,10 +154,10 @@ if true do
   h1.perform(())
 str
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let str, h11;
+//│ let str, h11, tmp7;
 //│ str = "";
 //│ if (true === true) {
-//│   let handleBlock$7, Handler$h1$3, cpsCont$12;
+//│   let handleBlock$7, Handler$h1$3;
 //│   (class Handler$h1$2 extends Effect1 {
 //│     static {
 //│       Handler$h1$3 = this
@@ -188,27 +165,30 @@ str
 //│     constructor() {
 //│       super();
 //│     }
-//│     perform(k, arg) {
-//│       let Handler$h1$perform;
-//│       Handler$h1$perform = function Handler$h1$perform(k1, k2) {
-//│         let tmp7, tmp8, cpsCont$0;
-//│         tmp7 = str + "A";
-//│         str = tmp7;
-//│         cpsCont$0 = function cpsCont$0(retVal) {
-//│           tmp8 = str + "A";
-//│           str = tmp8;
-//│           return k1(runtime.Unit)
-//│         };
-//│         return k2(cpsCont$0, arg)
+//│     *perform(arg) {
+//│       let Handler$h1$perform, tmp8;
+//│       Handler$h1$perform = function *Handler$h1$perform(k) {
+//│         let tmp9, tmp10, tmp11;
+//│         tmp9 = str + "A";
+//│         str = tmp9;
+//│         tmp11 = runtime.safeCall(k(arg));
+//│         yield* tmp11;
+//│         tmp10 = str + "A";
+//│         str = tmp10;
+//│         return runtime.Unit
 //│       };
-//│       return new runtime.Suspend(k, this, Handler$h1$perform)
+//│       tmp8 = globalThis.Object.freeze([
+//│         this,
+//│         Handler$h1$perform
+//│       ]);
+//│       return yield tmp8
 //│     }
 //│     toString() { return runtime.render(this); }
 //│     static [definitionMetadata] = ["class", "Handler$h1$"];
 //│   });
 //│   h11 = new Handler$h1$3();
-//│   handleBlock$7 = (undefined, function (k) {
-//│     let h22, tmp7, handleBlock$8, Handler$h2$3, cpsCont$92;
+//│   handleBlock$7 = (undefined, function *() {
+//│     let h22, handleBlock$8, Handler$h2$3, tmp8;
 //│     (class Handler$h2$2 extends Effect1 {
 //│       static {
 //│         Handler$h2$3 = this
@@ -216,46 +196,45 @@ str
 //│       constructor() {
 //│         super();
 //│       }
-//│       perform(k1, arg) {
-//│         let Handler$h2$perform;
-//│         Handler$h2$perform = function Handler$h2$perform(k2, k3) {
-//│           let tmp8, tmp9, tmp10, tmp11, cpsCont$3;
-//│           tmp8 = str + "B";
-//│           tmp9 = str + tmp8;
-//│           str = tmp9;
-//│           cpsCont$3 = function cpsCont$3(retVal) {
-//│             tmp10 = str + "B";
-//│             tmp11 = str + tmp10;
-//│             str = tmp11;
-//│             return k2(runtime.Unit)
-//│           };
-//│           return k3(cpsCont$3, arg)
+//│       *perform(arg) {
+//│         let Handler$h2$perform, tmp9;
+//│         Handler$h2$perform = function *Handler$h2$perform(k) {
+//│           let tmp10, tmp11, tmp12, tmp13, tmp14;
+//│           tmp10 = str + "B";
+//│           tmp11 = str + tmp10;
+//│           str = tmp11;
+//│           tmp14 = runtime.safeCall(k(arg));
+//│           yield* tmp14;
+//│           tmp12 = str + "B";
+//│           tmp13 = str + tmp12;
+//│           str = tmp13;
+//│           return runtime.Unit
 //│         };
-//│         return new runtime.Suspend(k1, this, Handler$h2$perform)
+//│         tmp9 = globalThis.Object.freeze([
+//│           this,
+//│           Handler$h2$perform
+//│         ]);
+//│         return yield tmp9
 //│       }
 //│       toString() { return runtime.render(this); }
 //│       static [definitionMetadata] = ["class", "Handler$h2$"];
 //│     });
 //│     h22 = new Handler$h2$3();
-//│     handleBlock$8 = (undefined, function (k1) {
-//│       let cpsCont$63;
-//│       cpsCont$63 = function cpsCont$6(retVal) {
-//│         return h11.perform(k1, runtime.Unit)
-//│       };
-//│       return h22.perform(cpsCont$63, runtime.Unit)
+//│     handleBlock$8 = (undefined, function *() {
+//│       let tmp9;
+//│       tmp9 = runtime.safeCall(h22.perform(runtime.Unit));
+//│       yield* tmp9;
+//│       tmp9 = runtime.safeCall(h11.perform(runtime.Unit));
+//│       return yield* tmp9
 //│     });
-//│     cpsCont$92 = function cpsCont$9(retVal) {
-//│       tmp7 = retVal;
-//│       return k(tmp7)
-//│     };
-//│     return runtime.cpsHandlerImpl(cpsCont$92, h22, handleBlock$8)
+//│     tmp8 = runtime.enterHandleBlockGenerator(h22, handleBlock$8);
+//│     return yield* tmp8
 //│   });
-//│   cpsCont$12 = function cpsCont$12(retVal) {
-//│     return runtime.cpsId(str)
-//│   };
-//│   return runtime.cpsHandlerImpl(cpsCont$12, h11, handleBlock$7)
+//│   tmp7 = runtime.enterHandleBlockGenerator(h11, handleBlock$7);
+//│   runtime.handlerTopLevelCall(tmp7);
+//│   return str
 //│ }
-//│ return runtime.cpsId(str);
+//│ return str;
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = "BABABA"
 //│ str = "BABABA"

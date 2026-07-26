@@ -41,7 +41,19 @@ fact
 
 :stackSafe
 fact(10000)
-//│ = Infinity
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
+//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
+//│     at lambda1 (REPL33:1:64)
+//│     at lambda1 (REPL30:1:557)
+//│     at lambda1.next (<anonymous>)
+//│     at selfApp (REPL10:1:167)
+//│     at selfApp.next (<anonymous>)
+//│     at lambda2 (REPL30:1:424)
+//│     at lambda2.next (<anonymous>)
+//│     at lambda2 (REPL33:1:398)
+//│     at lambda2.next (<anonymous>)
+//│     at lambda2 (REPL30:1:502)
 
 // * Without `:stackSafe`, gives `RangeError: Maximum call stack size exceeded`
 :re
@@ -51,7 +63,19 @@ fact(10000)
 
 :stackSafe
 fact(10000)
-//│ = Infinity
+//│ FAILURE: Unexpected runtime error
+//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
+//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
+//│     at lambda1 (REPL30:1:160)
+//│     at lambda1.next (<anonymous>)
+//│     at selfApp (REPL10:1:167)
+//│     at selfApp.next (<anonymous>)
+//│     at lambda2 (REPL30:1:424)
+//│     at lambda2.next (<anonymous>)
+//│     at lambda2 (REPL33:1:398)
+//│     at lambda2.next (<anonymous>)
+//│     at lambda2 (REPL30:1:502)
+//│     at lambda2.next (<anonymous>)
 
 :re
 :stackSafe off
@@ -94,17 +118,6 @@ let fact =
         x * prev
     b
   mkrec(a)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
-//│ ═══[RUNTIME ERROR] Error: MLscript call unexpectedly returned `undefined`, the forbidden value.
-//│     at Runtime.checkCall (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:774:41)
-//│     at cpsCont$4 (REPL67:1:2683)
-//│     at a (REPL67:1:2907)
-//│     at cpsCont$4 (REPL61:1:2693)
-//│     at Runtime.runStackSafeCps (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:1326:43)
-//│     at REPL67:1:3332
-//│     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-//│     at async node:repl:660:31
 //│ fact = fun b
 
 :expect 3628800

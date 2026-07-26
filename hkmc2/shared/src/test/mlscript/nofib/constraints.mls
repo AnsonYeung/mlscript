@@ -2,16 +2,4 @@
 
 import "../../mlscript-compile/nofib/constraints.mls"
 constraints.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at constraints.Assign (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/constraints.mjs:13:39)
-//│     at cpsCont$63 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/constraints.mjs:490:38)
-//│     at constraints.maxLevel (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/constraints.mjs:271:16)
-//│     at lscomp1 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/constraints.mjs:500:36)
-//│     at cpsCont$64 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/constraints.mjs:506:22)
-//│     at cpsCont$45 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:676:18)
-//│     at cpsCont$45 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:676:18)
-//│     at cpsCont$45 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:676:18)
-//│     at cpsCont$45 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:676:18)
-//│     at cpsCont$45 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:676:18)
+//│ = "[4,4,4,4,4]"

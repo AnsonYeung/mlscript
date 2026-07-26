@@ -2,16 +2,4 @@
 
 import "../../mlscript-compile/nofib/cryptarithm2.mls"
 cryptarithm2.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at NofibPrelude.Cons (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:90:38)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:554:31)
-//│     at NofibPrelude.map (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:561:14)
-//│     at cpsCont$41 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:557:29)
-//│     at lambda (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm2.mjs:166:14)
-//│     at cryptarithm2.runStateT (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm2.mjs:120:14)
-//│     at cpsCont$15 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm2.mjs:137:33)
-//│     at cryptarithm2.return_ (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm2.mjs:169:12)
-//│     at lambda2 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm2.mjs:182:33)
-//│     at lambda1 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/cryptarithm2.mjs:139:18)
+//│ = "[\"W\",\" \",\"=\",\">\",\" \",\"3\",\"\\n\",\"H\",\" \",\"=\",\">\",\" \",\"9\",\"\\n\",\"N\",\" \",\"=\",\">\",\" \",\"8\",\"\\n\",\"I\",\" \",\"=\",\">\",\" \",\"4\",\"\\n\",\"L\",\" \",\"=\",\">\",\" \",\"7\",\"\\n\",\"R\",\" \",\"=\",\">\",\" \",\"2\",\"\\n\",\"V\",\" \",\"=\",\">\",\" \",\"6\",\"\\n\",\"T\",\" \",\"=\",\">\",\" \",\"1\",\"\\n\",\"E\",\" \",\"=\",\">\",\" \",\"0\",\"\\n\",\"Y\",\" \",\"=\",\">\",\" \",\"5\",\"\\n\"]"

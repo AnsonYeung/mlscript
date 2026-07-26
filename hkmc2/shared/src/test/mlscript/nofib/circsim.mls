@@ -2,16 +2,4 @@
 
 import "../../mlscript-compile/nofib/circsim.mls"
 circsim.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at NofibPrelude.Cons (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:90:38)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:554:31)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
-//│     at cpsCont$40 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:555:18)
+//│ = "[[F,F,F,F,F,F,F,F],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T],[T,T,T,T,T,T,T,T]]"

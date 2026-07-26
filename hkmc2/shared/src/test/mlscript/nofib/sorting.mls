@@ -2,16 +2,4 @@
 
 import "../../mlscript-compile/nofib/sorting.mls"
 sorting.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at sorting.gtList (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:210:16)
-//│     at sorting.leList (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:229:20)
-//│     at to_tree (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:894:24)
-//│     at cpsCont$186 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:891:20)
-//│     at cpsCont$11 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:227:14)
-//│     at cpsCont$9 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:215:16)
-//│     at cpsCont$4 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:195:26)
-//│     at sorting.int_of_char (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:148:12)
-//│     at cpsCont$5 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:197:32)
-//│     at sorting.int_of_char (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/sorting.mjs:148:12)
+//│ = 51324117188054929115411819706576305711291550658570113274291768822777898552447837804420193403034280334581113235670099168108057310001444698188883902000871912629747889286942274533143362191347715770581074120684028066661549409447053566864805982796651442411825424058139343253169753750307013113236996387277789074623630137288987589869641913268610508598505040964906263227437054452571059796961267985287441539342423613634888118731387934522320394294636575704912348025851038478882488022787377510287490741895262233989080994241592338442788051616303082788441666485156091668196999668892850523930511918729736856089560984406499736606084171798216360770991023233180481976810767432750226966921480421914178641779179040473344962763594357880599983085435482161632405644389584578524102239884780307588440751057343783694537559222924711205140877849398042544407611747227163056408231621727687968160470282720794027470616537695447289808133239223198869n

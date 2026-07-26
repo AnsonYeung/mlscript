@@ -3,16 +3,40 @@
 
 import "../../mlscript-compile/nofib/minimax.mls"
 print(minimax.main())
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at [Symbol.hasInstance] (<anonymous>)
-//│     at Iter.isArrayLike (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Iter.mjs:820:12)
-//│     at Tuple.isArrayLike (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:283:38)
-//│     at cpsCont$49 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/minimax.mjs:841:33)
-//│     at minimax.empty_ (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/minimax.mjs:771:24)
-//│     at minimax.empty (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/minimax.mjs:806:34)
-//│     at minimax.placePiece (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/minimax.mjs:903:20)
-//│     at lambda (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/minimax.mjs:969:22)
-//│     at NofibPrelude.map (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:559:14)
-//│     at cpsCont$41 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:557:29)
+//│ > OXO
+//│ > XWin
+//│ > X|O| 
+//│ > ------
+//│ >  |X| 
+//│ > ------
+//│ >  | | 
+//│ > 
+//│ > XWin
+//│ > X|O|O
+//│ > ------
+//│ >  |X| 
+//│ > ------
+//│ >  | | 
+//│ > 
+//│ > XWin
+//│ > X|O|O
+//│ > ------
+//│ > X|X| 
+//│ > ------
+//│ >  | | 
+//│ > 
+//│ > XWin
+//│ > X|O|O
+//│ > ------
+//│ > X|X|O
+//│ > ------
+//│ >  | | 
+//│ > 
+//│ > XWin
+//│ > X|O|O
+//│ > ------
+//│ > X|X|O
+//│ > ------
+//│ > X| | 
+//│ > 
+//│ > 

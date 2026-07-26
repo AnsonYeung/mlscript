@@ -67,18 +67,78 @@ fun continueFromNestedFunctionWithEffects() =
       root.continue
     loop()
 continueFromNestedFunctionWithEffects()
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
-//│ 	at: scala.Predef$.$qmark$qmark$qmark(Predef.scala:383)
-//│ 	at: hkmc2.codegen.CpsHandlerLowering$$anon$2.applyBlock(CpsHandlerLowering.scala:135)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySubBlock(BlockTransformer.scala:29)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySub$1(BlockTransformer.scala:50)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3$$anonfun$1(BlockTransformer.scala:56)
-//│ 	at: hkmc2.codegen.BlockTransformer.rec$1(BlockTransformer.scala:333)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyListOf(BlockTransformer.scala:334)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3(BlockTransformer.scala:59)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyValue(BlockTransformer.scala:196)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyPath(BlockTransformer.scala:191)
+//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
+//│ let tmp;
+//│ @generator
+//│ define continueFromNestedFunctionWithEffects⁰ as fun continueFromNestedFunctionWithEffects¹() {
+//│   let i, root$result, nonLocalHandler$root, labelBodyResult, labelContinueDispatch, tmp1, tmp2;
+//│   set i = 0;
+//│   block root:
+//│     let handleBlock$, NonLocalLabelEffect;
+//│     define NonLocalLabelEffect as class NonLocalLabelEffect⁰ extends runtime⁰.NonLocalReturn⁰ {
+//│       method break⁰ = fun break¹(value) {
+//│         let NonLocalLabelEffectbreak, suspendRes, tmp3;
+//│         @generator
+//│         define NonLocalLabelEffectbreak as fun NonLocalLabelEffectbreak⁰(resume) {
+//│           let tmp4;
+//│           return value
+//│         };
+//│         set tmp3 = [NonLocalLabelEffect⁰.this, NonLocalLabelEffectbreak⁰];
+//│         return yield⁰(tmp3)
+//│       }
+//│       method continue⁰ = fun continue¹() {
+//│         let NonLocalLabelEffectcontinue, suspendRes, tmp3;
+//│         @generator
+//│         define NonLocalLabelEffectcontinue as fun NonLocalLabelEffectcontinue⁰(resume) {
+//│           let tmp4;
+//│           return runtime⁰.Continue﹖
+//│         };
+//│         set tmp3 = [NonLocalLabelEffect⁰.this, NonLocalLabelEffectcontinue⁰];
+//│         return yield⁰(tmp3)
+//│       }
+//│     };
+//│     set nonLocalHandler$root = new mut NonLocalLabelEffect⁰();
+//│     @generator
+//│     define handleBlock$ as fun handleBlock$⁰() {
+//│       let loop, tmp3;
+//│       @generator
+//│       define loop as fun loop⁰() {
+//│         let scrut, tmp4, tmp5;
+//│         set scrut = >=⁰(i, 3);
+//│         match scrut
+//│           true =>
+//│             set tmp5 = nonLocalHandler$root.break﹖(i);
+//│             do yield*⁰(tmp5);
+//│             end
+//│         set tmp4 = +⁰(i, 1);
+//│         set i = tmp4;
+//│         set tmp5 = nonLocalHandler$root.continue﹖();
+//│         return yield*⁰(tmp5)
+//│       };
+//│       set tmp3 = loop⁰();
+//│       return yield*⁰(tmp3)
+//│     };
+//│     set tmp2 = runtime⁰.enterHandleBlockGenerator﹖(nonLocalHandler$root, handleBlock$⁰);
+//│     set tmp1 = yield*⁰(tmp2);
+//│     set labelBodyResult = tmp1;
+//│     set labelContinueDispatch = ===⁰(labelBodyResult, runtime⁰.Continue﹖);
+//│     match labelContinueDispatch
+//│       true =>
+//│         continue root
+//│       else
+//│         set root$result = labelBodyResult;
+//│         break root
+//│     end
+//│   return root$result
+//│ };
+//│ set tmp = continueFromNestedFunctionWithEffects¹();
+//│ set tmp = runtime⁰.handlerTopLevelCall﹖(tmp);
+//│ return tmp
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+//│ > let continueFromNestedFunctionWithEffects, tmp3;try { continueFromNestedFunctionWithEffects = function *continueFromNestedFunctionWithEffects() {   runtime.checkArgs("continueFromNestedFunctionWithEffects", 0, true, arguments.length);   let i, root$result, nonLocalHandler$root, labelContinueDispatch, tmp4, tmp5;   i = 0;   root: {     let handleBlock$, NonLocalLabelEffect4;     globalThis.Object.freeze(class NonLocalLabelEffect3 extends runtime.NonLocalReturn {       static {         NonLocalLabelEffect4 = this       }       constructor() {         super();       }       get break$__checkNotMethod() { runtime.deboundMethod("break", "NonLocalLabelEffect"); }        get continue$__checkNotMethod() { runtime.deboundMethod("continue", "NonLocalLabelEffect"); }       *break(value) {         runtime.checkArgs("break", 1, true, arguments.length);         let NonLocalLabelEffectbreak, tmp6;         NonLocalLabelEffectbreak = function *NonLocalLabelEffectbreak(resume) {           runtime.checkArgs("NonLocalLabelEffectbreak", 1, true, arguments.length);           return value         };         tmp6 = globalThis.Object.freeze([           this,           NonLocalLabelEffectbreak         ]);         return yield tmp6       }       *continue() {         runtime.checkArgs("continue", 0, true, arguments.length);         let NonLocalLabelEffectcontinue, tmp6;         NonLocalLabelEffectcontinue = function *NonLocalLabelEffectcontinue(resume) {           runtime.checkArgs("NonLocalLabelEffectcontinue", 1, true, arguments.length);           return runtime.Continue         };         tmp6 = globalThis.Object.freeze([           this,           NonLocalLabelEffectcontinue         ]);         return yield tmp6       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["class", "NonLocalLabelEffect"];     });     nonLocalHandler$root = new NonLocalLabelEffect4();     handleBlock$ = (undefined, function *() {       runtime.checkArgs("", 0, true, arguments.length);       let loop, tmp6;       loop = function *loop() {         runtime.checkArgs("loop", 0, true, arguments.length);         let scrut, tmp7, tmp8;         scrut = i >= 3;         if (scrut === true) {           tmp8 = runtime.safeCall(nonLocalHandler$root.break(i));           yield* tmp8;         }         tmp7 = i + 1;         i = tmp7;         tmp8 = runtime.safeCall(nonLocalHandler$root.continue());         return yield* tmp8       };       tmp6 = runtime.checkCall(loop());       return yield* tmp6     });     tmp5 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalHandler$root, handleBlock$));     tmp4 = yield* tmp5;     labelContinueDispatch = tmp4 === runtime.Continue;     if (labelContinueDispatch === true) {       continue root     }     root$result = tmp4;   }   return root$result }; tmp3 = runtime.checkCall(continueFromNestedFunctionWithEffects()); block$res7 = runtime.checkCall(runtime.handlerTopLevelCall(tmp3));; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
+//│ >                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+//│ > 
+//│ > Uncaught:
 
 
 fun continueFromNestedLambdaWithEffects() =
@@ -89,18 +149,10 @@ fun continueFromNestedLambdaWithEffects() =
       root.continue
     loop()
 continueFromNestedLambdaWithEffects()
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
-//│ 	at: scala.Predef$.$qmark$qmark$qmark(Predef.scala:383)
-//│ 	at: hkmc2.codegen.CpsHandlerLowering$$anon$2.applyBlock(CpsHandlerLowering.scala:135)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySubBlock(BlockTransformer.scala:29)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySub$1(BlockTransformer.scala:50)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3$$anonfun$1(BlockTransformer.scala:56)
-//│ 	at: hkmc2.codegen.BlockTransformer.rec$1(BlockTransformer.scala:333)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyListOf(BlockTransformer.scala:334)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3(BlockTransformer.scala:59)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyValue(BlockTransformer.scala:196)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyPath(BlockTransformer.scala:191)
+//│ > let continueFromNestedLambdaWithEffects, tmp4;try { continueFromNestedLambdaWithEffects = function *continueFromNestedLambdaWithEffects() {   runtime.checkArgs("continueFromNestedLambdaWithEffects", 0, true, arguments.length);   let i, root$result, nonLocalHandler$root, labelContinueDispatch, tmp5, tmp6;   i = 0;   root: {     let handleBlock$, NonLocalLabelEffect5;     globalThis.Object.freeze(class NonLocalLabelEffect4 extends runtime.NonLocalReturn {       static {         NonLocalLabelEffect5 = this       }       constructor() {         super();       }       get break$__checkNotMethod() { runtime.deboundMethod("break", "NonLocalLabelEffect"); }        get continue$__checkNotMethod() { runtime.deboundMethod("continue", "NonLocalLabelEffect"); }       *break(value) {         runtime.checkArgs("break", 1, true, arguments.length);         let NonLocalLabelEffectbreak, tmp7;         NonLocalLabelEffectbreak = function *NonLocalLabelEffectbreak(resume) {           runtime.checkArgs("NonLocalLabelEffectbreak", 1, true, arguments.length);           return value         };         tmp7 = globalThis.Object.freeze([           this,           NonLocalLabelEffectbreak         ]);         return yield tmp7       }       *continue() {         runtime.checkArgs("continue", 0, true, arguments.length);         let NonLocalLabelEffectcontinue, tmp7;         NonLocalLabelEffectcontinue = function *NonLocalLabelEffectcontinue(resume) {           runtime.checkArgs("NonLocalLabelEffectcontinue", 1, true, arguments.length);           return runtime.Continue         };         tmp7 = globalThis.Object.freeze([           this,           NonLocalLabelEffectcontinue         ]);         return yield tmp7       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["class", "NonLocalLabelEffect"];     });     nonLocalHandler$root = new NonLocalLabelEffect5();     handleBlock$ = (undefined, function *() {       runtime.checkArgs("", 0, true, arguments.length);       let lambda, tmp7;       lambda = (undefined, function *() {         runtime.checkArgs("", 0, true, arguments.length);         let scrut, tmp8, tmp9;         scrut = i >= 2;         if (scrut === true) {           tmp9 = runtime.safeCall(nonLocalHandler$root.break(i));           yield* tmp9;         }         tmp8 = i + 1;         i = tmp8;         tmp9 = runtime.safeCall(nonLocalHandler$root.continue());         return yield* tmp9       });       tmp7 = runtime.safeCall(lambda());       return yield* tmp7     });     tmp6 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalHandler$root, handleBlock$));     tmp5 = yield* tmp6;     labelContinueDispatch = tmp5 === runtime.Continue;     if (labelContinueDispatch === true) {       continue root     }     root$result = tmp5;   }   return root$result }; tmp4 = runtime.checkCall(continueFromNestedLambdaWithEffects()); block$res8 = runtime.checkCall(runtime.handlerTopLevelCall(tmp4));; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
+//│ >                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+//│ > 
+//│ > Uncaught:
 
 
 fun continueFromNestedFunctionAndLambdaWithEffects() =
@@ -112,17 +164,9 @@ fun continueFromNestedFunctionAndLambdaWithEffects() =
         root.continue
     mkContinue()()
 continueFromNestedFunctionAndLambdaWithEffects()
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
-//│ 	at: scala.Predef$.$qmark$qmark$qmark(Predef.scala:383)
-//│ 	at: hkmc2.codegen.CpsHandlerLowering$$anon$2.applyBlock(CpsHandlerLowering.scala:135)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySubBlock(BlockTransformer.scala:29)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySub$1(BlockTransformer.scala:50)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3$$anonfun$1(BlockTransformer.scala:56)
-//│ 	at: hkmc2.codegen.BlockTransformer.rec$1(BlockTransformer.scala:333)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyListOf(BlockTransformer.scala:334)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3(BlockTransformer.scala:59)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyValue(BlockTransformer.scala:196)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyPath(BlockTransformer.scala:191)
+//│ > let continueFromNestedFunctionAndLambdaWithEffects, tmp5;try { continueFromNestedFunctionAndLambdaWithEffects = function *continueFromNestedFunctionAndLambdaWithEffects() {   runtime.checkArgs("continueFromNestedFunctionAndLambdaWithEffects", 0, true, arguments.length);   let i, root$result, nonLocalHandler$root, labelContinueDispatch, tmp6, tmp7;   i = 0;   root: {     let handleBlock$, NonLocalLabelEffect6;     globalThis.Object.freeze(class NonLocalLabelEffect5 extends runtime.NonLocalReturn {       static {         NonLocalLabelEffect6 = this       }       constructor() {         super();       }       get break$__checkNotMethod() { runtime.deboundMethod("break", "NonLocalLabelEffect"); }        get continue$__checkNotMethod() { runtime.deboundMethod("continue", "NonLocalLabelEffect"); }       *break(value) {         runtime.checkArgs("break", 1, true, arguments.length);         let NonLocalLabelEffectbreak, tmp8;         NonLocalLabelEffectbreak = function *NonLocalLabelEffectbreak(resume) {           runtime.checkArgs("NonLocalLabelEffectbreak", 1, true, arguments.length);           return value         };         tmp8 = globalThis.Object.freeze([           this,           NonLocalLabelEffectbreak         ]);         return yield tmp8       }       *continue() {         runtime.checkArgs("continue", 0, true, arguments.length);         let NonLocalLabelEffectcontinue, tmp8;         NonLocalLabelEffectcontinue = function *NonLocalLabelEffectcontinue(resume) {           runtime.checkArgs("NonLocalLabelEffectcontinue", 1, true, arguments.length);           return runtime.Continue         };         tmp8 = globalThis.Object.freeze([           this,           NonLocalLabelEffectcontinue         ]);         return yield tmp8       }       toString() { return runtime.render(this); }       static [definitionMetadata] = ["class", "NonLocalLabelEffect"];     });     nonLocalHandler$root = new NonLocalLabelEffect6();     handleBlock$ = (undefined, function *() {       runtime.checkArgs("", 0, true, arguments.length);       let mkContinue, baseCall, tmp8;       mkContinue = function *mkContinue() {         runtime.checkArgs("mkContinue", 0, true, arguments.length);         let lambda;         lambda = (undefined, function *() {           runtime.checkArgs("", 0, true, arguments.length);           let scrut, tmp9, tmp10;           scrut = i >= 4;           if (scrut === true) {             tmp10 = runtime.safeCall(nonLocalHandler$root.break(i));             yield* tmp10;           }           tmp9 = i + 1;           i = tmp9;           tmp10 = runtime.safeCall(nonLocalHandler$root.continue());           return yield* tmp10         });         return lambda       };       tmp8 = runtime.checkCall(mkContinue());       baseCall = yield* tmp8;       tmp8 = runtime.safeCall(baseCall());       return yield* tmp8     });     tmp7 = runtime.checkCall(runtime.enterHandleBlockGenerator(nonLocalHandler$root, handleBlock$));     tmp6 = yield* tmp7;     labelContinueDispatch = tmp6 === runtime.Continue;     if (labelContinueDispatch === true) {       continue root     }     root$result = tmp6;   }   return root$result }; tmp5 = runtime.checkCall(continueFromNestedFunctionAndLambdaWithEffects()); block$res9 = runtime.checkCall(runtime.handlerTopLevelCall(tmp5));; undefined } catch (e) { console.log('\u200B' + (e.stack ?? e) + '\u200B'); }
+//│ >                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+//│ > 
+//│ > Uncaught:
 
 

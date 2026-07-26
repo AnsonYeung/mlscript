@@ -25,43 +25,44 @@ fun main() =
 main()
 while
   do print(xs)
-  let f = xs.pop()
+  let f = @native xs.pop()
   f !== () then
     set count += 1
     f(count)
     print("?")
 //│ > B a
-//│ = 1
-//│ count = 0
-//│ xs = [fun]
+//│ > [fun]
+//│ > 1
+//│ > —
+//│ > B b
+//│ > ?
+//│ > [fun]
+//│ > 2
+//│ > —
+//│ > B c
+//│ > ?
+//│ > [fun]
+//│ > 3
+//│ > ?
+//│ > []
+//│ count = 3
+//│ xs = []
 
 // * Notes:
 :sjs
 (@native (mut []).pop()) === undefined
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp, tmp1, tmp2;
-//│ tmp = [];
-//│ tmp1 = runtime.safeCall(tmp.pop());
-//│ tmp2 = tmp1 === undefined;
-//│ return runtime.cpsId(tmp2)
+//│ let tmp1, tmp2; tmp1 = []; tmp2 = runtime.safeCall(tmp1.pop()); return tmp2 === undefined
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = false
 (@native (mut []).pop()) === null
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp3, tmp4, tmp5;
-//│ tmp3 = [];
-//│ tmp4 = runtime.safeCall(tmp3.pop());
-//│ tmp5 = tmp4 === null;
-//│ return runtime.cpsId(tmp5)
+//│ let tmp3, tmp4; tmp3 = []; tmp4 = runtime.safeCall(tmp3.pop()); return tmp4 === null
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = false
 (@native (mut []).pop()) === ()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp6, tmp7, tmp8;
-//│ tmp6 = [];
-//│ tmp7 = runtime.safeCall(tmp6.pop());
-//│ tmp8 = tmp7 === runtime.Unit;
-//│ return runtime.cpsId(tmp8)
+//│ let tmp5, tmp6; tmp5 = []; tmp6 = runtime.safeCall(tmp5.pop()); return tmp6 === runtime.Unit
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = true
 

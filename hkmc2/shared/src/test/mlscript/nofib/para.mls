@@ -3,16 +3,4 @@
 
 import "../../mlscript-compile/nofib/para.mls"
 para.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at r (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:537:14)
-//│     at r (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:535:16)
-//│     at NofibPrelude.reverse (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:539:12)
-//│     at cpsCont$114 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/para.mjs:774:43)
-//│     at cpsCont$52 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:772:16)
-//│     at NofibPrelude.leave (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:718:18)
-//│     at cpsCont$53 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:774:27)
-//│     at NofibPrelude.take (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:740:18)
-//│     at NofibPrelude.splitAt (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:776:25)
-//│     at cpsCont$115 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/para.mjs:790:39)
+//│ = "In the constructive programming community it is commonplace to\nsee formal developments of textbook algorithms. In the algorithm\ndesign community, on the other hand, it may be well known that\nthe textbook solution to a problem is not the most efficient\npossible. However, in presenting the more efficient solution, the\nalgorithm designer will usually omit some of the implementation\ndetails, this creating an algorithm gap between the abstract\nalgorithm and its concrete implementation. This is in contrast\nto the formal development, which usually presents the complete\nconcrete implementation of the less efficient solution.\n"

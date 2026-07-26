@@ -2,17 +2,5 @@
 
 import "../../mlscript-compile/nofib/power.mls"
 power.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at cpsCont$94 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:339:40)
-//│     at NofibPrelude.lazy (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:184:12)
-//│     at power.multPs (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:361:25)
-//│     at cpsCont$95 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:341:38)
-//│     at NofibPrelude.lazy (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:184:12)
-//│     at power.multPs (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:361:25)
-//│     at cpsCont$96 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:343:36)
-//│     at NofibPrelude.lazy (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:184:12)
-//│     at power.x_ (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:89:25)
-//│     at cpsCont$97 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/power.mjs:345:34)
+//│ = "[0,1,1,2,5,14,42,132,429,1430,4862,16796,58786,208012]"
 

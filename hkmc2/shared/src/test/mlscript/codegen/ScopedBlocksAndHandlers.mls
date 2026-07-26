@@ -23,28 +23,29 @@ fun f(x) =
       let z = 3
       fun g() = z
 //│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
-//│ define f⁰ as fun f¹(k, x) {
+//│ @generator
+//│ define f⁰ as fun f¹(x) {
 //│   match x
 //│     true =>
 //│       match x
 //│         true =>
-//│           return k(runtime⁰.Unit⁰)
+//│           return runtime⁰.Unit⁰
 //│         else
-//│           return k(runtime⁰.Unit⁰)
+//│           return runtime⁰.Unit⁰
 //│       end
 //│     else
-//│       return k(runtime⁰.Unit⁰)
+//│       return runtime⁰.Unit⁰
 //│   end
 //│ };
 //│ end
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f;
-//│ f = function f(k, x) {
+//│ f = function *f(x) {
 //│   if (x === true) {
-//│     if (x === true) { return k(runtime.Unit) }
-//│     return k(runtime.Unit);
+//│     if (x === true) { return runtime.Unit }
+//│     return runtime.Unit;
 //│   }
-//│   return k(runtime.Unit);
+//│   return runtime.Unit;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -128,7 +129,20 @@ fun f(x) =
       g() )
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f4;
-//│ f4 = function f(k, x) { if (x === true) { return k(runtime.Unit) } return k(runtime.Unit); };
+//│ f4 = function *f(x) {
+//│   let tmp1;
+//│   if (x === true) {
+//│     let g, z;
+//│     g = function *g() {
+//│       return z
+//│     };
+//│     z = 3;
+//│     tmp1 = g();
+//│     yield* tmp1;
+//│     return runtime.Unit
+//│   }
+//│   return runtime.Unit;
+//│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 // * Note: degenerate case
@@ -139,8 +153,7 @@ fun f(x) =
       let z = 3
       fun g() = z )
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let f5;
-//│ f5 = function f(k, x) { if (x === true) { return k(runtime.Unit) } return k(runtime.Unit); };
+//│ let f5; f5 = function *f(x) { if (x === true) { return runtime.Unit } return runtime.Unit; };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

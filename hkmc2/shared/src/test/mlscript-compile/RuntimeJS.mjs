@@ -42,9 +42,6 @@ const RuntimeJS = {
   *enterHandleBlockGenerator(tag, bod) {
     return yield* RuntimeJS.resumeWithHandleBlock(tag, bod(), undefined);
   },
-  enterHandleBlockGeneratorTopLevel(tag, bod) {
-    return RuntimeJS.handlerTopLevelCall(RuntimeJS.enterHandleBlockGenerator(tag, bod));
-  },
   handlerTopLevelCall(r) {
     let result = r.next();
     if (result.done) {

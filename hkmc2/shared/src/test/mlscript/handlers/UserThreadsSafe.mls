@@ -41,8 +41,7 @@ handle h = ThreadEffect with
 in
   mainn(h)
 //│ > main start
-//│ = 2
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] TypeError: number 1 is not iterable (cannot read property Symbol(Symbol.iterator))
 
 
 // FIFO
@@ -58,7 +57,6 @@ handle h = ThreadEffect with
 in
   mainn(h)
 //│ > main start
-//│ = 2
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] TypeError: number 1 is not iterable (cannot read property Symbol(Symbol.iterator))
 
 

@@ -3,16 +3,4 @@
 
 import "../../mlscript-compile/nofib/gcd.mls"
 gcd.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at cpsCont$28 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:452:34)
-//│     at cpsCont$25 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:440:14)
-//│     at NofibPrelude.intQuot (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:420:12)
-//│     at NofibPrelude.intRem (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:442:25)
-//│     at cpsCont$29 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:458:27)
-//│     at NofibPrelude.intQuot (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:420:12)
-//│     at NofibPrelude.quotRem (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:460:25)
-//│     at gcd.g (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/gcd.mjs:62:31)
-//│     at cpsCont$1 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/gcd.mjs:58:26)
-//│     at cpsCont$28 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:456:16)
+//│ = 5021

@@ -254,65 +254,26 @@ f(Pair(1, 2))
 :stackSafe 100
 fun f() = case [...x, y, z] then x
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ let ‹stack safe body›;
-//│ define ‹stack safe body› as fun ‹stack safe body›⁰() {
-//│   let lambda;
-//│   @private
-//│   define lambda as fun lambda⁰(k, caseScrut) {
-//│     let cpsCont$0, tmp;
-//│     define cpsCont$0 as fun cpsCont$0⁰(retVal) {
-//│       let tmp1;
-//│       set tmp1 = runtime⁰.cpsSetCheckDepth﹖();
-//│       match tmp1
-//│         true =>
-//│           return runtime⁰.cpsRaiseStack﹖(cpsCont$0⁰, retVal)
-//│         else
-//│           let x, y, z, lastElement1$, lastElement2$, middleElements;
-//│           match caseScrut
-//│             Array(2+) =>
-//│               set middleElements = runtime⁰.Tuple⁰.slice⁰(caseScrut, 0, 2);
-//│               set lastElement2$ = runtime⁰.Tuple⁰.get⁰(caseScrut, -2);
-//│               set lastElement1$ = runtime⁰.Tuple⁰.get⁰(caseScrut, -1);
-//│               set y = lastElement1$;
-//│               set z = lastElement2$;
-//│               set x = middleElements;
-//│               return k(x)
-//│             else
-//│               throw new globalThis⁰.Error⁰("match error")
-//│           end
-//│       end
-//│     };
-//│     set tmp = runtime⁰.cpsSetCheckDepth﹖();
-//│     match tmp
-//│       true =>
-//│         return runtime⁰.cpsRaiseStack﹖(cpsCont$0⁰, undefined)
-//│       else
-//│         return cpsCont$0⁰(undefined)
-//│     end
-//│   };
-//│   define f²¹ as fun f²²(k) {
-//│     let cpsCont$2, tmp;
-//│     define cpsCont$2 as fun cpsCont$2⁰(retVal) {
-//│       let tmp1;
-//│       set tmp1 = runtime⁰.cpsSetCheckDepth﹖();
-//│       match tmp1
-//│         true =>
-//│           return runtime⁰.cpsRaiseStack﹖(cpsCont$2⁰, retVal)
-//│         else
-//│           return k(lambda⁰)
-//│       end
-//│     };
-//│     set tmp = runtime⁰.cpsSetCheckDepth﹖();
-//│     match tmp
-//│       true =>
-//│         return runtime⁰.cpsRaiseStack﹖(cpsCont$2⁰, undefined)
-//│       else
-//│         return cpsCont$2⁰(undefined)
-//│     end
-//│   };
+//│ let lambda, tmp;
+//│ @generator @private
+//│ define lambda as fun lambda⁰(caseScrut) {
+//│   let x, y, z, lastElement1$, lastElement2$, middleElements, tmp1;
+//│   match caseScrut
+//│     Array(2+) =>
+//│       set middleElements = runtime⁰.Tuple⁰.slice⁰(caseScrut, 0, 2);
+//│       set lastElement2$ = runtime⁰.Tuple⁰.get⁰(caseScrut, -2);
+//│       set lastElement1$ = runtime⁰.Tuple⁰.get⁰(caseScrut, -1);
+//│       set y = lastElement1$;
+//│       set z = lastElement2$;
+//│       set x = middleElements;
+//│       return x
+//│     else
+//│       throw new globalThis⁰.Error⁰("match error")
 //│   end
 //│ };
-//│ return runtime⁰.runStackSafeCps﹖(100, ‹stack safe body›⁰)
+//│ @generator
+//│ define f²¹ as fun f²²() { let tmp1; return lambda⁰ };
+//│ end
 //│ dead-param-elim > >>> dead-param-elim results >>>
 //│ dead-param-elim > <<< dead-param-elim results <<<
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
@@ -327,34 +288,14 @@ import "../../mlscript-compile/Runtime.mls"
 fun f(c) = Runtime.Tuple.get(c, 1) + 1
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
 //│ import "..." as Runtime;
-//│ let ‹stack safe body›;
-//│ define ‹stack safe body› as fun ‹stack safe body›¹() {
-//│   define f²³ as fun f²⁴(k, c) {
-//│     let cpsCont$0, tmp;
-//│     define cpsCont$0 as fun cpsCont$0¹(retVal) {
-//│       let tmp1;
-//│       set tmp1 = runtime⁰.cpsSetCheckDepth﹖();
-//│       match tmp1
-//│         true =>
-//│           return runtime⁰.cpsRaiseStack﹖(cpsCont$0¹, retVal)
-//│         else
-//│           let tmp2, tmp3;
-//│           set tmp2 = Runtime⁰.Tuple⁰.get⁰(c, 1);
-//│           set tmp3 = +⁰(tmp2, 1);
-//│           return k(tmp3)
-//│       end
-//│     };
-//│     set tmp = runtime⁰.cpsSetCheckDepth﹖();
-//│     match tmp
-//│       true =>
-//│         return runtime⁰.cpsRaiseStack﹖(cpsCont$0¹, undefined)
-//│       else
-//│         return cpsCont$0¹(undefined)
-//│     end
-//│   };
-//│   end
+//│ let tmp;
+//│ @generator
+//│ define f²³ as fun f²⁴(c) {
+//│   let tmp1, tmp2;
+//│   set tmp1 = Runtime⁰.Tuple⁰.get⁰(c, 1);
+//│   return +⁰(tmp1, 1)
 //│ };
-//│ return runtime⁰.runStackSafeCps﹖(100, ‹stack safe body›¹)
+//│ end
 //│ dead-param-elim > >>> dead-param-elim results >>>
 //│ dead-param-elim > <<< dead-param-elim results <<<
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

@@ -32,49 +32,18 @@ fun hi(n) =
   else hi(n - 1)
 hi(0)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let hi, $_stack$_safe$_body$_;
-//│ $_stack$_safe$_body$_ = (undefined, function () {
-//│   hi = function hi(k, n) {
-//│     let cpsCont$0, tmp1;
-//│     cpsCont$0 = function cpsCont$0(retVal) {
-//│       let tmp2;
-//│       tmp2 = runtime.cpsSetCheckDepth();
-//│       if (tmp2 === true) {
-//│         return runtime.cpsRaiseStack(cpsCont$0, retVal)
-//│       }
-//│       {
-//│         let scrut, tmp3;
-//│         scrut = n === 0;
-//│         if (scrut === true) {
-//│           return k(0)
-//│         }
-//│         tmp3 = n - 1;
-//│         return hi(k, tmp3);
-//│       }
-//│     };
-//│     tmp1 = runtime.cpsSetCheckDepth();
-//│     if (tmp1 === true) {
-//│       return runtime.cpsRaiseStack(cpsCont$0, undefined)
-//│     }
-//│     {
-//│       let tmp2;
-//│       tmp2 = runtime.cpsSetCheckDepth();
-//│       if (tmp2 === true) {
-//│         return runtime.cpsRaiseStack(cpsCont$0, undefined)
-//│       }
-//│       {
-//│         let scrut, tmp3;
-//│         scrut = n === 0;
-//│         if (scrut === true) {
-//│           return k(0)
-//│         }
-//│         tmp3 = n - 1;
-//│         return hi(k, tmp3);
-//│       }
-//│     }
-//│   };
-//│   return hi(runtime.cpsId, 0)
-//│ });
-//│ return runtime.runStackSafeCps(1000, $_stack$_safe$_body$_)
+//│ let hi, tmp1;
+//│ hi = function *hi(n) {
+//│   let scrut, tmp2, tmp3;
+//│   scrut = n === 0;
+//│   if (scrut === true) {
+//│     return 0
+//│   }
+//│   tmp2 = n - 1;
+//│   tmp3 = hi(tmp2);
+//│   return yield* tmp3;
+//│ };
+//│ tmp1 = hi(0);
+//│ return runtime.handlerTopLevelCall(tmp1)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 0

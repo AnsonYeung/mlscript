@@ -120,14 +120,14 @@ box.n
 handle h1 = Eff with
   fun perform()(k) =
     print("h1")
-    let x = k()
+    let x = k(())
     print("h1 end")
     x
 handle h2 = Eff with
   fun perform()(k) =
     print("h2")
     h1.perform()
-    let x = k()
+    let x = k(())
     print("h2 end")
     x
 h2.perform()
@@ -150,17 +150,17 @@ h2.perform()
 handle h1 = Eff with
   fun perform()(k) =
     print("h1")
-    k()
+    k(())
 handle h2 = Eff with
   fun perform()(k) =
     print("h2")
     h1.perform()
-    k()
+    k(())
 handle h3 = Eff with
   fun perform()(k) =
     print("h3")
     h2.perform()
-    k()
+    k(())
 h1.perform()
 h3.perform()
 //│ > h1

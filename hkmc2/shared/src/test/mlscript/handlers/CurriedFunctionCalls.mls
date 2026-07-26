@@ -6,15 +6,13 @@
 :sir
 fun f(x) = y => x + y
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ define f⁰ as fun f¹(k, x) {
-//│   let lambda;
-//│   @private
-//│   define lambda as fun lambda⁰(k1, y) {
-//│     let tmp;
-//│     set tmp = +⁰(x, y);
-//│     return k1(tmp)
-//│   };
-//│   return k(lambda⁰)
+//│ let tmp;
+//│ @generator
+//│ define f⁰ as fun f¹(x) {
+//│   let lambda, tmp1;
+//│   @generator @private
+//│   define lambda as fun lambda⁰(y) { let tmp2; return +⁰(x, y) };
+//│   return lambda⁰
 //│ };
 //│ end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
@@ -22,31 +20,36 @@ fun f(x) = y => x + y
 :sir
 f(1)(2)
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ let baseCall, cpsCont$0;
-//│ define cpsCont$0 as fun cpsCont$0⁰(retVal) {
-//│   set baseCall = retVal;
-//│   return baseCall(runtime⁰.cpsId﹖, 2)
-//│ };
-//│ return f¹(cpsCont$0⁰, 1)
+//│ let baseCall, tmp;
+//│ set tmp = f¹(1);
+//│ set tmp = runtime⁰.handlerTopLevelCall﹖(tmp);
+//│ set baseCall = tmp;
+//│ set tmp = baseCall(2);
+//│ set tmp = runtime⁰.handlerTopLevelCall﹖(tmp);
+//│ return tmp
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 3
 
 :soir
 fun g(a) = b => f(a)(b) + f(b)(a)
 //│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
-//│ define g⁰ as fun g¹(k, a) {
+//│ @generator
+//│ define g⁰ as fun g¹(a) {
 //│   let lambda;
-//│   @private
-//│   define lambda as fun lambda¹(k1, b) {
-//│     let x, tmp, y, tmp1, tmp2;
-//│     set x = a;
-//│     set tmp = +⁰(x, b);
-//│     set y = a;
-//│     set tmp1 = +⁰(b, y);
-//│     set tmp2 = +⁰(tmp, tmp1);
-//│     return k1(tmp2)
+//│   @generator @private
+//│   define lambda as fun lambda¹(b) {
+//│     let baseCall, tmp, baseCall1, tmp1, tmp2;
+//│     set tmp2 = f¹(a);
+//│     set baseCall = yield*⁰(tmp2);
+//│     set tmp2 = baseCall(b);
+//│     set tmp = yield*⁰(tmp2);
+//│     set tmp2 = f¹(b);
+//│     set baseCall1 = yield*⁰(tmp2);
+//│     set tmp2 = baseCall1(a);
+//│     set tmp1 = yield*⁰(tmp2);
+//│     return +⁰(tmp, tmp1)
 //│   };
-//│   return k(lambda¹)
+//│   return lambda¹
 //│ };
 //│ end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

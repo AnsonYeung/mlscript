@@ -3,16 +3,4 @@
 
 import "../../mlscript-compile/nofib/scc.mls"
 scc.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] TypeError: k is not a function
-//│     at cpsCont$281 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:110:18)
-//│     at NofibPrelude._internal_cons_to_str (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:204:18)
-//│     at Cons.toString (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:112:29)
-//│     at [mlscript.prettyPrint] (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:114:37)
-//│     at renderArray_renderSet_renderClassInstance_renderObject_renderMap_renderValue_lambda_lambda_lambda_lambda_lambda_lambda$_lambda$_lambda$_lambda$_lambda$ (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Rendering.mjs:225:94)
-//│     at renderValue (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Rendering.mjs:1083:10)
-//│     at Predef.render (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Rendering.mjs:1322:12)
-//│     at NofibPrelude._internal_cons_to_str (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:208:41)
-//│     at Cons.toString (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/NofibPrelude.mjs:112:29)
-//│     at cpsCont$34 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/scc.mjs:295:35)
+//│ = "[[1],[2],[7,5,6],[3,4]]"

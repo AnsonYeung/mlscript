@@ -2,18 +2,6 @@
 
 import "../../mlscript-compile/nofib/mandel2.mls"
 mandel2.main()
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:276)
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at mandel2.check_radius (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:217:22)
-//│     at cpsCont$11 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:236:26)
-//│     at mandel2.radius (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:141:12)
-//│     at cpsCont$12 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:238:24)
-//│     at mandel2.new_y (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:156:12)
-//│     at cpsCont$13 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:240:22)
-//│     at mandel2.new_x (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:149:12)
-//│     at mandel2.check_radius (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:242:20)
-//│     at cpsCont$16 (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:256:26)
-//│     at mandel2.nq (file:///storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/nofib/mandel2.mjs:134:12)
+//│ = true
 
       
