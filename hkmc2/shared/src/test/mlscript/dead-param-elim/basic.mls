@@ -257,7 +257,10 @@ fun f() = case [...x, y, z] then x
 //│ let lambda, tmp;
 //│ @generator @private
 //│ define lambda as fun lambda⁰(caseScrut) {
-//│   let x, y, z, lastElement1$, lastElement2$, middleElements, tmp1;
+//│   let x, y, z, lastElement1$, lastElement2$, middleElements, tmp1, curDepth;
+//│   set tmp1 = runtime⁰.checkDepthGenerator﹖();
+//│   set curDepth = +⁰(runtime⁰.GeneratorStackSafety﹖.stackDepth﹖, 1);
+//│   do yield*⁰(tmp1);
 //│   match caseScrut
 //│     Array(2+) =>
 //│       set middleElements = runtime⁰.Tuple⁰.slice⁰(caseScrut, 0, 2);
@@ -272,7 +275,13 @@ fun f() = case [...x, y, z] then x
 //│   end
 //│ };
 //│ @generator
-//│ define f²¹ as fun f²²() { let tmp1; return lambda⁰ };
+//│ define f²¹ as fun f²²() {
+//│   let tmp1, curDepth;
+//│   set tmp1 = runtime⁰.checkDepthGenerator﹖();
+//│   set curDepth = +⁰(runtime⁰.GeneratorStackSafety﹖.stackDepth﹖, 1);
+//│   do yield*⁰(tmp1);
+//│   return lambda⁰
+//│ };
 //│ end
 //│ dead-param-elim > >>> dead-param-elim results >>>
 //│ dead-param-elim > <<< dead-param-elim results <<<
@@ -291,7 +300,10 @@ fun f(c) = Runtime.Tuple.get(c, 1) + 1
 //│ let tmp;
 //│ @generator
 //│ define f²³ as fun f²⁴(c) {
-//│   let tmp1, tmp2;
+//│   let tmp1, tmp2, curDepth;
+//│   set tmp2 = runtime⁰.checkDepthGenerator﹖();
+//│   set curDepth = +⁰(runtime⁰.GeneratorStackSafety﹖.stackDepth﹖, 1);
+//│   do yield*⁰(tmp2);
 //│   set tmp1 = Runtime⁰.Tuple⁰.get⁰(c, 1);
 //│   return +⁰(tmp1, 1)
 //│ };

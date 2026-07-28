@@ -105,7 +105,7 @@ class BlockTransformer(subst: SymbolSubst):
             else AssignDynField(lhs2, fld2, arrayIdx, rhs2, rest2)
     case _: Scoped => applyScopedBlock(b)
   
-  // FunDefn body, Lambda body, Handler body, ctor and pCtor are considered "funBodyLike"
+  // FunDefn body, Lambda body are considered "funBodyLike"
   def applyFunBodyLikeBlock(b: Block): Block = applyScopedBlock(b)
   
   // Apply to Blocks that are conceptually "scoped", which includes:
@@ -244,7 +244,7 @@ class BlockTransformer(subst: SymbolSubst):
     val methods2 = defn.methods.mapConserve(applyFunDefn)
     val privateFields2 = defn.privateFields.mapConserve(_.subst)
     val publicFields2 = defn.publicFields.mapConserve(applyPublicField)
-    val ctor2 = applyFunBodyLikeBlock(defn.ctor)
+    val ctor2 = applyScopedBlock(defn.ctor)
     if (methods2 is defn.methods) &&
         (privateFields2 is defn.privateFields) &&
         (publicFields2 is defn.publicFields) &&
@@ -264,8 +264,8 @@ class BlockTransformer(subst: SymbolSubst):
       val methods2 = methods.mapConserve(applyFunDefn)
       val privateFields2 = privateFields.mapConserve(_.subst)
       val publicFields2 = publicFields.mapConserve(applyPublicField)
-      val preCtor2 = applyFunBodyLikeBlock(preCtor)
-      val ctor2 = applyFunBodyLikeBlock(ctor)
+      val preCtor2 = applyScopedBlock(preCtor)
+      val ctor2 = applyScopedBlock(ctor)
       val mod2 = mod.mapConserve(applyObjBody)
       k:
         if (own2 is own) && (isym2 is isym) && (sym2 is sym) && (ctorSym2 is ctorSym) &&
@@ -312,15 +312,6 @@ class BlockTransformer(subst: SymbolSubst):
     case Case.Tup(len, inf) => k(cse)
     case Case.Field(name, safe) => k(cse)
   
-  def applyHandler(hdr: Handler): Handler =
-    val sym2 = hdr.sym.subst
-    val resumeSym2 = hdr.resumeSym.subst
-    val params2 = hdr.params.mapConserve(applyParamList)
-    val body2 = applyFunBodyLikeBlock(hdr.body)
-    if (sym2 is hdr.sym) && (resumeSym2 is hdr.resumeSym) &&
-        (params2 is hdr.params) && (body2 is hdr.body)
-      then hdr else Handler(sym2, resumeSym2, params2, body2)
-  
   def applyLam(lam: Lambda): Lambda =
     val params2 = applyParamList(lam.params)
     val body2 = applyFunBodyLikeBlock(lam.body)
@@ -341,8 +332,6 @@ class BlockTransformerShallow(subst: SymbolSubst) extends BlockTransformer(subst
   override def applyDefn(defn: Defn)(k: Defn => Block): Block = defn match
     case _: FunDefn | _: ClsLikeDefn => k(defn)
     case _: ValDefn => super.applyDefn(defn)(k)
-  
-  override def applyHandler(hdr: Handler): Handler = hdr
 
 // Does not traverse into sub-blocks or definitions. The purpose of this is is to only rewrite a block's data, i.e. 
 // paths, values, cases, etc. within a block. Can be used in tandem with `BlockTransformer` or `BlockTransformerShallow` 

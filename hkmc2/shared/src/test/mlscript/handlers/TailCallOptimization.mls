@@ -32,18 +32,24 @@ fun hi(n) =
   else hi(n - 1)
 hi(0)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let hi, tmp1;
+//│ let hi, $_stack$_safe$_body$_;
 //│ hi = function *hi(n) {
-//│   let scrut, tmp2, tmp3;
+//│   let scrut, tmp1, tmp2, curDepth;
+//│   tmp2 = runtime.checkDepthGenerator();
+//│   curDepth = runtime.GeneratorStackSafety.stackDepth + 1;
+//│   yield* tmp2;
 //│   scrut = n === 0;
 //│   if (scrut === true) {
 //│     return 0
 //│   }
-//│   tmp2 = n - 1;
-//│   tmp3 = hi(tmp2);
-//│   return yield* tmp3;
+//│   tmp1 = n - 1;
+//│   runtime.GeneratorStackSafety.stackDepth = curDepth;
+//│   tmp2 = hi(tmp1);
+//│   return yield* tmp2;
 //│ };
-//│ tmp1 = hi(0);
-//│ return runtime.handlerTopLevelCall(tmp1)
+//│ $_stack$_safe$_body$_ = (undefined, function () {
+//│   return hi(0)
+//│ });
+//│ return runtime.runStackSafe(1000, $_stack$_safe$_body$_)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 0

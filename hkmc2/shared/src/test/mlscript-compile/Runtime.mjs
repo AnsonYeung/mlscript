@@ -681,6 +681,9 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
       toString() { return runtime.render(this); }
       static [definitionMetadata] = ["object", "StackDelayCpsHandler"];
     });
+    Runtime.runStackSafe = RuntimeJS.runStackSafeGenerator;
+    Runtime.checkDepthGenerator = RuntimeJS.checkDepthGenerator;
+    Runtime.GeneratorStackSafety = RuntimeJS.GeneratorStackSafety;
     Runtime.Int31 = function Int31(v) {
       return globalThis.Object.freeze(new Int31.class(v));
     };
@@ -1281,7 +1284,7 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
   static cpsRaiseStack(k, retVal) {
     return runtime.safeCall(Runtime.stackHandler.delay(k, retVal))
   }
-  static runStackSafe(limit, f) {
+  static runStackSafeOrig(limit, f) {
     let old, old1, old2, result, scrut, tmp, tmp1, tmp2;
     old = Runtime.stackLimit;
     try {

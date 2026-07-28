@@ -123,7 +123,7 @@ let obj = new Object with
 //│ ═══[RUNTIME ERROR] TypeError: object is not iterable (cannot read property Symbol(Symbol.iterator))
 //│     at $anon.foo (REPL53:1:479)
 //│     at foo.next (<anonymous>)
-//│     at Runtime.handlerTopLevelCall (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:46:20)
+//│     at Runtime.handlerTopLevelCall (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:104:20)
 //│     at new $anon (REPL53:1:237)
 //│     at REPL53:1:636
 //│     at ContextifyScript.runInThisContext (node:vm:137:12)

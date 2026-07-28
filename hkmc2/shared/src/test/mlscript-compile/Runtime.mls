@@ -521,7 +521,11 @@ fun cpsSetCheckDepth() =
 fun cpsRaiseStack(k, retVal) =
   stackHandler.delay(k, retVal)
 
-fun runStackSafe(limit, f) =
+val runStackSafe = RuntimeJS.runStackSafeGenerator
+val checkDepthGenerator = RuntimeJS.checkDepthGenerator
+val GeneratorStackSafety = RuntimeJS.GeneratorStackSafety
+
+fun runStackSafeOrig(limit, f) =
   set stackLimit = limit in...
   set stackDepth = 1 in...
   set stackHandler = StackDelayHandler in...

@@ -44,16 +44,16 @@ fact(10000)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at lambda1 (REPL33:1:64)
-//│     at lambda1 (REPL30:1:557)
+//│     at [Symbol.iterator] (<anonymous>)
+//│     at lambda1 (REPL33:1:278)
 //│     at lambda1.next (<anonymous>)
-//│     at selfApp (REPL10:1:167)
+//│     at lambda1 (REPL30:1:1197)
+//│     at lambda1.next (<anonymous>)
+//│     at selfApp (REPL10:1:361)
 //│     at selfApp.next (<anonymous>)
-//│     at lambda2 (REPL30:1:424)
+//│     at lambda2 (REPL30:1:931)
 //│     at lambda2.next (<anonymous>)
-//│     at lambda2 (REPL33:1:398)
-//│     at lambda2.next (<anonymous>)
-//│     at lambda2 (REPL30:1:502)
+//│     at lambda2 (REPL33:1:753)
 
 // * Without `:stackSafe`, gives `RangeError: Maximum call stack size exceeded`
 :re
@@ -66,15 +66,15 @@ fact(10000)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at lambda1 (REPL30:1:160)
+//│     at lambda1 (REPL33:1:88)
 //│     at lambda1.next (<anonymous>)
-//│     at selfApp (REPL10:1:167)
+//│     at lambda1 (REPL30:1:1197)
+//│     at lambda1.next (<anonymous>)
+//│     at selfApp (REPL10:1:361)
 //│     at selfApp.next (<anonymous>)
-//│     at lambda2 (REPL30:1:424)
+//│     at lambda2 (REPL30:1:931)
 //│     at lambda2.next (<anonymous>)
-//│     at lambda2 (REPL33:1:398)
-//│     at lambda2.next (<anonymous>)
-//│     at lambda2 (REPL30:1:502)
+//│     at lambda2 (REPL33:1:753)
 //│     at lambda2.next (<anonymous>)
 
 :re

@@ -182,7 +182,7 @@ fstConfig(Pair(1, 2))
 //│ ═══[RUNTIME ERROR] TypeError: p is not a function
 //│     at fstConfig_5$fstConfig (REPL58:1:244)
 //│     at fstConfig_5$fstConfig.next (<anonymous>)
-//│     at Runtime.handlerTopLevelCall (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:46:20)
+//│     at Runtime.handlerTopLevelCall (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:104:20)
 //│     at REPL58:1:1225
 //│     at ContextifyScript.runInThisContext (node:vm:137:12)
 //│     at REPLServer.defaultEval (node:repl:598:22)

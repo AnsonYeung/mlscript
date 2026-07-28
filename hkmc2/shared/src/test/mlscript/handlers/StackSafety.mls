@@ -14,19 +14,25 @@ fun hi(n) =
   else hi(n - 1)
 hi(0)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let hi, tmp;
+//│ let hi, $_stack$_safe$_body$_;
 //│ hi = function *hi(n) {
-//│   let scrut, tmp1, tmp2;
+//│   let scrut, tmp, tmp1, curDepth;
+//│   tmp1 = runtime.checkDepthGenerator();
+//│   curDepth = runtime.GeneratorStackSafety.stackDepth + 1;
+//│   yield* tmp1;
 //│   scrut = n === 0;
 //│   if (scrut === true) {
 //│     return 0
 //│   }
-//│   tmp1 = n - 1;
-//│   tmp2 = hi(tmp1);
-//│   return yield* tmp2;
+//│   tmp = n - 1;
+//│   runtime.GeneratorStackSafety.stackDepth = curDepth;
+//│   tmp1 = hi(tmp);
+//│   return yield* tmp1;
 //│ };
-//│ tmp = hi(0);
-//│ return runtime.handlerTopLevelCall(tmp)
+//│ $_stack$_safe$_body$_ = (undefined, function () {
+//│   return hi(0)
+//│ });
+//│ return runtime.runStackSafe(6, $_stack$_safe$_body$_)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 0
 
@@ -39,34 +45,40 @@ fun sum(n) =
     n + sum(n - 1)
 sum(10000)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let sum, tmp1;
+//│ let sum, $_stack$_safe$_body$_1;
 //│ sum = function *sum(n) {
-//│   let scrut, tmp2, tmp3, tmp4;
+//│   let scrut, tmp, tmp1, tmp2, curDepth;
+//│   tmp2 = runtime.checkDepthGenerator();
+//│   curDepth = runtime.GeneratorStackSafety.stackDepth + 1;
+//│   yield* tmp2;
 //│   scrut = n === 0;
 //│   if (scrut === true) {
 //│     return 0
 //│   }
-//│   tmp2 = n - 1;
-//│   tmp4 = sum(tmp2);
-//│   tmp3 = yield* tmp4;
-//│   return n + tmp3;
+//│   tmp = n - 1;
+//│   runtime.GeneratorStackSafety.stackDepth = curDepth;
+//│   tmp2 = sum(tmp);
+//│   tmp1 = yield* tmp2;
+//│   return n + tmp1;
 //│ };
-//│ tmp1 = sum(10000);
-//│ return runtime.handlerTopLevelCall(tmp1)
+//│ $_stack$_safe$_body$_1 = (undefined, function () {
+//│   return sum(10000)
+//│ });
+//│ return runtime.runStackSafe(1000, $_stack$_safe$_body$_1)
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at Runtime.checkArgs (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:724:19)
-//│     at sum (REPL13:1:56)
+//│     at Object.delay (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:28:11)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at sum (REPL13:1:278)
 //│     at sum.next (<anonymous>)
-//│     at sum (REPL13:1:249)
+//│     at sum (REPL13:1:460)
 //│     at sum.next (<anonymous>)
-//│     at sum (REPL13:1:249)
+//│     at sum (REPL13:1:460)
 //│     at sum.next (<anonymous>)
-//│     at sum (REPL13:1:249)
-//│     at sum.next (<anonymous>)
-//│     at sum (REPL13:1:249)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
 //│ ═══[RUNTIME ERROR] Expected: '50005000', got: 'undefined'
@@ -84,17 +96,17 @@ foo(foo)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at foo (REPL16:1:152)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:35:14)
+//│     at checkDepth.next (<anonymous>)
+//│     at foo (REPL16:1:520)
 //│     at foo.next (<anonymous>)
-//│     at foo (REPL16:1:375)
+//│     at foo (REPL16:1:716)
 //│     at foo.next (<anonymous>)
-//│     at foo (REPL16:1:375)
+//│     at foo (REPL16:1:716)
 //│     at foo.next (<anonymous>)
-//│     at foo (REPL16:1:375)
+//│     at foo (REPL16:1:716)
 //│     at foo.next (<anonymous>)
-//│     at foo (REPL16:1:375)
-//│     at foo.next (<anonymous>)
-//│ ctr = 3725
+//│ ctr = 4550
 
 :stackSafe
 :expect 50005000
@@ -107,15 +119,15 @@ foo
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at lambda (REPL20:1:64)
+//│     at Object.delay (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:28:11)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at lambda (REPL20:1:305)
 //│     at lambda.next (<anonymous>)
-//│     at lambda (REPL20:1:266)
+//│     at lambda (REPL20:1:485)
 //│     at lambda.next (<anonymous>)
-//│     at lambda (REPL20:1:266)
-//│     at lambda.next (<anonymous>)
-//│     at lambda (REPL20:1:266)
-//│     at lambda.next (<anonymous>)
-//│     at lambda (REPL20:1:266)
+//│     at lambda (REPL20:1:485)
 //│     at lambda.next (<anonymous>)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
@@ -134,15 +146,15 @@ foo()
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at lambda1 (REPL24:1:200)
+//│     at Object.delay (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:28:11)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at lambda1 (REPL24:1:572)
 //│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL24:1:403)
+//│     at lambda1 (REPL24:1:770)
 //│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL24:1:403)
-//│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL24:1:403)
-//│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL24:1:403)
+//│     at lambda1 (REPL24:1:770)
 //│     at lambda1.next (<anonymous>)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
@@ -159,16 +171,16 @@ foo
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at lambda1 (REPL27:1:67)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at lambda1 (REPL27:1:309)
 //│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL27:1:270)
+//│     at lambda1 (REPL27:1:490)
 //│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL27:1:270)
+//│     at lambda1 (REPL27:1:490)
 //│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL27:1:270)
-//│     at lambda1.next (<anonymous>)
-//│     at lambda1 (REPL27:1:270)
-//│     at lambda1.next (<anonymous>)
+//│     at lambda1 (REPL27:1:490)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
 //│ ═══[RUNTIME ERROR] Expected: '50005000', got: 'undefined'
@@ -192,16 +204,16 @@ foo(h)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at Runtime.checkArgs (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:724:19)
-//│     at Handler$h$perform.lambda2 (REPL34:1:790)
+//│     at Object.delay (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:28:11)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at Handler$h$perform.lambda2 (REPL34:1:1513)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL34:1:1031)
+//│     at Handler$h$perform.lambda2 (REPL34:1:1743)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL34:1:1031)
+//│     at Handler$h$perform.lambda2 (REPL34:1:1743)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL34:1:1031)
-//│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL34:1:1031)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
 //│ ═══[RUNTIME ERROR] Expected: '50005000', got: 'undefined'
@@ -222,16 +234,16 @@ in
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at Runtime.checkArgs (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/Runtime.mjs:724:19)
-//│     at Handler$h$perform.lambda2 (REPL37:1:629)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:35:14)
+//│     at checkDepth.next (<anonymous>)
+//│     at Handler$h$perform.lambda2 (REPL37:1:1155)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL37:1:870)
+//│     at Handler$h$perform.lambda2 (REPL37:1:1385)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL37:1:870)
+//│     at Handler$h$perform.lambda2 (REPL37:1:1385)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL37:1:870)
+//│     at Handler$h$perform.lambda2 (REPL37:1:1385)
 //│     at Handler$h$perform.lambda2.next (<anonymous>)
-//│     at Handler$h$perform.lambda2 (REPL37:1:870)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
 //│ ═══[RUNTIME ERROR] Expected: '50005000', got: 'undefined'
@@ -247,15 +259,15 @@ A.x
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:154)
+//│     at Object.delay (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:28:11)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:416)
 //│     at globalThis.Object.freeze.lambda2.next (<anonymous>)
-//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:400)
+//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:630)
 //│     at globalThis.Object.freeze.lambda2.next (<anonymous>)
-//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:400)
-//│     at globalThis.Object.freeze.lambda2.next (<anonymous>)
-//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:400)
-//│     at globalThis.Object.freeze.lambda2.next (<anonymous>)
-//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:400)
+//│     at globalThis.Object.freeze.lambda2 [as f] (REPL40:1:630)
 //│     at globalThis.Object.freeze.lambda2.next (<anonymous>)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
@@ -278,7 +290,15 @@ foo(h)
 fun max(a, b) = if a < b then b else a
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let max;
-//│ max = function *max(a, b) { let scrut; scrut = a < b; if (scrut === true) { return b } return a; };
+//│ max = function *max(a, b) {
+//│   let scrut, tmp4;
+//│   tmp4 = runtime.checkDepthGenerator();
+//│   runtime.GeneratorStackSafety.stackDepth + 1;
+//│   yield* tmp4;
+//│   scrut = a < b;
+//│   if (scrut === true) { return b }
+//│   return a;
+//│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 
@@ -293,16 +313,16 @@ bad()
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at sum (REPL49:1:64)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at sum (REPL49:1:286)
 //│     at sum.next (<anonymous>)
-//│     at sum (REPL49:1:264)
+//│     at sum (REPL49:1:471)
 //│     at sum.next (<anonymous>)
-//│     at sum (REPL49:1:264)
+//│     at sum (REPL49:1:471)
 //│     at sum.next (<anonymous>)
-//│     at sum (REPL49:1:264)
-//│     at sum.next (<anonymous>)
-//│     at sum (REPL49:1:264)
-//│     at sum.next (<anonymous>)
+//│     at sum (REPL49:1:471)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
 //│ ═══[RUNTIME ERROR] Expected: '100010000', got: 'undefined'
@@ -343,16 +363,16 @@ f(h)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at perform.next (<anonymous>)
-//│     at while1 (REPL56:1:517)
+//│     at Object.delay (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:28:11)
+//│     at delay.next (<anonymous>)
+//│     at Runtime.checkDepth [as checkDepthGenerator] (file:///home/attempt0/mlscript/head/hkmc2/shared/src/test/mlscript-compile/RuntimeJS.mjs:37:55)
+//│     at checkDepth.next (<anonymous>)
+//│     at while1 (REPL56:1:841)
 //│     at while1.next (<anonymous>)
-//│     at while1 (REPL56:1:618)
+//│     at while1 (REPL56:1:1169)
 //│     at while1.next (<anonymous>)
-//│     at while1 (REPL56:1:618)
+//│     at while1 (REPL56:1:1169)
 //│     at while1.next (<anonymous>)
-//│     at while1 (REPL56:1:618)
-//│     at while1.next (<anonymous>)
-//│     at while1 (REPL56:1:618)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:295)
 //│ ═══[RUNTIME ERROR] Expected: '10000', got: 'undefined'
@@ -368,16 +388,16 @@ f(10000)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at trivial (REPL59:1:57)
-//│     at f (REPL59:1:276)
+//│     at trivial (REPL59:1:75)
+//│     at trivial.next (<anonymous>)
+//│     at f (REPL59:1:634)
 //│     at f.next (<anonymous>)
-//│     at f (REPL59:1:411)
+//│     at f (REPL59:1:807)
 //│     at f.next (<anonymous>)
-//│     at f (REPL59:1:411)
+//│     at f (REPL59:1:807)
 //│     at f.next (<anonymous>)
-//│     at f (REPL59:1:411)
+//│     at f (REPL59:1:807)
 //│     at f.next (<anonymous>)
-//│     at f (REPL59:1:411)
 
 abstract class Eff with
   fun raise()
@@ -426,13 +446,13 @@ handler_stack(M)
 //│ FAILURE: Unexpected runtime error
 //│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:255)
 //│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
-//│     at shift_stack (REPL70:1:83)
-//│     at shift_stack (REPL70:1:274)
+//│     at shift_stack (REPL70:1:121)
 //│     at shift_stack.next (<anonymous>)
-//│     at shift_stack (REPL70:1:304)
+//│     at shift_stack (REPL70:1:515)
 //│     at shift_stack.next (<anonymous>)
-//│     at shift_stack (REPL70:1:304)
+//│     at shift_stack (REPL70:1:515)
 //│     at shift_stack.next (<anonymous>)
-//│     at shift_stack (REPL70:1:304)
+//│     at shift_stack (REPL70:1:515)
 //│     at shift_stack.next (<anonymous>)
-//│     at shift_stack (REPL70:1:304)
+//│     at shift_stack (REPL70:1:515)
+//│     at shift_stack.next (<anonymous>)
