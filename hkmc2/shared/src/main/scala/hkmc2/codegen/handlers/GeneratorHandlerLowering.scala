@@ -12,17 +12,24 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx, T
   val yieldStar = Elaborator.State.builtinOpsMap("yield*")
   val yieldOp = Elaborator.State.builtinOpsMap("yield")
   val unit = Value.Lit(Tree.UnitLit(true))
+  val stackSafetyConfig = summon[Config].stackSafety
+  val rt = Elaborator.State.runtimeSymbol.asSimpleRef
 
   var scopedTmp: List[LocalVarSymbol] = Nil
+  var stackDepthSyms: List[LocalVarSymbol] = Nil
 
   private def freshTmp(nme: Str = "tmp") = TempSymbol(N, nme)
   private def getCurScopedTmp = scopedTmp.head
+  private def getCurDepthSym = stackDepthSyms.head
   private def isMainBlock = scopedTmp.sizeIs == 1
 
   private inline def nestScope[T](inline thunk: LocalVarSymbol => T): T =
     val t = freshTmp()
+    val curDepth = freshTmp("curDepth")
     scopedTmp = t :: scopedTmp
+    stackDepthSyms = curDepth :: stackDepthSyms
     val r = thunk(t)
+    stackDepthSyms = stackDepthSyms.tail
     scopedTmp = scopedTmp.tail
     r
   
@@ -46,16 +53,27 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx, T
   override def applyMainBlock(main: Block): Block =
     nestScope: t =>
       Scoped(Set.single(t), super.applyMainBlock(main))
-
+  
   override def applyFunDefn(fun: FunDefn): FunDefn =
     FunDefn(
       fun.owner,
       fun.sym,
       fun.dSym,
       fun.params,
-      nestScope: t =>
-        Scoped(Set.single(t), applyScopedBlock(fun.body))
+      applyFunBodyLikeBlock(fun.body)
     )(fun.configOverride, Annot.Generator :: fun.annotations)
+  
+  override def applyFunBodyLikeBlock(b: Block): Block =
+    nestScope: t =>
+      blockBuilder
+        .scopedVars(Set.single(t))
+        .staticif(stackSafetyConfig.isDefined, _
+          .scopedVars(Set.single(getCurDepthSym))
+          .assign(t, callRuntimeMethod("checkDepthGenerator", Nil))
+          .assign(getCurDepthSym, Call(Value.SimpleRef(Elaborator.State.builtinOpsMap("+")),
+            (rt.selSN("GeneratorStackSafety").selSN("stackDepth").asArg :: Value.Lit(Tree.IntLit(1)).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+          .assign(NoSymbol, runtimeYieldStar(t.asSimpleRef)))
+        .rest(super.applyFunBodyLikeBlock(b))
   
   override def applyResult(r: Result)(k: Result => Block): Block =
     val tmp = getCurScopedTmp
@@ -71,16 +89,25 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx, T
     case EffectfulResult() => r match
       case c: Call if !c.metadata.isNative =>
         if isMainBlock then
-          blockBuilder
-            .assign(tmp, c)
-            .assign(tmp, callRuntimeMethod("handlerTopLevelCall", tmp.asSimpleRef.asArg :: Nil))
+          val withStackSafety = stackSafetyConfig match
+            case S(ss) =>
+              val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
+              val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+              blockBuilder
+                .scopedVars(Set.single(bodSym))
+                .define(bodFun)
+                .assign(tmp, callRuntimeMethod("runStackSafe", Value.Lit(Tree.IntLit(ss.stackLimit)).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil))
+            case N =>
+              blockBuilder
+                .assign(tmp, r)
+                .assign(tmp, callRuntimeMethod("handlerTopLevelCall", tmp.asSimpleRef.asArg :: Nil))
+          withStackSafety
             .rest(k(tmp.asSimpleRef))
         else
-          Assign(
-            tmp,
-            c,
-            k(runtimeYieldStar(tmp.asSimpleRef))
-          )
+          blockBuilder
+            .staticif(stackSafetyConfig.isDefined, _.assignFieldN(rt.selSN("GeneratorStackSafety"), new Tree.Ident("stackDepth"), getCurDepthSym.asSimpleRef))
+            .assign(tmp, c)
+            .rest(k(runtimeYieldStar(tmp.asSimpleRef)))
       case _ => super.applyResult(r)(k)
     case _ => super.applyResult(r)(k)
     

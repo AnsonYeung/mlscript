@@ -139,16 +139,16 @@ let res =
 :re
 res.raise()
 //│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
-//│ 	at Test.test (Debugging.mls:130:15)
-//│ 	at Test.main (Debugging.mls:133:5)
+//│ 	at Test.test (Debugging.mls:125:15)
+//│ 	at Test.main (Debugging.mls:128:5)
 
 set res = res.resumeWith(42)
 
 :re
 res.raise()
 //│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
-//│ 	at Test.test (Debugging.mls:130:15)
-//│ 	at Test.main (Debugging.mls:133:16)
+//│ 	at Test.test (Debugging.mls:125:15)
+//│ 	at Test.main (Debugging.mls:128:16)
 
 :expect 0.33676533676533676
 res.resumeWith(666)
@@ -168,8 +168,8 @@ fun f() =
 
 f()
 //│ > Stack Trace:
-//│ > 	at f (Debugging.mls:167:3) with locals: j=200
+//│ > 	at f (Debugging.mls:162:3) with locals: j=200
 //│ > Stack Trace:
-//│ > 	at f (Debugging.mls:169:3)
+//│ > 	at f (Debugging.mls:164:3)
 //│ > Stack Trace:
 //│ > 	at tail position

@@ -528,6 +528,10 @@ fun checkDepth() =
   else
     ()
 
+// val runStackSafe = RuntimeJS.runStackSafeGenerator
+val checkDepthGenerator = RuntimeJS.checkDepthGenerator
+val GeneratorStackSafety = RuntimeJS.GeneratorStackSafety
+
 fun runStackSafe(limit, f) =
   set stackLimit = limit in...
   set stackDepth = 1 in...
