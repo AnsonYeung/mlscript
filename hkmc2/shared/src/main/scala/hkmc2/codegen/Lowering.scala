@@ -1470,9 +1470,10 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
         case N => WarningReport(msg"This annotation has no effect." -> annot.toLoc :: Nil)
     annotations.foreach:
       case Annot.Untyped => ()
-      case a @ (Annot.TailRec | Annot.Inline | Annot.NoInline | Annot.Generator | Annot.Async | Annot.RaiseEffects) =>
+      case a @ (Annot.TailRec | Annot.Native | Annot.Inline | Annot.NoInline | Annot.Generator | Annot.Async | Annot.RaiseEffects) =>
         val annot = a match
           case Annot.TailRec => "@tailrec"
+          case Annot.Native => "@native"
           case Annot.Inline => "@inline"
           case Annot.NoInline => "@noInline"
           case Annot.Generator => "@generator"
@@ -1505,6 +1506,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
         case st.App(_, _) | New(_, _, _) | DynNew(_, _) | Mut(_: New | _: DynNew) => ()
         case st.Resolved(_, defnSym) if isImplicitNullaryCall(defnSym) => ()
         case _ => warn(annot)
+      case a @ Annot.Native => ()
       case a @ Annot.TailCall => receiver match
         case st.App(Ref(_: BuiltinSymbol), _) => warn(a, S(msg"The @tailcall annotation has no effect on calls to built-in symbols."))
         case st.App(_, _) => ()

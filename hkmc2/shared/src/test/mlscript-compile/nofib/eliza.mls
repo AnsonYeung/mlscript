@@ -2,12 +2,14 @@ import "./NofibPrelude.mls"
 import "../../../../../../hkmc2/shared/src/test/mlscript-compile/Predef.mls"
 open NofibPrelude
 
+open annotations
+
 
 module eliza with ...
 
 
 
-fun toUpper(c) = c.toUpperCase()
+fun toUpper(c) = @native c.toUpperCase()
 
 fun lz_map(f, ls) = lazy of () =>
   if ls is
