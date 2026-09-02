@@ -94,6 +94,11 @@ declare module annotations with
   object buffered
   object bufferable
   object mayNotRaiseEffects
+  object generator
+  object async
+
+declare module handlers with
+  fun await
 
 declare module scope with
   fun locally

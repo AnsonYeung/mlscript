@@ -24,6 +24,7 @@ abstract class JSBackendDiffMaker extends MLsDiffMaker:
   val showSanitizedJS = NullaryCommand("ssjs")
   val showJS = NullaryCommand("sjs")
   val showRepl = NullaryCommand("showRepl")
+  val await = NullaryCommand("await")
   val traceJS = NullaryCommand("traceJS")
   val expect = Command("expect"): ln =>
     ln.trim
@@ -114,11 +115,15 @@ abstract class JSBackendDiffMaker extends MLsDiffMaker:
       blockPrinter.worksheet(p)(using irPrintingScp).mkString(output.ColWidth)
     
     Config.extractConfigFromStats(blk).givenIn {
+    val loweringState = summon[Elaborator.State]
+    if file.toString =/= runtimeSourceFile.toString && file.toString =/= preludeFile.toString then
+      loweringState.initRuntimeSymbolsFromFile(runtimeSourceFile, prelude)(
+        using summon[TL], summon[Raise], cctx)
     
     if noCodeGen.isUnset then
       given Elaborator.Ctx = curCtx
       val low = ltl.givenIn:
-        new codegen.Lowering()
+        new codegen.Lowering()(using summon[Config], ltl, summon[Raise], loweringState, curCtx, summon[SymbolPrinter])
           with codegen.LoweringTraceLog(traceJS.isSet)
       
       val lowered = ltl.givenIn:
@@ -264,7 +269,8 @@ abstract class JSBackendDiffMaker extends MLsDiffMaker:
       // * Sometimes the JS block won't execute due to a syntax or runtime error so we always set this first
       host.execute(s"$resNme = undefined")
       
-      mkQuery(preStr, jsStr): stdout =>
+      val awaitResult = (if await.isSet then s"; $resNme = await $resNme" else "")
+      mkQuery(preStr, jsStr + awaitResult): stdout =>
         stdout.splitSane('\n').init // should always ends with "undefined" (TODO: check)
           .foreach: line =>
             output(s"> ${line}")

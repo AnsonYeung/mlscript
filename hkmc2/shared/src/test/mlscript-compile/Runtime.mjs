@@ -5,7 +5,55 @@ import RuntimeJS from "./RuntimeJS.mjs";
 import Rendering from "./Rendering.mjs";
 import LazyArray from "./LazyArray.mjs";
 import Iter from "./Iter.mjs";
-let Runtime1, lambda, lambda1, lambda2, lambda$, lambda$1, Capture$scope241, Capture$scope311, lambda$2, Capture$scope331, lambda$3, Capture$handleEffect1, Capture$scope451;
+let continuation, Runtime1, lambda, lambda1, lambda2, lambda3, lambda4, lambda5, lambda6, lambda7, lambda8, lambda9, lambda10, lambda$, lambda$1, Capture$scope241, Capture$scope311, lambda$2, Capture$scope331, lambda$3, Capture$handleEffect1, Capture$scope451, lambda$4, continuation$;
+lambda7 = (undefined, function (saved) {
+  return runtime.safeCall(saved(runtime.Unit))
+});
+lambda6 = (undefined, function (Runtime2, f) {
+  let handler, tmp, scrut;
+  handler = Runtime2.StackDelayHandler;
+  tmp = f();
+  scrut = Runtime2.curEffect === null;
+  if (scrut === true) {
+    return tmp
+  }
+  {
+    let cur, handlerFrame;
+    cur = Runtime2.curEffect;
+    handlerFrame = new Runtime2.HandlerContFrame.class(null, null, handler);
+    cur.contTrace.lastHandler.nextHandler = handlerFrame;
+    cur.contTrace.lastHandler = handlerFrame;
+    cur.contTrace.last = handlerFrame;
+    return Runtime2.handleEffects(cur);
+  }
+});
+continuation$ = function continuation$(Runtime2, resume) {
+  return (value) => {
+    return continuation(Runtime2, resume, value)
+  }
+};
+continuation = function continuation(Runtime2, resume, value) {
+  let r, scrut;
+  r = runtime.safeCall(resume(value));
+  scrut = Runtime2.curEffect !== null;
+  if (scrut === true) {
+    Runtime2.illegalEffect("in exported async function");
+    return r
+  }
+  return r;
+};
+lambda$4 = (undefined, function (Runtime2, promise) {
+  return (resume) => {
+    let continuation$here;
+    continuation$here = continuation$(Runtime2, resume);
+    return runtime.safeCall(promise.then(continuation$here))
+  }
+});
+lambda5 = (undefined, function (Runtime2, promise, resume) {
+  let continuation$here;
+  continuation$here = continuation$(Runtime2, resume);
+  return runtime.safeCall(promise.then(continuation$here))
+});
 (class Capture$scope45 {
   static {
     Capture$scope451 = this
@@ -15,6 +63,11 @@ let Runtime1, lambda, lambda1, lambda2, lambda$, lambda$1, Capture$scope241, Cap
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "Capture$scope45"];
+});
+lambda4 = (undefined, function (handleEffect$cap, Runtime2) {
+  let tmp;
+  tmp = Runtime2.resume(handleEffect$cap.cur$0.contTrace);
+  return runtime.safeCall(handleEffect$cap.cur$0.handlerFun(tmp))
 });
 (class Capture$handleEffect {
   static {
@@ -38,10 +91,10 @@ let Runtime1, lambda, lambda1, lambda2, lambda$, lambda$1, Capture$scope241, Cap
 });
 lambda$3 = (undefined, function (scope33$cap, cont) {
   return (m, marker) => {
-    return lambda2(scope33$cap, cont, m, marker)
+    return lambda3(scope33$cap, cont, m, marker)
   }
 });
-lambda2 = (undefined, function (scope33$cap, cont, m, marker) {
+lambda3 = (undefined, function (scope33$cap, cont, m, marker) {
   let scrut, tmp, tmp1;
   scrut = runtime.safeCall(m.has(cont));
   if (scrut === true) {
@@ -64,10 +117,10 @@ lambda2 = (undefined, function (scope33$cap, cont, m, marker) {
 });
 lambda$2 = (undefined, function (scope31$cap, cont) {
   return (m, marker) => {
-    return lambda1(scope31$cap, cont, m, marker)
+    return lambda2(scope31$cap, cont, m, marker)
   }
 });
-lambda1 = (undefined, function (scope31$cap, cont, m, marker) {
+lambda2 = (undefined, function (scope31$cap, cont, m, marker) {
   let scrut, tmp, tmp1;
   scrut = runtime.safeCall(m.has(cont));
   if (scrut === true) {
@@ -78,11 +131,14 @@ lambda1 = (undefined, function (scope31$cap, cont, m, marker) {
   }
   return runtime.Unit;
 });
-lambda = (undefined, function (l) {
+lambda1 = (undefined, function (l) {
   let tmp, tmp1;
   tmp = l.localName + "=";
   tmp1 = runtime.safeCall(Rendering.render(l.value));
   return tmp + tmp1
+});
+lambda = (undefined, function (scope24$cap, Runtime2) {
+  return Runtime2.resume(scope24$cap.tr$0.contTrace)(runtime.Unit)
 });
 (class Capture$scope24 {
   static {
@@ -100,10 +156,25 @@ lambda$1 = (undefined, function (Runtime2) {
     return runtime.Unit
   }
 });
+lambda10 = (undefined, function (Runtime2, k) {
+  Runtime2.stackResume = k;
+  return runtime.Unit
+});
+lambda9 = (undefined, function (FunctionContFrame1, f, currentArgList, argListLength) {
+  let tmp, tmp1, tmp2, tmp3;
+  tmp = currentArgList + 1;
+  tmp1 = currentArgList + 1;
+  tmp2 = tmp1 + argListLength;
+  tmp3 = runtime.safeCall(FunctionContFrame1.saved.slice(tmp, tmp2));
+  return runtime.safeCall(f.apply(FunctionContFrame1.saved.at(4), tmp3))
+});
 lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
   return () => {
     return Runtime2.resume(EffectHandle1.reified.contTrace)(value)
   }
+});
+lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
+  return Runtime2.resume(EffectHandle1.reified.contTrace)(value)
 });
 (class Runtime {
   static {
@@ -605,6 +676,20 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
       [prettyPrint]() { return this.toString(); }
       static [definitionMetadata] = ["class", "CustomStackError", ["stack"]];
     });
+    (class AsyncEffectMarker {
+      static {
+        new this
+      }
+      constructor() {
+        Runtime.AsyncEffectMarker = this;
+        Object.defineProperty(this, "class", {
+          value: AsyncEffectMarker
+        });
+        globalThis.Object.freeze(this);
+      }
+      toString() { return runtime.render(this); }
+      static [definitionMetadata] = ["object", "AsyncEffectMarker"];
+    });
     Runtime.stackLimit = 0;
     Runtime.stackDepth = 0;
     Runtime.stackHandler = null;
@@ -829,7 +914,7 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
               if (showLocals === true) {
                 scrut3 = curLocals.length > 0;
                 if (scrut3 === true) {
-                  tmp2 = runtime.safeCall(curLocals.map(lambda));
+                  tmp2 = runtime.safeCall(curLocals.map(lambda1));
                   tmp3 = runtime.safeCall(tmp2.join(", "));
                   tmp4 = " with locals: " + tmp3;
                 } else {
@@ -1061,16 +1146,16 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
     }
   }
   static handleEffect(cur) {
-    let scrut, handlerFrame, saved, old, scrut1, scrut2, scrut3, tmp, tmp1, handleEffect$cap, scope45$cap;
+    let scrut, handlerFrame, saved, scrut1, scrut2, old, scrut3, scrut4, scrut5, scrut6, tmp, tmp1, handleEffect$cap, scope45$cap;
     handleEffect$cap = new Capture$handleEffect1(cur);
     scope45$cap = new Capture$scope451(undefined);
     scope45$cap.prevHandlerFrame$0 = handleEffect$cap.cur$0.contTrace;
     lbl: while (true) {
-      let scrut4, scrut5;
-      scrut4 = scope45$cap.prevHandlerFrame$0.nextHandler !== null;
-      if (scrut4 === true) {
-        scrut5 = scope45$cap.prevHandlerFrame$0.nextHandler.handler !== handleEffect$cap.cur$0.handler;
-        if (scrut5 === true) {
+      let scrut7, scrut8;
+      scrut7 = scope45$cap.prevHandlerFrame$0.nextHandler !== null;
+      if (scrut7 === true) {
+        scrut8 = scope45$cap.prevHandlerFrame$0.nextHandler.handler !== handleEffect$cap.cur$0.handler;
+        if (scrut8 === true) {
           scope45$cap.prevHandlerFrame$0 = scope45$cap.prevHandlerFrame$0.nextHandler;
           continue lbl
         }
@@ -1083,6 +1168,14 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
     }
     handlerFrame = scope45$cap.prevHandlerFrame$0.nextHandler;
     saved = new Runtime.ContTrace.class(handlerFrame.next, handleEffect$cap.cur$0.contTrace.last, handlerFrame.nextHandler, handleEffect$cap.cur$0.contTrace.lastHandler, false);
+    scrut1 = handleEffect$cap.cur$0.contTrace.last === handlerFrame;
+    if (scrut1 === true) {
+      saved.last = saved;
+    }
+    scrut2 = handleEffect$cap.cur$0.contTrace.lastHandler === handlerFrame;
+    if (scrut2 === true) {
+      saved.lastHandler = saved;
+    }
     handleEffect$cap.cur$0.contTrace.last = handlerFrame;
     handleEffect$cap.cur$0.contTrace.lastHandler = handlerFrame;
     handlerFrame.next = null;
@@ -1101,16 +1194,19 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
     } finally {
       Runtime.stackDepth = old;
     }
-    scrut1 = Runtime.curEffect !== null;
-    if (scrut1 === true) {
+    scrut3 = Runtime.curEffect !== null;
+    if (scrut3 === true) {
       handleEffect$cap.cur$0 = Runtime.curEffect;
-      scrut2 = saved.next !== null;
-      if (scrut2 === true) {
+      scrut4 = saved.next !== null;
+      if (scrut4 === true) {
         handleEffect$cap.cur$0.contTrace.last.next = saved.next;
+      }
+      scrut5 = saved.last !== saved;
+      if (scrut5 === true) {
         handleEffect$cap.cur$0.contTrace.last = saved.last;
       }
-      scrut3 = saved.nextHandler !== null;
-      if (scrut3 === true) {
+      scrut6 = saved.nextHandler !== null;
+      if (scrut6 === true) {
         handleEffect$cap.cur$0.contTrace.lastHandler.nextHandler = saved.nextHandler;
         handleEffect$cap.cur$0.contTrace.lastHandler = saved.lastHandler;
         return handleEffect$cap.cur$0
@@ -1178,6 +1274,21 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
       return value;
     }
   }
+  static await(promise) {
+    let lambda$here;
+    lambda$here = lambda$4(Runtime, promise);
+    return Runtime.mkEffect(Runtime.AsyncEffectMarker, lambda$here)
+  }
+  static toJsAsync(thunk) {
+    let r, scrut;
+    r = Runtime.enterHandleBlock(Runtime.AsyncEffectMarker, thunk);
+    scrut = Runtime.curEffect !== null;
+    if (scrut === true) {
+      Runtime.illegalEffect("in exported async function");
+      return runtime.safeCall(globalThis.Promise.resolve(r))
+    }
+    return runtime.safeCall(globalThis.Promise.resolve(r));
+  }
   static checkDepth() {
     let tmp, tmp1;
     tmp = Runtime.stackDepth >= Runtime.stackLimit;
@@ -1200,35 +1311,31 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
         Runtime.stackDepth = 1;
         old2 = Runtime.stackHandler;
         try {
-          {
-            let inlinedVal;
-            Runtime.stackHandler = Runtime.StackDelayHandler;
-            inlinedVal = Runtime.enterHandleBlock(Runtime.StackDelayHandler, f);
-            result = inlinedVal;
-            scrut = Runtime.curEffect !== null;
-            if (scrut === true) {
-              throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
-            }
-            lbl: while (true) {
-              let scrut1, saved, scrut2;
-              scrut1 = Runtime.stackResume !== null;
-              if (scrut1 === true) {
-                let inlinedVal1;
-                saved = Runtime.stackResume;
-                Runtime.stackResume = null;
-                Runtime.stackDepth = 1;
-                inlinedVal1 = runtime.safeCall(saved(runtime.Unit));
-                result = inlinedVal1;
-                scrut2 = Runtime.curEffect !== null;
-                if (scrut2 === true) {
-                  throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
-                }
-                continue lbl;
-              }
-              break;
-            }
-            tmp2 = result;
+          Runtime.stackHandler = Runtime.StackDelayHandler;
+          result = lambda6(Runtime, f);
+          scrut = Runtime.curEffect !== null;
+          if (scrut === true) {
+            throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
           }
+          lbl: while (true) {
+            let scrut1, saved, scrut2;
+            scrut1 = Runtime.stackResume !== null;
+            if (scrut1 === true) {
+              let inlinedVal;
+              saved = Runtime.stackResume;
+              Runtime.stackResume = null;
+              Runtime.stackDepth = 1;
+              inlinedVal = runtime.safeCall(saved(runtime.Unit));
+              result = inlinedVal;
+              scrut2 = Runtime.curEffect !== null;
+              if (scrut2 === true) {
+                throw globalThis.Object.freeze(new globalThis.Error("Effect crossed through stack safe boundary"))
+              }
+              continue lbl;
+            }
+            break;
+          }
+          tmp2 = result;
         } finally {
           Runtime.stackHandler = old2;
         }
@@ -1247,11 +1354,35 @@ lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
       if (rhs instanceof Runtime.Int31.class) {
         return lhs + rhs
       }
-      return runtime.safeCall(Runtime.unreachable());
+      return Runtime.unreachable;
     }
-    return runtime.safeCall(Runtime.unreachable());
+    return Runtime.unreachable;
   }
   toString() { return runtime.render(this); }
   static [definitionMetadata] = ["class", "Runtime"];
 });
+export { continuation as _$_modulePrivate_$_continuation };
+export { Runtime1 as _$_modulePrivate_$_Runtime };
+export { lambda as _$_modulePrivate_$_lambda };
+export { lambda1 as _$_modulePrivate_$_lambda1 };
+export { lambda2 as _$_modulePrivate_$_lambda2 };
+export { lambda3 as _$_modulePrivate_$_lambda3 };
+export { lambda4 as _$_modulePrivate_$_lambda4 };
+export { lambda5 as _$_modulePrivate_$_lambda5 };
+export { lambda6 as _$_modulePrivate_$_lambda6 };
+export { lambda7 as _$_modulePrivate_$_lambda7 };
+export { lambda8 as _$_modulePrivate_$_lambda8 };
+export { lambda9 as _$_modulePrivate_$_lambda9 };
+export { lambda10 as _$_modulePrivate_$_lambda10 };
+export { lambda$ as _$_modulePrivate_$_lambda$ };
+export { lambda$1 as _$_modulePrivate_$_lambda$1 };
+export { Capture$scope241 as _$_modulePrivate_$_Capture$scope24 };
+export { Capture$scope311 as _$_modulePrivate_$_Capture$scope31 };
+export { lambda$2 as _$_modulePrivate_$_lambda$2 };
+export { Capture$scope331 as _$_modulePrivate_$_Capture$scope33 };
+export { lambda$3 as _$_modulePrivate_$_lambda$3 };
+export { Capture$handleEffect1 as _$_modulePrivate_$_Capture$handleEffect };
+export { Capture$scope451 as _$_modulePrivate_$_Capture$scope45 };
+export { lambda$4 as _$_modulePrivate_$_lambda$4 };
+export { continuation$ as _$_modulePrivate_$_continuation$ };
 let Runtime = Runtime1; export default Runtime;

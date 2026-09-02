@@ -29,8 +29,9 @@ object Elaborator:
     "==", "!=", "<", "<=", ">", ">=",
     "===", "!==",
     "&&", "||")
-  val unaryOps = Set("-", "+", "!", "~", "typeof")
+  val unaryOps = Set("-", "+", "!", "~", "typeof", "yield", "yield*")
   val anyOps = Set("super")
+  val impureOps = Set("super", "yield", "yield*")
   val builtins = binaryOps ++ unaryOps ++ anyOps
   val aliasOps = Map(
     ";" -> ",",
@@ -45,7 +46,7 @@ object Elaborator:
   
   // TODO: rename to ScopeKind?
   enum OuterCtx:
-    case Function(returnHandlerSymbol: TempSymbol)
+    case Function(returnHandlerSymbol: TempSymbol)(val isGenerator: Bool, val isAsync: Bool)
     case InnerScope(innerSymbol: InnerSymbol)
     case LocalScope(nameHint: Str)
     case LambdaOrHandlerBlock
@@ -186,6 +187,17 @@ object Elaborator:
       case OuterCtx.NonReturnContext => ReturnHandler.Forbidden
       case _: OuterCtx.LocalScope =>
         parent.fold(ReturnHandler.NotInFunction)(_.getRetHandler)
+    def inGenerator: Bool = outer match
+      case f: OuterCtx.Function => f.isGenerator
+      case _: OuterCtx.LocalScope =>
+        parent.fold(false)(_.inGenerator)
+      case _: (OuterCtx.LambdaOrHandlerBlock.type | OuterCtx.InnerScope | OuterCtx.NonReturnContext.type) => false
+    def inAsync: Bool = outer match
+      case f: OuterCtx.Function => f.isAsync
+      case _: OuterCtx.LocalScope =>
+        parent.fold(false)(_.inAsync)
+      case _: (OuterCtx.LambdaOrHandlerBlock.type | OuterCtx.InnerScope | OuterCtx.NonReturnContext.type) => false
+    def potentiallyInstrumented(using Config): Bool = config.effectHandlers.isDefined || inAsync
     
     // * Invariant: We expect that the top-level context only contain hard-coded symbols like `globalThis`
     // * and that built-in symbols like Int and Str be imported into another nested context on top of it.
@@ -282,10 +294,14 @@ object Elaborator:
         val tailcall = assumeObject("tailcall")
         val inline = assumeObject("inline")
         val noInline = assumeObject("noInline")
+        val generator = assumeObject("generator")
+        val async = assumeObject("async")
         val compile = assumeObject("compile")
         val buffered = assumeObject("buffered")
         val bufferable = assumeObject("bufferable")
         val mayNotRaiseEffects = assumeObject("mayNotRaiseEffects")
+      object handlers extends VirtualModule(assumeBuiltinMod("handlers")):
+        val await = assumeObject("await").asTrm.get
       object scope extends VirtualModule(assumeBuiltinMod("scope")):
         val locally = assumeObject("locally")
       object runtime extends VirtualModule(assumeBuiltinMod("runtime")):
@@ -397,15 +413,64 @@ object Elaborator:
         matchFailureTrm = term("MatchFailure"),
       )
 
+  /** Immutable semantic metadata published before a compilation unit is optimized. */
+  final case class CompilationUnit(
+    modulePath: Str,
+    defaultExport: Opt[BlockMemberSymbol],
+    config: Config,
+    importedModulePaths: Map[ImportSymbol, Str],
+  ):
+    def externalImport(sym: ImportSymbol, isForeign: Bool): Opt[ExternalModuleImport] =
+      importedModulePaths.get(sym) match
+      case S(path) => S(ExternalModuleImport.Default(sym, path))
+      case N if defaultExport.contains(sym) =>
+        S(ExternalModuleImport.Default(sym, modulePath))
+      case N => sym match
+        case sym: BlockMemberSymbol if isForeign =>
+          S(ExternalModuleImport.Private(sym, modulePath))
+        case _ => N
+
+  end CompilationUnit
+
+  /** Immutable JavaScript ABI published after optimization has fixed the emitted definitions. */
+  final case class CompilationUnitAbi(
+    privateExportNames: Map[BlockMemberSymbol, Str],
+  )
+
+  enum ExternalModuleImport:
+    case Default(sym: ImportSymbol, modulePath: Str)
+    case Private(sym: BlockMemberSymbol, modulePath: Str)
+
   class State:
     val suid = new Uid.Symbol.State
     given State = this
+    private var _compilationUnit: Opt[CompilationUnit] = N
+    private var _compilationUnitAbi: Opt[CompilationUnitAbi] = N
+    /** Publish semantic provenance before optimizing this compilation unit. */
+    private[hkmc2] def publishCompilationUnit(unit: CompilationUnit): Unit =
+      assert(_compilationUnit.isEmpty)
+      assert(unit.defaultExport.forall(_.getState is this))
+      assert(unit.importedModulePaths.keysIterator.forall(_.getState is this))
+      _compilationUnit = S(unit)
+    /** Publish the separately staged JavaScript ABI before caching this compilation unit. */
+    private[hkmc2] def publishCompilationUnitAbi(abi: CompilationUnitAbi): Unit =
+      assert(_compilationUnit.nonEmpty && _compilationUnitAbi.isEmpty)
+      assert(abi.privateExportNames.keysIterator.forall(_.getState is this))
+      _compilationUnitAbi = S(abi)
+    /** Resolve the one JavaScript import represented by an external symbol reference. */
+    def externalModuleImport(sym: ImportSymbol, importingState: State): Opt[ExternalModuleImport] =
+      assert(sym.getState is this)
+      _compilationUnit.flatMap(_.externalImport(sym, this isnt importingState))
+    def compilationUnitPrivateName(sym: BlockMemberSymbol): Opt[Str] =
+      _compilationUnitAbi.flatMap(_.privateExportNames.get(sym))
+    /** Root worksheet states have no fixed compilation-unit configuration. */
+    def compilationUnitConfig: Opt[Config] =
+      _compilationUnit.map(_.config)
     val globalThisSymbol = TopLevelSymbol("globalThis")
-    val disposeSymbol = DisposeSymbol()
     private var cachedRuntimeSymbols: Opt[RuntimeSymbols] = N
     def initRuntimeSymbolsFromBlock(blk: Term.Blk): Unit =
       cachedRuntimeSymbols = S(RuntimeSymbols.fromBlock(blk))
-    def initRuntimeSymbolsFromFile(file: io.Path, prelude: Ctx)(using TL, Raise, Config, CompilerCtx): Unit =
+    def initRuntimeSymbolsFromFile(file: io.Path, prelude: Ctx)(using TL, Raise, CompilerCtx): Unit =
       if cachedRuntimeSymbols.isEmpty then
         cachedRuntimeSymbols = S(RuntimeSymbols.fromBlock(CompilerCtx.get.getElaboratedBlock(file, prelude).term))
     private def runtimeSymbols: RuntimeSymbols =
@@ -455,7 +520,8 @@ object Elaborator:
             binary = binaryOps(op),
             unary = unaryOps(op),
             nullary = false,
-            functionLike = anyOps(op))
+            functionLike = anyOps(op),
+            isPure = !impureOps(op))
         .toMap
       baseBuiltins ++ aliasOps.map:
         case (alias, base) => alias -> baseBuiltins(base)
@@ -557,6 +623,10 @@ extends Importer:
             return S(Annot.Inline)
           case ctx.builtins.annotations.noInline =>
             return S(Annot.NoInline)
+          case ctx.builtins.annotations.generator =>
+            return S(Annot.Generator)
+          case ctx.builtins.annotations.async =>
+            return S(Annot.Async)
           case ctx.builtins.annotations.mayNotRaiseEffects =>
             return S(Annot.MayNotRaiseEffects)
           case _ => ()
@@ -997,7 +1067,7 @@ extends Importer:
       error
     case LetLike(Keywrd(`set`), lhs, S(rhs), S(bod)) =>
       // * Backtracking assignment
-      if config.effectHandlers.isDefined then
+      if ctx.potentiallyInstrumented then
         raise(ErrorReport(
           msg"Backtracking assignment is not supported with effect handlers enabled" ->
             tree.toLoc :: Nil))
@@ -1031,7 +1101,7 @@ extends Importer:
         block(sts_, hasResult = false)._1
       
       elabed.res match
-      case Term.Lit(UnitLit(false)) => 
+      case Term.Lit(UnitLit(false)) =>
       case trm => raise(WarningReport(msg"Terms in handler block do nothing" -> trm.toLoc :: Nil))
       
       val tds = elabed.stats.map {
@@ -1042,11 +1112,11 @@ extends Importer:
                   raise(ErrorReport(msg"Handler function cannot be a getter" -> td.toLoc :: Nil))
                 val newTd = TermDefinition(Fun, sym, tsym, newParams.reverse, tparams, sign, body, flags, mf, annotations, comp)
                 S(HandlerTermDefinition(value.sym, newTd))
-              case _ => 
+              case _ =>
                 raise(ErrorReport(msg"Handler function is missing resumption parameter" -> td.toLoc :: Nil))
                 None
               
-          case st => 
+          case st =>
             raise(ErrorReport(msg"Only function definitions are allowed in handler blocks" -> st.toLoc :: Nil))
             None
         }.collect { case Some(x) => x }
@@ -1183,7 +1253,7 @@ extends Importer:
       case LabelLookup.Found(binding) =>
         Term.Break(binding.labelSymbol, binding.resultSymbol, value)
       case LabelLookup.AcrossBoundary(binding) =>
-        if config.effectHandlers.isEmpty then
+        if !ctx.potentiallyInstrumented then
           mkNonLabelSelectionApp(tree, sel, args)
         else
           markEffectMethodUsed(binding.nonLocalBreakMethodMarker, nme)
@@ -1205,7 +1275,7 @@ extends Importer:
         Term.Continue(binding.labelSymbol)
       case LabelLookup.AcrossBoundary(binding) =>
         checkNoArgs
-        if config.effectHandlers.isEmpty then
+        if !ctx.potentiallyInstrumented then
           raise:
             ErrorReport(msg"Non-local 'continue' is only supported with effect handlers enabled."
               -> labelId.toLoc :: Nil)
@@ -1237,7 +1307,7 @@ extends Importer:
       case LabelLookup.Found(binding) =>
         Term.Break(binding.labelSymbol, binding.resultSymbol, N)
       case LabelLookup.AcrossBoundary(binding) =>
-        if config.effectHandlers.isEmpty then
+        if !ctx.potentiallyInstrumented then
           raise:
             ErrorReport(msg"Non-local 'break' is only supported with effect handlers enabled."
               -> labelId.toLoc :: Nil)
@@ -1252,7 +1322,7 @@ extends Importer:
       case LabelLookup.Found(binding) =>
         Term.Continue(binding.labelSymbol)
       case LabelLookup.AcrossBoundary(binding) =>
-        if config.effectHandlers.isEmpty then
+        if !ctx.potentiallyInstrumented then
           raise:
             ErrorReport(msg"Non-local 'continue' is only supported with effect handlers enabled."
               -> labelId.toLoc :: Nil)
@@ -1362,7 +1432,7 @@ extends Importer:
       ctx.getRetHandler match
       case ReturnHandler.Required(sym) =>
         log(s"Non-local return: $sym")
-        if config.effectHandlers.isEmpty then
+        if !ctx.potentiallyInstrumented then
           raise:
             ErrorReport(msg"Non-local return statements are only supported with effect handlers enabled." -> tree.toLoc :: Nil)
           error
@@ -1381,6 +1451,14 @@ extends Importer:
         error
     case PrefixApp(kw @ Keywrd(Keyword.`throw`), body) =>
       Term.Throw(subterm(body)).mkLocWith(kw)
+    case PrefixApp(kw @ Keywrd(Keyword.`yield` | Keyword.`yield*`), body) =>
+      if ctx.inGenerator then
+        val synthIdent = new Tree.Ident(kw.kw.name).withLocOf(kw)
+        Term.App(ident(synthIdent).get, Term.Tup(PlainFld(subterm(body)) :: Nil)(DummyTup))(DummyApp, N, FlowSymbol("yield"))
+      else
+        raise:
+          ErrorReport(msg"Yield expressions are not allowed in this context." -> tree.toLoc :: Nil)
+        subterm(body)
     case PrefixApp(kw @ Keywrd(Keyword.`do`), InfixApp(labelId: Ident, Keywrd(Keyword.`:`), body)) =>
       val labelSym = new LabelSymbol(N, labelId.name)
       val resultSym = new TempSymbol(N, s"${labelId.name}$$result")
@@ -1828,7 +1906,7 @@ extends Importer:
             val tdf = ctx.nest(OuterCtx.NonReturnContext).givenIn: newCtx ?=>
               // * Add type parameters to context
               val (tps, newCtx1) = td.typeParams match
-                case S(t) => 
+                case S(t) =>
                   val (tps, ctx) = typeParams(t)
                   (S(tps), ctx)
                 case N => (N, ctx)
@@ -1851,7 +1929,11 @@ extends Importer:
                 case _ if ctx.mode is Mode.Light => S(Term.Missing)
                 case S(rhs) => S:
                   val nonLocalRetHandler = TempSymbol(N, s"nonLocalRetHandler$$${id.name}")
-                  newCtx.nest(OuterCtx.Function(nonLocalRetHandler)).givenIn: newCtx ?=>
+                  val hasGeneratorAnnotation = annotations.contains(Annot.Generator)
+                  val hasAsyncAnnotation = annotations.contains(Annot.Async)
+                  if pss.isEmpty && hasGeneratorAnnotation then
+                    raise(ErrorReport(msg"Generators are not supported on functions without a parameter list" -> td.toLoc :: Nil))
+                  newCtx.nest(OuterCtx.Function(nonLocalRetHandler)(pss.nonEmpty && hasGeneratorAnnotation, hasAsyncAnnotation)).givenIn: newCtx ?=>
                     val b = term(rhs)(using newCtx)
                     if nonLocalRetHandler.directRefs.isEmpty then b else
                       mkEffectHandleAbortive(
@@ -1866,13 +1948,13 @@ extends Importer:
                 // st.isModified(Mod) indicates if the function marks
                 // its result as "module". e.g, `fun f: module M`
                 //                                      ^^^^^^
-                case S(st) if st.isModified(Mod) => 
+                case S(st) if st.isModified(Mod) =>
                   Modulefulness.ofSign(s)(true)
                 case _ =>
                   Modulefulness.none
               
               val tsym = TermSymbol(k, owner, id) // TODO?
-              val tdf = TermDefinition(k, sym, tsym, pss, tps, s, body, 
+              val tdf = TermDefinition(k, sym, tsym, pss, tps, s, body,
                 TermDefFlags.empty.copy(isMethod = isMethod), mfn, annotations, N).withLocOf(td)
               tsym.defn = S(tdf)
               sym.tsym = S(tsym)
@@ -1966,7 +2048,7 @@ extends Importer:
               // For class-like types, "desugar" the parameters into additional class fields.
               
               val owner = td.symbol match
-                // Any MemberSymbol should be an InnerSymbol, except for TypeAliasSymbol, 
+                // Any MemberSymbol should be an InnerSymbol, except for TypeAliasSymbol,
                 // but type aliases should not call this function.
                 case s: InnerSymbol => S(s)
                 case _: TypeAliasSymbol => die
@@ -2172,7 +2254,7 @@ extends Importer:
                     N,
                     TermDefFlags.empty,
                     Modulefulness.none,
-                    annotations.collect: 
+                    annotations.collect:
                       case a @ Annot.Modifier(Keyword.`declare`) => a
                     ,
                     S(clsSym),
@@ -2325,7 +2407,7 @@ extends Importer:
             case S(spd) =>
               if spd is SpreadKind.Lazy then
                 raise(ErrorReport(msg"Lazy spread parameters not allowed." -> hd.toLoc :: Nil))
-              if tl.isEmpty then 
+              if tl.isEmpty then
                 (ParamList(flags, acc.reverse, S(p)).withLocOf(t), newCtx)
               else
                 raise(ErrorReport(msg"Spread parameters must be the last in the parameter list." -> hd.toLoc :: Nil))
@@ -2360,7 +2442,7 @@ extends Importer:
     /** Resolve an identifier. We need to perform a very preliminary check to
      *  determine whether this identifier refers to a pattern, a class, an
      *  object, or creates a new binding.
-     * 
+     *
      *  FIXME: This routine is insufficient to look up definitions defined
      *  later in the program. */
     def ident(id: Ident)(using Ctx): Ctxl[Opt[Term]] = scoped("ucs:pattern:resolution"):
@@ -2420,11 +2502,11 @@ extends Importer:
           // Found `...` (no following patterns), which means the spread part
           // will not be further matched. Set the spread pattern to `Wildcard`.
           (leading, S(SpreadKind.fromKw(ellipsis), Wildcard(), Nil))
-        case ((leading, N), t) => 
+        case ((leading, N), t) =>
           // Found a tuple field while the spread pattern is not set. Add the
           // elaborated pattern to the leading patterns.
           (go(t) :: leading, N)
-        case ((leading, S((spreadKind, spread, trailing))), t) => 
+        case ((leading, S((spreadKind, spread, trailing))), t) =>
           // Found a tuple field while the spread pattern has been set. Add the
           // elaborated pattern to the trailing patterns.
           (leading, S((spreadKind, spread, go(t) :: trailing)))
@@ -2657,7 +2739,7 @@ extends Importer:
         // fields.foreach(f => traverseType(pol)(f.value))
         fields.foreach(traverseType(pol))
       // case _ => ???
-      case Term.Neg(ty) => 
+      case Term.Neg(ty) =>
         traverseType(pol.!)(ty)
       case _ =>
         // TODO
