@@ -159,12 +159,6 @@ object NoSymbol extends MaybeSymbol:
   override def toString: Str = nme
 type NoSymbol = NoSymbol.type
 
-final class DisposeSymbol(using State) extends Symbol:
-  def nme: Str = "‹dispose symbol›"
-  override def toString: Str = nme
-  override def toLoc = N
-  override def subst(using SymbolSubst): Symbol = this
-
 /** Symbols bound by `Program.imports`.
   *
   * User-facing imports bind variable or member symbols, while compiler-generated imports
@@ -258,14 +252,12 @@ class VarSymbol(val id: Ident)(using State) extends LocalVarSymbol(id.name) with
   override def subst(using s: SymbolSubst): VarSymbol = s.mapVarSym(this)
 
 class BuiltinSymbol
-    (val nme: Str, val binary: Bool, val unary: Bool, val nullary: Bool, val functionLike: Bool)(using State)
+    (val nme: Str, val binary: Bool, val unary: Bool, val nullary: Bool, val functionLike: Bool, val isPure: Bool)(using State)
     extends Symbol:
   def toLoc: Option[Loc] = N
   override def prefix: Str = "builtin:"
   
   def subst(using sub: SymbolSubst): BuiltinSymbol = sub.mapBuiltInSym(this)
-  
-  def isPure: Bool = nme =/= "super" // * For now, all other builtins are pure
   
   // * A basic approximation of builtin operator types
   lazy val signature : semantics.flow.Producer =
@@ -398,7 +390,7 @@ sealed abstract case class LitSymbol(lit: Literal)(using State) extends CtorSymb
   def toLoc: Option[Loc] = lit.toLoc
   override def prefix: Str = "lit:"
 object LitSymbol:
-  val cache: mutable.Map[Literal, LitSymbol] = mutable.Map.empty
+  val cache: scala.collection.concurrent.Map[Literal, LitSymbol] = scala.collection.concurrent.TrieMap.empty
   def apply(lit: Literal)(using State): LitSymbol =
     cache.getOrElseUpdate(lit, new LitSymbol(lit){})
 
@@ -540,10 +532,9 @@ class PatternSymbol(val id: Tree.Ident, val params: Opt[Tree.Tup], val body: Tre
   def toLoc: Option[Loc] = id.toLoc // TODO track source tree of pattern here
   override def prefix: Str = "pattern:"
 
-  /** The fixed-point machine compiled from this definition, paired with
-    * whether a failed run must be retried with the naive translation;
-    * memoized across `@compile` match sites (see `ups.FixedPointCompiler`). */
-  var fixedPointMachine: Opt[(ups.FixedPointCompiler.Machine, Bool)] = N
+  /** The fixed-point machine compiled from this definition, memoized across
+    * `@compile` match sites (see `ups.FixedPointCompiler`). */
+  var fixedPointMachine: Opt[ups.FixedPointCompiler.Machine] = N
 
   override def subst(using sub: SymbolSubst): PatternSymbol = sub.mapPatSym(this)
 
