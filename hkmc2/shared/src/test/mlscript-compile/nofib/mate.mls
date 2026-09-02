@@ -4,6 +4,7 @@ open NofibPrelude
 
 module mate with ...
 
+open annotations
 
 
 //│ ————————————————————————————————————————————————————————————————————————————————
@@ -100,11 +101,11 @@ fun maybe(d, f, x) = if x is
   None then d
   Some(x) then f(x)
 
-fun isUpper(c) = let x = c.charCodeAt(0) in (x >= 65 and x <= 90)
+fun isUpper(c) = let x = @native c.charCodeAt(0) in (x >= 65 and x <= 90)
 
-fun isLower(c) = let x = c.charCodeAt(0) in (x >= 97 and x <= 122)
+fun isLower(c) = let x = @native c.charCodeAt(0) in (x >= 97 and x <= 122)
 
-fun toLower(c) = if isUpper(c) then String.fromCharCode(c.charCodeAt(0) + 32) else c
+fun toLower(c) = if isUpper(c) then @native String.fromCharCode((@native c.charCodeAt(0)) + 32) else c
 
 fun words(s) = if leaveWhile(x => x === " ", s) is
   Nil then Nil
@@ -430,7 +431,7 @@ fun last(ls) = if ls is
   x :: Nil then x
   h :: t then last(t)
 
-fun intOfString(s) = globalThis.parseInt(nofibListToString(s))
+fun intOfString(s) = @native globalThis.parseInt(nofibListToString(s))
 
 fun parseGoal(ls) = if ls is
   gltxt :: Nil then
@@ -572,7 +573,7 @@ fun solve(bd, c, n) = showResult(solution(bd, c, (2 * n) - 1))
 
 fun testMate_nofib(dummy) = 
   let input = nofibStringToList of
-    fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/heathcote3.prob").toString()
+    (@native fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/heathcote3.prob")).toString()
   let bdcn = readProblem(input)
   if bdcn is [bd, [c, n]] then
     showBoard(bd) +:

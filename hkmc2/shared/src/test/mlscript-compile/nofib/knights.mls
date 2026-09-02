@@ -4,9 +4,10 @@ open NofibPrelude
 
 module knights with ...
 
+open annotations
 
 fun myIsDigit(c) =
-  c.codePointAt(0) >= 48 && c.codePointAt(0) <= 57
+  (@native c.codePointAt(0)) >= 48 && (@native c.codePointAt(0)) <= 57
 
 fun intintComp(a_b, c_d) = if a_b is [a, b] and c_d is [c, d] then (a < c) || ((a === c) && (b < d))
 
@@ -256,7 +257,7 @@ fun depthSearch(q, growFn, finFn) =
 fun printTour(ss) =
   fun strToInt(y, xs) = if xs is
     Nil then y
-    x :: xs then strToInt((10 * y) + (x.codePointAt(0) - 48), xs)
+    x :: xs then strToInt((10 * y) + ((@native x.codePointAt(0)) - 48), xs)
   fun pp(xs) = if xs is
     Nil then Nil
     [x, y] :: xs then
