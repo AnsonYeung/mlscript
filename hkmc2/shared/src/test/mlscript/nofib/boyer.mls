@@ -1,5 +1,6 @@
 :js
 
+:nofib
 import "../../mlscript-compile/nofib/boyer.mls"
 boyer.main()
 //│ = true

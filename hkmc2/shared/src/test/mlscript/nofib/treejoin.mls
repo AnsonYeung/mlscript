@@ -1,5 +1,6 @@
 :js
 
+:nofib
 :re // nodejs stack size 8192 can handle this
 import "../../mlscript-compile/nofib/treejoin.mls"
 treejoin.main()

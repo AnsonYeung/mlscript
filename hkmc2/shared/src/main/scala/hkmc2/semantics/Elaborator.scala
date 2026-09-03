@@ -2291,6 +2291,10 @@ extends Importer:
         reportUnusedAnnotations
         val modify = ConfigParser.parseLanguageDirective(args)
         go(sts, Nil, SetConfig(modify) :: acc)
+      case Directive(Ident("nofib"), _) :: sts =>
+        // TODO: add nofib benchmark configs
+        reportUnusedAnnotations
+        go(sts, Nil, acc)
       case Directive(Ident(name), _) :: sts =>
         raise(ErrorReport(
           msg"Unknown directive '#${name}'" -> sts.headOption.flatMap(_.toLoc) :: Nil,

@@ -71,6 +71,7 @@ abstract class MLsDiffMaker extends DiffMaker:
   val noFreeze = NullaryCommand("noFreeze")
   val noModuleCheck = NullaryCommand("noModuleCheck")
   val effectHandlers = Command("effectHandlers")(_.trim)
+  val nofib = NullaryCommand("nofib")
   val effectHandlersOptions = Set("debug", "")
   val stackSafe = Command("stackSafe")(_.trim)
   val liftDefns = NullaryCommand("lift")

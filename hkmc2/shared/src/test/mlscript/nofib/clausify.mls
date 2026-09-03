@@ -1,5 +1,6 @@
 :js
 
+:nofib
 import "../../mlscript-compile/nofib/clausify.mls"
 clausify.main()
 //│ = "a <=\na <=\na <=\na <=\na <=\na <=\na <=\na <=\na <=\na <=\n"

@@ -1,5 +1,6 @@
 :js
 
+:nofib
 import "../../mlscript-compile/nofib/constraints.mls"
 constraints.main()
 //│ = "[4,4,4,4,4]"

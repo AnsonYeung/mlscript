@@ -1,5 +1,6 @@
 :js
 
+:nofib
 // This is caused by the implementation of `+:` in `NofibPrelude.mls`. Replacing
 // `+:` with a non-recursive implementation can fix the stack overflow error.
 // However, it will cause the file size to increase by ~390 KiB.

@@ -1,5 +1,6 @@
 :js
 
+:nofib
 import "../../mlscript-compile/nofib/boyer2.mls"
 boyer2.main()
 //│ = "The term is a tautology"

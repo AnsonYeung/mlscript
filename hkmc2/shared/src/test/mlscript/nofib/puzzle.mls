@@ -1,5 +1,6 @@
 :js
 
+:nofib
 
 // This used to require NodeJS stack size ~8192,
 // but since we now lift everything by default, we benefit from tail-recursion optimization.

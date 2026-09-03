@@ -1,5 +1,6 @@
 :js
 
+:nofib
 :re
 import "../../mlscript-compile/nofib/cryptarithm1.mls"
 cryptarithm1.main()

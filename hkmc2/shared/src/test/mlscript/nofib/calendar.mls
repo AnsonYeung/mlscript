@@ -1,5 +1,6 @@
 :js
 
+:nofib
 import "../../mlscript-compile/nofib/calendar.mls"
 print(calendar.main())
 //│ >                                    1993                                    
