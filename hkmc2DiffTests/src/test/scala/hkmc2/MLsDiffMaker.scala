@@ -8,6 +8,7 @@ import utils.*
 import hkmc2.semantics.{Elaborator, Resolver, Resolvable, Symbol, SymbolPrinter}
 
 import semantics.Elaborator.{Ctx, State}
+import hkmc2.codegen.HandlerLowering
 
 abstract class MLsDiffMaker extends DiffMaker:
   
@@ -130,7 +131,7 @@ abstract class MLsDiffMaker extends DiffMaker:
       baseDir = wd,
       sanityChecks = Opt.when(noSanityCheck.isUnset)(SanityChecks(light = true, checkUnreachable = true)),
       effectHandlers = Opt.when(effectHandlers.isSet)(EffectHandlers(
-        strategy = Config.EffectHandlerStrategy.IfCheck,
+        strategy = HandlerLowering.defaultStrategy,
         debug = effectHandlers.get.contains("debug"),
         stackSafety = stackSafe.get.flatMap:
           case "off" => N

@@ -84,9 +84,9 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
         case (S(res), uid) =>
           assert(uid === nextState)
           blockBuilder
-            .staticif(ExceptionToggle, _.assign(flattenCtx.pcVar, intLit(uid)))
+            .staticif(useExceptions, _.assign(flattenCtx.pcVar, intLit(uid)))
             .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-            .staticif(!ExceptionToggle, _
+            .staticif(!useExceptions, _
               .ifthen(
                 paths.curEffect,
                 Case.Lit(Tree.UnitLit(true)),

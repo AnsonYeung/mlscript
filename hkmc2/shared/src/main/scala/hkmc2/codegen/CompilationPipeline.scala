@@ -49,7 +49,7 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
       else prog
     runPass("HandlerLowering"): prog =>
       config.effectHandlers match
-      case S(strategy = Config.EffectHandlerStrategy.Generator) =>
+      case S(strategy = _: HandlerLowering.Generator) =>
         GeneratorHandlerLowering().applyProgram(prog)
       case _ =>
         HandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)

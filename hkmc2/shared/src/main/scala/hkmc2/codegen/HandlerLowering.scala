@@ -21,8 +21,50 @@ import hkmc2.codegen.handlers.ClassCodegen
 
 object HandlerLowering:
 
-  val ExceptionToggle = false
-  val DoubleCompilation = false
+  abstract class Strategy:
+    def beginUnwind(using State): Block
+    def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
+
+  abstract class ExoticStrategy extends Strategy:
+    override def beginUnwind(using State): Block =
+      Return(unit)
+    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(p)
+
+  case class IfCheck() extends Strategy:
+    override def beginUnwind(using State): Block =
+      Return(unit)
+    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+
+  case class ExceptionRethrow() extends Strategy:
+    override def beginUnwind(using State): Block =
+      Throw(State.runtimeSymbol.asSimpleRef.selSN("EffectException"))
+    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block = 
+
+      val tmp = loweringCtx.registerTempSymbol(N)
+      val err = new TempSymbol(N, "e")
+      TryCatch(
+        Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
+        err,
+        Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("effectRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
+        k(tmp.asSimpleRef)
+      )
+  
+  case class DoubleCompilation() extends Strategy:
+    override def beginUnwind(using State): Block =
+      Return(unit)
+    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+  
+  case class Generator() extends ExoticStrategy
+  
+  def currentStrategy(using Config): Strategy =
+    config.effectHandlers.fold(noneStrategy)(_.strategy)
+  
+  val defaultStrategy = IfCheck()
+
+  val noneStrategy = IfCheck()
 
   private val pcIdent: Tree.Ident = Tree.Ident("pc")
   private val nextIdent: Tree.Ident = Tree.Ident("next")
@@ -141,6 +183,7 @@ object HandlerLowering:
   type ResultMap = collection.Map[Identity[Result], StateId]
   
   class SharedState(val opt: Opt[EffectHandlers])(using Elaborator.State, Config):
+    val useExceptions = opt.exists(_.strategy.isInstanceOf[ExceptionRethrow])
     val estate = summon[Elaborator.State]
     val cfg = summon[Config]
     def freshTmp(dbgNme: Str = "tmp") = new TempSymbol(N, dbgNme)
@@ -200,6 +243,9 @@ class HandlerPaths(using Elaborator.State):
   val resumeValue: Path = runtimePath.selN(resumeValueIdent)
 
 class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, Raise, Elaborator.State, Elaborator.Ctx, Config):
+
+  val ExceptionToggle = opt.exists(_.strategy.isInstanceOf[ExceptionRethrow])
+  val DoubleCompilation = opt.exists(_.strategy.isInstanceOf[DoubleCompilation])
   
   val debugEnabled = opt.exists(_.debug)
   val stackSafety = opt.flatMap(_.stackSafety)

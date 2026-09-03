@@ -906,10 +906,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
         if allArgs.length > 1 then
           subTerm(baseF)(conclude)
         else
-          if HandlerLowering.ExceptionToggle then
-            Throw(State.runtimeSymbol.asSimpleRef.selSN("EffectException"))
-          else
-            Return(unit)
+          HandlerLowering.currentStrategy.beginUnwind
       case t if instantiatedResolvedBms.exists(_ is ctx.builtins.internals.effectfulCallToInternal) =>
         if allArgs.length > 1 then
           subTerm(baseF)(conclude)
@@ -917,17 +914,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
           lowerArgs(arg): loweredArg =>
             loweredArg match
             case Arg(N, p) :: Nil =>
-              if HandlerLowering.ExceptionToggle then
-                val tmp = loweringCtx.registerTempSymbol(N)
-                val err = new TempSymbol(N, "e")
-                TryCatch(
-                  Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
-                  err,
-                  Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("effectRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
-                  k(tmp.asSimpleRef)
-                )
-              else
-                k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+              HandlerLowering.currentStrategy.effectfulCallToInternal(loweringCtx, p, k)
             case _ =>
               fail:
                 ErrorReport(

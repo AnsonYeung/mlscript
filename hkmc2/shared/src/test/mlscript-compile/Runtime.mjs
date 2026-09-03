@@ -1107,12 +1107,12 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
     let scrut, tmp;
     scrut = saved.at(1) === -2;
     if (scrut === true) {
-      return runtime.Unit
+      return null
     }
     tmp = new Runtime.FunctionContFrameImpl.class(null, saved);
     Runtime.curEffect.contTrace.last.next = tmp;
     Runtime.curEffect.contTrace.last = Runtime.curEffect.contTrace.last.next;
-    return runtime.Unit;
+    return null;
   }
   static unwindFramed(frame) {
     Runtime.curEffect.contTrace.last.next = frame;
@@ -1126,7 +1126,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
     res.contTrace.last = res.contTrace;
     res.contTrace.lastHandler = res.contTrace;
     Runtime.curEffect = res;
-    return runtime.Unit
+    return null
   }
   static handleBlockImpl(cur, handler) {
     let handlerFrame;
@@ -1161,7 +1161,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
         scrut = cur === nxt;
         if (scrut === true) {
           Runtime.curEffect = cur;
-          return runtime.Unit
+          return null
         }
         cur = nxt;
         continue lbl;

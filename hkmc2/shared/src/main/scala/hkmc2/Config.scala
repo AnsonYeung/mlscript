@@ -5,6 +5,7 @@ import utils.*
 
 import Config.*
 import Message.MessageContext
+import hkmc2.codegen.HandlerLowering
 
 
 /** The compilation target of a program. */
@@ -129,13 +130,9 @@ object Config:
   case class TypeChecking()
   
   case class SanityChecks(light: Bool, checkUnreachable: Bool)
-  
-  enum EffectHandlerStrategy:
-    case IfCheck
-    case Generator
 
   case class EffectHandlers(
-    strategy: EffectHandlerStrategy,
+    strategy: HandlerLowering.Strategy,
     debug: Bool,
     stackSafety: Opt[StackSafety],
     // Whether we check `Instantiate` nodes for effects. Currently, effects cannot be raised in constructors.
@@ -514,7 +511,7 @@ object ConfigParser:
   
   private def parseEffectHandlers(tree: Tree, current: Opt[Config.EffectHandlers])(using Raise): Opt[Config.EffectHandlers] = tree match
     case Call("EffectHandlers", args) =>
-      val base = current.getOrElse(Config.EffectHandlers(strategy = EffectHandlerStrategy.IfCheck, debug = false, stackSafety = N))
+      val base = current.getOrElse(Config.EffectHandlers(strategy = HandlerLowering.defaultStrategy, debug = false, stackSafety = N))
       val strategy = base.strategy
       var debug = base.debug
       var stackSafety = base.stackSafety
