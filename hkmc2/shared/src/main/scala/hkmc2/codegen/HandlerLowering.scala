@@ -165,7 +165,8 @@ object HandlerLowering:
           case s: Select if s.name.name === "toString" => false
           case s: Select if s.symbol.isEmpty =>
             true
-          case Select(Value.MemberRef(bms, disamb), _) if bms.nme === "Predef" => false
+          case s @ Select(Value.MemberRef(bms, disamb), _) if bms.nme === "Predef" =>
+            s.symbol.exists(_.irDefn.exists(_.annotations.contains(Annot.RaiseEffects)))
           case Value.RefLike(State.superSymbol) => config.checkInstantiateEffect
           case _ => true
       case _: Instantiate if config.checkInstantiateEffect => true

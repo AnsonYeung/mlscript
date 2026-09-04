@@ -4,14 +4,17 @@
 
 
 // This acts as a function that may throw an effect
+@annotations.noInline
 fun f() = ()
 
 // A constant function to block any potential optimization.
+@annotations.noInline
 fun always_true() = true
 
 
 // Observe that no local variables will be saved, as they are not needed.
 :sjs
+:noOpt
 fun g() =
   let a =
     if always_true() then
@@ -24,7 +27,7 @@ fun g() =
 //│ let g;
 //│ runtime.resetEffects();
 //│ g = function g() {
-//│   let scrut, tmp, pc;
+//│   let a, scrut, tmp, pc;
 //│   if (runtime.resumePc === -1) {
 //│     pc = 0;
 //│   } else {
@@ -34,35 +37,37 @@ fun g() =
 //│   main: while (true) {
 //│     switch (pc) {
 //│       case 0:
-//│         runtime.resumeValue = true;
-//│         if (runtime.curEffect === null) {
-//│           pc = 3;
-//│         } else {
-//│           return runtime.unwind(g, 3, "SavedVars.mls:17:8", null, null, 1, 0, 0)
+//│         brk0: {
+//│           runtime.resumeValue = always_true();
+//│           if (runtime.curEffect === null) {
+//│             break brk0
+//│           }
+//│           return runtime.unwind(g, 3, "SavedVars.mls:20:8", null, null, 1, 0, 0);
 //│         }
+//│         pc = 3;
 //│       case 3:
 //│         scrut = runtime.resumeValue;
 //│         if (scrut === true) {
-//│           let inlinedVal;
-//│           inlinedVal = runtime.Unit;
-//│           runtime.resumeValue = inlinedVal;
+//│           runtime.resumeValue = f();
 //│           if (runtime.curEffect === null) {
 //│             pc = 2;
 //│             continue main
 //│           }
-//│           return runtime.unwind(g, 2, "SavedVars.mls:18:7", null, null, 1, 0, 0);
+//│           return runtime.unwind(g, 2, "SavedVars.mls:21:7", null, null, 1, 0, 0);
 //│         }
 //│         tmp = 2;
 //│         pc = 1;
 //│         continue main;
 //│       case 2:
-//│         runtime.resumeValue;
-//│         tmp = 1;
+//│         brk2: {
+//│           runtime.resumeValue;
+//│           tmp = 1;
+//│           break brk2;
+//│         }
 //│         pc = 1;
-//│         if (1 === 1) { return 1 }
-//│         break;
 //│       case 1:
-//│         return tmp;
+//│         a = tmp;
+//│         return a;
 //│     }
 //│     break;
 //│   }

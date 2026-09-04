@@ -199,7 +199,12 @@ fun max(a, b) = if a < b then b else a
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let max;
 //│ runtime.resetEffects();
-//│ max = function max(a, b) { let scrut; scrut = a < b; if (scrut === true) { return b } return a; };
+//│ max = function max(a, b) {
+//│   let scrut1;
+//│   scrut1 = a < b;
+//│   if (scrut1 === true) { return b }
+//│   return a;
+//│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

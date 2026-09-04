@@ -1545,6 +1545,8 @@ class BlockSimplifier
           // policy could silently turn mutable values into frozen values, or vice versa.
           if defn.dSym.getState.compilationUnitConfig.exists(_.noFreeze =/= config.noFreeze)
           then return false
+          if defn.dSym.getState.compilationUnitConfig.exists(_.effectHandlers =/= config.effectHandlers)
+          then return false
           true
 
         // Whether this function can be inlined without causing any code duplication,
