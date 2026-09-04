@@ -6,7 +6,7 @@ open annotations
 
 
 :re
-@raiseEffects raiseUnhandledEffect()
+raiseUnhandledEffect()
 //│ ═══[RUNTIME ERROR] Error: Unhandled effect FatalEffect
 //│ 	at tail position
 
@@ -16,7 +16,7 @@ fun f() =
   let j = 100
   let k = 2000
   if i == 0 do
-    print of @raiseEffects raiseUnhandledEffect()
+    print of raiseUnhandledEffect()
   j / i
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f, f$debugInfo;
@@ -45,7 +45,7 @@ fun f() =
 //│         if (runtime.curEffect === null) {
 //│           pc = 1;
 //│         } else {
-//│           return runtime.unwind(f, 1, "Debugging.mls:19:28", f$debugInfo, null, 1, 0, 2, scrut, tmp1)
+//│           return runtime.unwind(f, 1, "Debugging.mls:19:14", f$debugInfo, null, 1, 0, 2, scrut, tmp1)
 //│         }
 //│       } else {
 //│         return 100 / 0
@@ -61,7 +61,7 @@ fun f() =
 :re
 f()
 //│ ═══[RUNTIME ERROR] Error: Unhandled effect FatalEffect
-//│ 	at f (Debugging.mls:19:28)
+//│ 	at f (Debugging.mls:19:14)
 
 :re
 fun lambda_test(f) =

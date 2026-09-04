@@ -49,8 +49,8 @@ fun f() =
 @async
 fun f() =
   print(0)
-  let x = @raiseEffects await(Promise.resolve(1))
-  @raiseEffects raiseUnhandledEffect()
+  let x = await(Promise.resolve(1))
+  raiseUnhandledEffect()
   print(1)
 f()
 //│ > 0

@@ -158,7 +158,9 @@ object HandlerLowering:
     def unapply(r: Result)(using Config, State): Bool = r match
       case c: Call if c.metadata.mayRaiseEffects =>
         if c.metadata.isNative then return false
-        if c.metadata.annotations.contains(Annot.RaiseEffects) then return true
+        // TODO: Was there some code that strips away annotation for Debugging.mls to fail
+        // in the commit that move HandlerLowering after optimization?
+        // if c.metadata.annotations.contains(Annot.RaiseEffects) then return true
         c.fun match
           case Value.MemberRef(_, c: ClassCtorSymbol) => false
           case s: Select if s.symbol.map(x => x.isInstanceOf[ClassCtorSymbol]).getOrElse(false) => config.checkInstantiateEffect

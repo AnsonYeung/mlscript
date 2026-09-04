@@ -1493,7 +1493,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
         case st.App(_, _) | New(_, _, _) | DynNew(_, _) | Mut(_: New | _: DynNew) => ()
         case st.Resolved(_, defnSym) if isImplicitNullaryCall(defnSym) => ()
         case _ => warn(annot)
-      case a: (Annot.TailCall.type | Annot.Native.type | Annot.RaiseEffects.type) => receiver match
+      case a: (Annot.TailCall.type | Annot.Native.type) => receiver match
         case st.App(Ref(_: BuiltinSymbol), _) => warn(a, S(msg"This annotation has no effect on calls to built-in symbols."))
         case st.App(_, _) => ()
         case st.Resolved(_, defnSym) if isImplicitNullaryCall(defnSym) => ()
