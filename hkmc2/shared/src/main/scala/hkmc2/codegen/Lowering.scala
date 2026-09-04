@@ -906,7 +906,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
         if allArgs.length > 1 then
           subTerm(baseF)(conclude)
         else
-          HandlerLowering.currentStrategy.beginUnwind
+          HandlerLowering.runtimeStrategy.beginUnwind
       case t if instantiatedResolvedBms.exists(_ is ctx.builtins.internals.effectfulCallToInternal) =>
         if allArgs.length > 1 then
           subTerm(baseF)(conclude)
@@ -914,7 +914,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
           lowerArgs(arg): loweredArg =>
             loweredArg match
             case Arg(N, p) :: Nil =>
-              HandlerLowering.currentStrategy.effectfulCallToInternal(loweringCtx, p, k)
+              HandlerLowering.runtimeStrategy.effectfulCallToInternal(loweringCtx, p, k)
             case _ =>
               fail:
                 ErrorReport(

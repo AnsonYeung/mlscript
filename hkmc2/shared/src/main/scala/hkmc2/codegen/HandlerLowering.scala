@@ -63,8 +63,12 @@ object HandlerLowering:
     config.effectHandlers.fold(noneStrategy)(_.strategy)
   
   val defaultStrategy = IfCheck()
+  val nofibEffectHandlers: Opt[EffectHandlers] = N
 
-  val noneStrategy = IfCheck()
+  // This will be used when compiling Runtime.mls
+  // Used for resolving internals.* stubs
+  val runtimeStrategy = defaultStrategy
+  val noneStrategy = runtimeStrategy
 
   private val pcIdent: Tree.Ident = Tree.Ident("pc")
   private val nextIdent: Tree.Ident = Tree.Ident("next")
