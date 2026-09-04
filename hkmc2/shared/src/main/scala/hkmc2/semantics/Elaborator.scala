@@ -19,6 +19,7 @@ import Keyword.{`and`, `case`, `do`, `else`, `if`, `is`, `let`, `or`, `set`, `th
 import hkmc2.utils.Scope
 import SimpleSplit.*
 import ucs.{error, unapply}
+import hkmc2.codegen.HandlerLowering
 
 
 object Elaborator:
@@ -2292,9 +2293,8 @@ extends Importer:
         val modify = ConfigParser.parseLanguageDirective(args)
         go(sts, Nil, SetConfig(modify) :: acc)
       case Directive(Ident("nofib"), _) :: sts =>
-        // TODO: add nofib benchmark configs
         reportUnusedAnnotations
-        go(sts, Nil, acc)
+        go(sts, Nil, SetConfig(_.copy(effectHandlers = HandlerLowering.nofibEffectHandlers)) :: acc)
       case Directive(Ident(name), _) :: sts =>
         raise(ErrorReport(
           msg"Unknown directive '#${name}'" -> sts.headOption.flatMap(_.toLoc) :: Nil,

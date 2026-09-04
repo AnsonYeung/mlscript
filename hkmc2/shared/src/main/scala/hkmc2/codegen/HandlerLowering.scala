@@ -63,7 +63,14 @@ object HandlerLowering:
     config.effectHandlers.fold(noneStrategy)(_.strategy)
   
   val defaultStrategy = IfCheck()
-  val nofibEffectHandlers: Opt[EffectHandlers] = N
+  val nofibEffectHandlers: Opt[EffectHandlers] = S(EffectHandlers(
+    strategy = defaultStrategy,
+    debug = false,
+    stackSafety = S(Config.StackSafety(100)),
+    false,
+    false,
+    false,
+  ))
 
   // This will be used when compiling Runtime.mls
   // Used for resolving internals.* stubs

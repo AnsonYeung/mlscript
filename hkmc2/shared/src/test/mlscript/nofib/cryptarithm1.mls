@@ -1,7 +1,6 @@
 :js
 
 :nofib
-:re
 import "../../mlscript-compile/nofib/cryptarithm1.mls"
 cryptarithm1.main()
-//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded
+//│ = [[[1,9,4,2,5,3,0,7,6,8]]]

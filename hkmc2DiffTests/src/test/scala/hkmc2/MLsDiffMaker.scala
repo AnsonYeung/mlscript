@@ -126,11 +126,7 @@ abstract class MLsDiffMaker extends DiffMaker:
         output(s"$errMarker Option ':effectHandlers' requires ':lift'")
     if inlineThreshold.isSet && noInlineOpt.isSet then
       output(s"$errMarker Option ':noInline' conflicts with option ':inlineThreshold'")
-    Config(
-      language = Config.Language.default,
-      baseDir = wd,
-      sanityChecks = Opt.when(noSanityCheck.isUnset)(SanityChecks(light = true, checkUnreachable = true)),
-      effectHandlers = Opt.when(effectHandlers.isSet)(EffectHandlers(
+    val effectHandlersConfig = Opt.when(effectHandlers.isSet)(EffectHandlers(
         strategy = HandlerLowering.defaultStrategy,
         debug = effectHandlers.get.contains("debug"),
         stackSafety = stackSafe.get.flatMap:
@@ -151,7 +147,12 @@ abstract class MLsDiffMaker extends DiffMaker:
               else
                 S(StackSafety(stackLimit = value))
         ,
-      )),
+      ))
+    Config(
+      language = Config.Language.default,
+      baseDir = wd,
+      sanityChecks = Opt.when(noSanityCheck.isUnset)(SanityChecks(light = true, checkUnreachable = true)),
+      effectHandlers = if nofib.isSet then HandlerLowering.nofibEffectHandlers else effectHandlersConfig,
       liftDefns = Opt.when(liftDefns.isSet)(LiftDefns()),
       patMatConsequentSharingThreshold = patMatConsequentSharingThreshold.get
         .orElse(Config.default.patMatConsequentSharingThreshold),
