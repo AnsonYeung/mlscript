@@ -552,7 +552,7 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
               // * In JS, `let x = (0, function (args) {...})` makes the function anonymous;
               // * otherwise, using `let x = function (args) {...}` would name the function `x`,
               // * which is not meaningful, here.
-              doc"${scope.lookup_!(sym, dSym.toLoc)} = (undefined, function ($params) ${ braced(bodyDoc) });"
+              doc"${scope.lookup_!(sym, dSym.toLoc)} = (undefined, $functionKeyword ($params) ${ braced(bodyDoc) });"
             
           case ClsLikeDefn(ownr, isym, sym, ctorSym, kind, paramsOpt, auxParams, par, mtds,
               privFlds, pubFlds, preCtor, ctor, modo, bufferable)
