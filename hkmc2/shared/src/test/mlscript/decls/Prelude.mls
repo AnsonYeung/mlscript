@@ -268,6 +268,7 @@ declare module debug with
 declare module internals with
   fun effectfulCallToInternal
   fun beginUnwind
+  fun runStackSafe
 
 declare module annotations with
   object untyped

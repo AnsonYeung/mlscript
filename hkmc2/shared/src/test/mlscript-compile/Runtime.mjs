@@ -730,6 +730,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
       toString() { return runtime.render(this); }
       static [definitionMetadata] = ["object", "StackDelayHandler"];
     });
+    Runtime.runStackSafeGenerator = RuntimeJS.runStackSafeGenerator;
     Runtime.checkDepthGenerator = RuntimeJS.checkDepthGenerator;
     Runtime.GeneratorStackSafety = RuntimeJS.GeneratorStackSafety;
     Runtime.Int31 = function Int31(v) {

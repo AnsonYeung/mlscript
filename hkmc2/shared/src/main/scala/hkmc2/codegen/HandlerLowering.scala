@@ -24,6 +24,7 @@ object HandlerLowering:
   abstract class Strategy:
     def beginUnwind(using State): Block
     def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
+    def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
 
   abstract class ExoticStrategy extends Strategy:
     override def beginUnwind(using State): Block =
@@ -36,6 +37,8 @@ object HandlerLowering:
       Return(unit)
     override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
 
   case class ExceptionRethrow() extends Strategy:
     override def beginUnwind(using State): Block =
@@ -50,27 +53,36 @@ object HandlerLowering:
         Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("effectRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
         k(tmp.asSimpleRef)
       )
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
   case class DoubleCompilation() extends Strategy:
     override def beginUnwind(using State): Block =
       Return(unit)
     override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
-  case class Generator() extends ExoticStrategy
+  case class Generator() extends ExoticStrategy:
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
   def currentStrategy(using Config): Strategy =
     config.effectHandlers.fold(noneStrategy)(_.strategy)
   
-  val defaultStrategy = IfCheck()
-  val nofibEffectHandlers: Opt[EffectHandlers] = S(EffectHandlers(
-    strategy = defaultStrategy,
-    debug = false,
-    stackSafety = S(Config.StackSafety(100)),
-    false,
-    false,
-    false,
-  ))
+  val defaultStrategy: Strategy = IfCheck()
+  // These nofib options is also used for resolving `internals.runStackSafe` stub
+  val nofibMaxStackDepth = 100
+  val nofibEffectHandlers: Opt[EffectHandlers] =
+    S(EffectHandlers(
+      strategy = defaultStrategy,
+      debug = false,
+      stackSafety = S(Config.StackSafety(nofibMaxStackDepth)),
+      false,
+      false,
+      false,
+    ))
 
   // This will be used when compiling Runtime.mls
   // Used for resolving internals.* stubs

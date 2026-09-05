@@ -921,6 +921,23 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
                   msg"Unsupported form for internal function." ->
                   t.toLoc :: Nil,
                   source = Diagnostic.Source.Compilation)
+      case t if instantiatedResolvedBms.exists(_ is ctx.builtins.internals.runStackSafe) =>
+        if allArgs.length > 1 then
+          subTerm(baseF)(conclude)
+        else
+          lowerArgs(arg): loweredArg =>
+            loweredArg match
+            case Arg(N, p) :: Nil =>
+              if HandlerLowering.nofibEffectHandlers.isDefined then
+                HandlerLowering.runtimeStrategy.runStackSafe(loweringCtx, p, k)
+              else
+                k(Call(p, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
+            case _ =>
+              fail:
+                ErrorReport(
+                  msg"Unsupported form for internal function." ->
+                  t.toLoc :: Nil,
+                  source = Diagnostic.Source.Compilation)
       case t if specialBuiltin.contains(SpecialBuiltin.ScopeLocally) =>
         // scope.locally only applies to the innermost call; extra args are applied on top
         if allArgs.length > 1 then
