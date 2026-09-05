@@ -1,7 +1,6 @@
 :js
 
 :nofib
-
 import "../../mlscript-compile/nofib/mandel.mls"
 mandel.main()
 //│ = Pixmap(

@@ -697,7 +697,7 @@ final case class FunDefn(
   val asPath = sym.asMemberRef(dSym)
   lazy val tailRec: Bool = annotations.contains(Annot.TailRec)
   lazy val inline: Bool = annotations.contains(Annot.Inline)
-  lazy val noInline: Bool = annotations.contains(Annot.NoInline) || generator || async
+  lazy val noInline: Bool = annotations.contains(Annot.NoInline) || generator || async || annotations.contains(Annot.Native)
   lazy val generator: Bool = annotations.contains(Annot.Generator)
   lazy val async: Bool = annotations.contains(Annot.Async)
   lazy val visibility: Visibility = annotations.collectFirst:

@@ -1,7 +1,7 @@
 :js
 
 :nofib
-
 import "../../mlscript-compile/nofib/gcd.mls"
 gcd.main()
 //│ = 5021
+

@@ -1,7 +1,6 @@
 :js
 
 :nofib
-
 import "../../mlscript-compile/nofib/minimax.mls"
 print(minimax.main())
 //│ > OXO

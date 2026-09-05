@@ -29,15 +29,15 @@ abstract class List[out T]: Cons[T] | Nil
 data class (::) Cons[out T](head: T, tail: List[T]) extends List[T] with
   @native
   fun toString() =
-    "[" + _internal_cons_to_str(new Cons(head, tail)) + "]"
+    "[" + (@native _internal_cons_to_str(new Cons(head, tail))) + "]"
 object Nil extends List with
   @native
   fun toString() = "[]"
 @native
 fun _internal_cons_to_str(ls) = if ls is
   Nil then ""
-  h :: Nil then render(h)
-  h :: t then render(h) + "," + _internal_cons_to_str(t)
+  h :: Nil then @native render(h)
+  h :: t then (@native render(h)) + "," + (@native _internal_cons_to_str(t))
 fun ltList(xs, ys, lt, gt) = if xs is
   Nil and
     ys is Nil then false

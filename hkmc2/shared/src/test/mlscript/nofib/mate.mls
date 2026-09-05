@@ -1,7 +1,6 @@
 :js
 
 :nofib
-
 import "../../mlscript-compile/nofib/mate.mls"
 print(mate.main())
 //│ >  - - - - - - - -
