@@ -107,6 +107,13 @@ sealed abstract class Block extends Product:
           |${finallyDo.showDbg}
           |}
           |${rest.showDbg}""".stripMargin
+    case TryCatch(sub, catchVar, catchBody, rest) =>
+      s"""|Try {
+          |${sub.showDbg}
+          |} catch (${catchVar.showDbg}) {
+          |${catchBody.showDbg}
+          |}
+          |${rest.showDbg}""".stripMargin
     case Assign(lhs, rhs, rest) =>
       s"""|Assign(${lhs.showDbg} = ${rhs.showDbg})
           |${rest.showDbg}""".stripMargin
@@ -137,6 +144,7 @@ sealed abstract class Block extends Product:
     case Match(_, arms, dflt, rst) => rst.isAbortive || arms.forall(_._2.isAbortive) && dflt.exists(_.isAbortive)
     case Define(_, rst) => rst.isAbortive
     case TryBlock(sub, fin, rst) => rst.isAbortive || sub.isAbortive || fin.isAbortive
+    case TryCatch(sub, _, catchBody, rst) => rst.isAbortive
     case Label(sym, loop, bod, rst) =>
       // * Note: the body may be abortive for the reason of breaking to the rest!
       // * So we can't really use the result of bod.isAbortive even when `loop` is false.
@@ -162,6 +170,7 @@ sealed abstract class Block extends Product:
       val rest = rst.definedVars
       if defn.isOwned then rest else rest + defn.sym
     case TryBlock(sub, fin, rst) => sub.definedVars ++ fin.definedVars ++ rst.definedVars
+    case TryCatch(sub, catchVar, catchBody, rst) => sub.definedVars ++ (catchBody.definedVars.filterNot(_ is catchVar)) ++ rst.definedVars
     case Label(lbl, _, bod, rst) => bod.definedVars ++ rst.definedVars
     case Scoped(syms, body) => body.definedVars -- syms
   
@@ -179,6 +188,7 @@ sealed abstract class Block extends Product:
     case TryBlock(sub, fin, rst) => sub.size + fin.size + rst.size
     case Label(_, _, bod, rst) => bod.size + rst.size
     case Scoped(_, body) => body.size - 1
+    case TryCatch(sub, _, catchBody, rst) => 1 + sub.size + catchBody.size + rst.size
   
   
   // TODO: make patmat use unreach
@@ -202,6 +212,8 @@ sealed abstract class Block extends Product:
     case Continue(label) => Set.single(label)
     case Begin(sub, rest) => sub.freeVars ++ rest.freeVars
     case TryBlock(sub, finallyDo, rest) => sub.freeVars ++ finallyDo.freeVars ++ rest.freeVars
+    case TryCatch(sub, NoSymbol, catchBody, rest) => sub.freeVars ++ catchBody.freeVars ++ rest.freeVars
+    case TryCatch(sub, catchVar: LocalVarSymbol, catchBody, rest) => sub.freeVars ++ catchBody.freeVars - catchVar ++ rest.freeVars
     case Assign(NoSymbol, rhs, rest) => rhs.freeVars ++ rest.freeVars
     case Assign(lhs: LocalVarSymbol, rhs, rest) => Set.single(lhs) ++ rhs.freeVars ++ rest.freeVars
     case AssignField(lhs, nme, rhs, rest) => lhs.freeVars ++ rhs.freeVars ++ rest.freeVars
@@ -219,6 +231,7 @@ sealed abstract class Block extends Product:
     case Match(p, arms, dflt, rest) => p.subBlocks ++ arms.map(_._2) ++ dflt.toList :+ rest
     case Begin(sub, rest) => sub :: rest :: Nil
     case TryBlock(sub, finallyDo, rest) => sub :: finallyDo :: rest :: Nil
+    case TryCatch(sub, catchVar, catchBody, rest) => sub :: catchBody :: rest :: Nil
     case Assign(_, rhs, rest) => rhs.subBlocks ::: rest :: Nil
     case AssignField(_, _, rhs, rest) => rhs.subBlocks ::: rest :: Nil
     case AssignDynField(_, _, _, rhs, rest) => rhs.subBlocks ::: rest :: Nil
@@ -293,6 +306,14 @@ sealed abstract class Block extends Product:
       if (newSub is sub) && (newFinallyDo is finallyDo) && (newRest is rest)
       then this
       else TryBlock(newSub, newFinallyDo, newRest)
+      
+    case TryCatch(sub, catchVar, catchBody, rest) =>
+      val newSub = sub.flattened
+      val newCatchBody = catchBody.flattened
+      val newRest = rest.flatten(k)
+      if (newSub is sub) && (newCatchBody is catchBody) && (newRest is rest)
+      then this
+      else TryCatch(newSub, catchVar, newCatchBody, newRest)
       
     case Assign(lhs, rhs, rest) =>
       val newRest = rest.flatten(k)
@@ -390,6 +411,8 @@ extends Block with NonBlockTail:
 
 // TODO: remove this form?
 case class Begin(sub: Block, rest: Block) extends Block with ProductWithTail with NonBlockTail
+
+case class TryCatch(sub: Block, catchVar: Assignable, catchBody: Block, rest: Block) extends Block with ProductWithTail with NonBlockTail
 
 case class TryBlock(sub: Block, finallyDo: Block, rest: Block) extends Block with ProductWithTail with NonBlockTail
 

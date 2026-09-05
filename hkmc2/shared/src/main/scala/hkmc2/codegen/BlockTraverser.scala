@@ -47,6 +47,7 @@ class BlockTraverser:
     case Label(lbl, loop, bod, rst) => applySymbol(lbl); applySubBlock(bod); applySubBlock(rst)
     case Begin(sub, rst) => applySubBlock(sub); applySubBlock(rst)
     case TryBlock(sub, fin, rst) => applySubBlock(sub); applySubBlock(fin); applySubBlock(rst)
+    case TryCatch(sub, catchVar, catchBody, rst) => applySubBlock(sub); applyMaybeSymbol(catchVar); applySubBlock(catchBody); applySubBlock(rst)
     case Assign(l, r, rst) => applyMaybeSymbol(l); applyResult(r); applySubBlock(rst)
     case b @ AssignField(l, n, r, rst) =>
       applyPath(l); applyResult(r); applySubBlock(rst); b.symbol.foreach(_.traverse)

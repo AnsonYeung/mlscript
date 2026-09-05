@@ -80,6 +80,10 @@ declare module wasm with
 declare module debug with
   fun printStack
 
+declare module internals with
+  fun effectfulCallToInternal
+  fun beginUnwind
+
 declare module annotations with
   object untyped
   object tailrec

@@ -317,6 +317,7 @@ class WatBuilder(using TraceLogger, State) extends CodeBuilder:
         case Match(_, _, _, rst) => applySubBlock(rst)
         case Label(_, _, _, rst) => applySubBlock(rst)
         case TryBlock(_, _, rst) => applySubBlock(rst)
+        case TryCatch(_, _, _, rst) => applySubBlock(rst)
         case _ => super.applyBlock(b)
       override def applyDefn(defn: Defn): Unit = defn match
         case clsLikeDefn: ClsLikeDefn =>
@@ -610,6 +611,7 @@ class WatBuilder(using TraceLogger, State) extends CodeBuilder:
       case AssignDynField(_, _, _, _, rst) => S(rst)
       case Match(_, _, _, rst) => S(rst)
       case TryBlock(_, _, rst) => S(rst)
+      case TryCatch(_, _, _, rst) => S(rst)
       case Label(_, _, _, rst) => S(rst)
       case _ => N
 
@@ -931,6 +933,7 @@ class WatBuilder(using TraceLogger, State) extends CodeBuilder:
       case Scoped(syms, _) => Scoped(syms, rest)
       case Begin(sub, _) => Begin(sub, rest)
       case TryBlock(sub, finallyDo, _) => TryBlock(sub, finallyDo, rest)
+      case TryCatch(sub, catchVar, catchBody, _) => TryCatch(sub, catchVar, catchBody, rest)
       case Assign(lhs, rhs, _) => Assign(lhs, rhs, rest)
       case af @ AssignField(lhs, nme, rhs, _) => AssignField(lhs, nme, rhs, rest)(af.symbol)
       case AssignDynField(lhs, fld, arrayIdx, rhs, _) => AssignDynField(lhs, fld, arrayIdx, rhs, rest)
@@ -2213,7 +2216,11 @@ class WatBuilder(using TraceLogger, State) extends CodeBuilder:
           Ls(msg"WatBuilder::returningTerm for TryBlock(...) not implemented yet" -> N),
           extraInfo = S(sub.showAsTree),
         ))
-
+      case TryCatch(sub, catchVar, catchBody, rest) =>
+        Vector(errExpr(
+          Ls(msg"WatBuilder::returningTerm for TryCatch(...) not implemented yet" -> N),
+          extraInfo = S(sub.showAsTree),
+        ))
       case Throw(res) =>
         val excWat = result(res)
         Vector(`throw`(exnTagIdx, Seq(excWat)))

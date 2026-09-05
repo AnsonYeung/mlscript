@@ -255,6 +255,8 @@ class BlockSimplifier
           x.rest.analyze
         case TryBlock(sub, finallyDo, rest) =>
           sub.analyze || rest.analyze
+        case TryCatch(sub, _, catchBody, rst) =>
+          rst.analyze
         case Label(lbl, loop, bod, rst) =>
           bod.analyze
             && !BrokenLabels.analyze(bod).contains(lbl) // if `bod` breaks to `lbl`, then we must consider `rst`
@@ -932,6 +934,27 @@ class BlockSimplifier
         val rest2 = applySubBlock(rest)
         if (sub2 is sub) && (finallyDo2 is finallyDo) && (rest2 is rest) then b
         else TryBlock(sub2, finallyDo2, rest2)
+      
+      case TryCatch(sub, catchVar, catchBody, rest) =>
+        val sub2 = applyBlock(sub)
+        val catchBody2 =
+          // * This block might be executed from an unknown point in `sub` (where the first exception is thrown),
+          // * so we have to be conservative and not propagate any information.
+          if !changed then
+            assignedResults.valuesIterator.foreach(liveAssignInfosUntilChangeTriggered += _)
+            // * ^ all assigned infos are still to be considered live, even though we reset `assignedResults`
+          assignedResults = emptyAssignedResults
+          // * Moreover, we have to special-case all assigned local variables, as the corresponding assignments
+          // * might end up being live even though local flow analysis would think they are not.
+          sub.definedVars.foreach:
+            case sym: LocalVar =>
+              log(s"Variable ${sym.showDbg} is written in a `finally` block; marking it as imprecise tracked")
+              impreciselyTrackedVars += sym
+            case _ =>
+          applyBlock(catchBody)
+        val rest2 = applySubBlock(rest)
+        if (sub2 is sub) && (catchBody2 is catchBody) && (rest2 is rest) then b
+        else TryCatch(sub2, catchVar, catchBody2, rest2)
         
       case _: Return | _: Throw | _: Unreachable =>
         makeImpossibleAfter:

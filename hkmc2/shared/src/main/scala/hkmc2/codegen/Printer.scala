@@ -56,6 +56,11 @@ class Printer(using Raise, ShowCfg, State, SymbolPrinter, Config):
       doc"begin #{  # ${print(sub)}; #}  # ${print(rest)}"
     case TryBlock(sub, finallyDo, rest) =>
       doc"try #{  # ${print(sub)} #}  # finally #{  # ${print(finallyDo)}; #  #} ${print(rest)}"
+    case TryCatch(sub, catchVar, catchBody, rest) =>
+      val nme = catchVar match
+        case v: LocalVarSymbol => scope.allocateName(v)
+        case NoSymbol => "_"
+      doc"try #{  # ${print(sub)} #}  # catch ($nme) #{  # ${print(catchBody)}; #  #} ${print(rest)}"
     case Assign(NoSymbol, rhs, rest) =>
       doc"do ${print(rhs)}; # ${print(rest)}"
     case Assign(lhs: (LocalVarSymbol | TermSymbol), rhs, rest) =>

@@ -94,7 +94,9 @@ continueFromNestedFunctionWithEffects()
 //│   loop main:
 //│     match pc
 //│       2 =>
-//│         do runtime⁰.resumeValue﹖;
+//│         block brk2:
+//│           do runtime⁰.resumeValue﹖;
+//│           break brk2
 //│         set pc = 1;
 //│         end
 //│     match pc
@@ -163,8 +165,10 @@ continueFromNestedFunctionWithEffects()
 //│   loop main:
 //│     match pc
 //│       0 =>
-//│         set scope0$cap = new mut Capture$scope0¹(i);
-//│         set scope0$cap.i$0⁰ = 0;
+//│         block brk0:
+//│           set scope0$cap = new mut Capture$scope0¹(i);
+//│           set scope0$cap.i$0⁰ = 0;
+//│           break brk0
 //│         set pc = 1;
 //│         end
 //│     match pc

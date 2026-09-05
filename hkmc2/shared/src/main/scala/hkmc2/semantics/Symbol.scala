@@ -159,7 +159,6 @@ object NoSymbol extends MaybeSymbol:
   override def toString: Str = nme
 type NoSymbol = NoSymbol.type
 
-
 /** Symbols bound by `Program.imports`.
   *
   * User-facing imports bind variable or member symbols, while compiler-generated imports
