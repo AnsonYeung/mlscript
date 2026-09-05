@@ -1,0 +1,35 @@
+:js
+:effectHandlers
+:lift
+
+
+open annotations
+
+@noInline
+fun g() = 2
+
+:sjs
+@native
+fun f() =
+  g() + g()
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ let f;
+//│ runtime.resetEffects();
+//│ f = function f() {
+//│   let tmp, tmp1;
+//│   tmp = g();
+//│   if (runtime.curEffect !== null) {
+//│     tmp = runtime.illegalEffect("in native function");
+//│   }
+//│   tmp1 = g();
+//│   if (runtime.curEffect === null) {
+//│     return tmp + tmp1
+//│   }
+//│   tmp1 = runtime.illegalEffect("in native function");
+//│   return tmp + tmp1;
+//│ };
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+
+:expect 4
+@native f()
+//│ = 4

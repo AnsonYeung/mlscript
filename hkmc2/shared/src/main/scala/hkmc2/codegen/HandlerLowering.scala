@@ -129,7 +129,7 @@ object HandlerLowering:
   
   // currentFun: path to the current function for resumption
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
-  case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool, inAsync: Bool)(using State):
+  case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool, inNative: Bool, inAsync: Bool)(using State):
     val rVar = VarSymbol(Tree.Ident("resumeVar"))
     var contClass: Opt[ClsLikeDefn] = N
     def unwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
@@ -602,7 +602,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         intLit(pl.params.length) :: pl.params.map(p => p.sym.asSimpleRef)
       val allArgs = fun.params.flatMap(pl => pl.paramSyms)
       val newCtx: HandlerCtx.FunctionLike = HandlerCtx.FunctionLike(FunctionCtx(funcPath, thisPath, ResumeInfo(rtArgLists, sortedVars, allArgs, L(fun.sym)),
-        DebugInfo(debugNme, if debugEnabled then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty, fun.async))
+        DebugInfo(debugNme, if debugEnabled then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty, fun.annotations.contains(Annot.Native), fun.async))
       val bod2 = translateBlock(fun.body, newCtx, scopedVars)
       val fun2 = if fun.body is bod2 then fun else
         FunDefn(fun.owner, fun.sym, fun.dSym, fun.params, bod2)(fun.configOverride, fun.annotations)
@@ -676,6 +676,8 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     val ctx = h.asInstanceOf[HandlerCtx.FunctionLike].ctx
     if ctx.inGetter then
       return postTranslateIllegalEffectCtx(b, "in a getter")
+    if ctx.inNative then
+      return postTranslateIllegalEffectCtx(b, "in native function")
     given FunctionCtx = ctx
     val parts = partitionBlock(b)
     val needsStackSafety = parts.needsStackSafety && stackSafety.isDefined

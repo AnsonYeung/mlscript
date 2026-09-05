@@ -96,7 +96,7 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx, T
               blockBuilder
                 .scopedVars(Set.single(bodSym))
                 .define(bodFun)
-                .assign(tmp, callRuntimeMethod("runStackSafe", Value.Lit(Tree.IntLit(ss.stackLimit)).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil))
+                .assign(tmp, callRuntimeMethod("runStackSafeGenerator", Value.Lit(Tree.IntLit(ss.stackLimit)).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil))
             case N =>
               blockBuilder
                 .assign(tmp, r)
