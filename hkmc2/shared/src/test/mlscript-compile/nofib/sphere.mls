@@ -4,7 +4,7 @@ open NofibPrelude
 
 module sphere with ...
 
-
+open annotations
 
 val pi = globalThis.Math.PI
 val epsilon  = 0.000001
@@ -357,7 +357,7 @@ fun tracepixel(spheres, lights, x, y, firstray, scrnx, scrny) =
     hit then shade(lights, sp, pos, dir, dist, [1.0, 1.0, 1.0])
     else background
 
-fun z_of_int(x) = globalThis.BigInt(x)
+fun z_of_int(x) = @native globalThis.BigInt(x)
 
 fun hash(param) =
   fun u8(x) = z_of_int(round(255 * x))

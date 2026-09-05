@@ -4,7 +4,7 @@ open NofibPrelude
 
 module lastpiece with ...
 
-
+open annotations
 
 fun isSome(x) = x is Some
 
@@ -468,7 +468,7 @@ fun fullRender(m, l, r, txt, a, b) =
     _ then x
   fullRenderAnn(m, l, r, annTxt, a, b)
 
-fun ceiling(x) = globalThis.Math.ceil(x)
+fun ceiling(x) = @native globalThis.Math.ceil(x)
 
 fun fullRenderAnn(m, lineLen, ribbons, txt, rest, doc) = if m is
   OneLineMode then easyDisplay(spaceText, (a, b) => b, txt, rest, reduceDoc(doc))

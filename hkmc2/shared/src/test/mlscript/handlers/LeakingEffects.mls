@@ -2,6 +2,8 @@
 :effectHandlers
 :lift
 
+open annotations
+
 
 abstract class Effect[A] with
   fun perform(arg: A): A
@@ -14,7 +16,7 @@ fun main() =
   handle g = Effect with
     fun perform(arg1)(k1) =
       print("B " + arg1)
-      xs.push(k1)
+      @native xs.push(k1)
   print(g.perform("a"))
   print("—")
   print(g.perform("b"))
@@ -47,11 +49,11 @@ while
 //│ xs = []
 
 // * Notes:
-(mut []).pop() === undefined
+(@native (mut []).pop()) === undefined
 //│ = false
-(mut []).pop() === null
+(@native (mut []).pop()) === null
 //│ = false
-(mut []).pop() === ()
+(@native (mut []).pop()) === ()
 //│ = true
 
 
@@ -67,7 +69,7 @@ handle h = Effect with
     handle g = Effect with
       fun perform(arg1)(k1) =
         print("B " + arg + " " + arg1)
-        xs.push(k1)
+        @native xs.push(k1)
     k(g)
     while xs.pop() is
       null then print("Done.")

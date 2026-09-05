@@ -4,12 +4,12 @@ open NofibPrelude
 
 module treejoin with ...
 
-
+open annotations
 
 fun isSpace(c) = c === " " || c === "\n"
 
 fun isDigit(c) =
-  let n = c.codePointAt(0)
+  let n = @native c.codePointAt(0)
   in n >= 48 && n <= 57
 
 abstract class Tree[E]: Node | Leaf | Empty
@@ -43,7 +43,7 @@ fun lookupT(k, t) = if t is
 fun readInt(s) =
   fun readInt_(n, cs) = if cs is
     c :: cs_ and
-      isDigit(c) then readInt_(n * 10 + c.codePointAt(0) - 48, cs_)
+      isDigit(c) then readInt_(n * 10 + (@native c.codePointAt(0)) - 48, cs_)
       else let s_ = leaveWhile(isSpace, c :: cs) in [n, s_]
     else
       let s_ = leaveWhile(isSpace, cs) in [n, s_]
@@ -68,8 +68,8 @@ fun readTree(fk, s, t) = if
 
 
 fun testTreejoin_nofib(n) =
-  let c1 = nofibStringToList of fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/1500.1").toString()
-  let c2 = nofibStringToList of fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/1500.2").toString()
+  let c1 = nofibStringToList of (@native fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/1500.1")).toString()
+  let c2 = nofibStringToList of (@native fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/1500.2")).toString()
   let a = readTree(case { [xx, _, _] then xx }, c1, Empty)
   let b = readTree(case { [xx, _, _] then xx }, c2, Empty)
   join(a, b, Empty)
