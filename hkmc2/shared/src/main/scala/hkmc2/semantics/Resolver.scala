@@ -322,6 +322,14 @@ class Resolver(tl: TraceLogger)
         t.params.foreach(traverseParam)
         traverse(t.body, expect = NonModule(N))
         
+      case t @ Term.Try(body, finallyDo) =>
+        if cfg.effectHandlers.isDefined then
+          raise(ErrorReport(
+            msg"try-finally is not supported with effect handlers enabled" ->
+              t.toLoc :: Nil))
+        traverse(body, expect = NonModule(N))
+        traverse(finallyDo, expect = NonModule(N))
+      
       case t: Resolvable =>
         resolve(t, prefer = expect, inAppPrefix = false, inTyPrefix = false, inCtxPrefix = false)
       

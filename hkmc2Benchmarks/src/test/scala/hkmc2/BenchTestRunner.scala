@@ -15,7 +15,7 @@ object BenchTestState extends DiffTestRunner.State:
 
 class BenchTestRunner
   extends DiffTestRunnerBase(BenchTestState)
-  with ParallelTestExecution
+  // with ParallelTestExecution
 :
   override protected def createDiffMaker
       (file: Path, preludePath: Path, predefPath: Path, relativeName: String)

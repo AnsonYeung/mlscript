@@ -1,4 +1,5 @@
 import "benchmark"
+import "../../../../../hkmc2/shared/src/test/mlscript-compile/Runtime.mls"
 
 let bm = benchmark
 
@@ -7,7 +8,13 @@ module Benchmark with...
 val benchmark = bm
 let prefixPath = "hkmc2Benchmarks/src/test/logs/"
 
-fun mkSuite() = new! mut bm.Suite()
+class SuiteWrapper(suite) with
+  fun add(nme, fn) =
+    suite.add(nme, () => Runtime.runStackSafe(100, fn))
+  fun run(settings) = suite.run(settings)
+  fun map(fn) = suite.map(fn)
+
+fun mkSuite() = SuiteWrapper(new! mut bm.Suite())
 
 fun setPrefixPath(path) = set prefixPath = path
 
@@ -18,3 +25,7 @@ fun runSuite(suite) =
 fun writeResults(suite, path) =
   let jsonStr = JSON.stringify(suite.map((res, _, _) => res), null, 2)
   fs.writeFileSync(prefixPath + path, jsonStr)
+
+fun writeResultsCsv(suite, path) =
+  let str = suite.map((res, _, _) => [res.name, res.stats.mean, res.stats.moe].join(",")).join("\n") + "\n"
+  fs.writeFileSync(prefixPath + path, str)

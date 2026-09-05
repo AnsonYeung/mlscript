@@ -797,7 +797,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     val ctx = HandlerCtx.TopLevel
     val transformed = blockBuilder
         .staticif(
-          opt.fold(false)(!_.doNotInstrumentTopLevelModCtor),
+          opt.fold(false)(_.resetEffects),
           _.assign(NoSymbol, Call(paths.resetEffects, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
         )
         .rest(translateBlock(prog.main, ctx, Set.empty))

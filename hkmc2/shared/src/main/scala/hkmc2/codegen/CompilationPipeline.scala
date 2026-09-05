@@ -46,9 +46,6 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
       if config.liftDefns.isDefined then
         blockPass(Lifter(_).transform)(prog)
       else prog
-    runPass("HandlerLowering"): prog =>
-      HandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
-    runPass("AsyncLowering")(AsyncLowering().transform)
     runPass("Flattening")(blockPass(_.flattened))
     runPass("BufferableTransform")(BufferableTransform().transform)
     runPass("MergeMatchArmTransformer")(MergeMatchArmTransformer.applyProgram)
@@ -81,6 +78,10 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
     
     runPass("DeadParamElim")(otl.givenIn(DeadParamElim.apply))
     
+    runPass("HandlerLowering"): prog =>
+      HandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
+    runPass("AsyncLowering")(AsyncLowering().transform)
+
     // * More tailrec opportunities might be revealed after WorkerWrapper + BlockSimplifier,
     // * which might bring split curried recursive calls (such as those coming out of Deforest + EtaExpansion)
     // * into proper tail positions.
