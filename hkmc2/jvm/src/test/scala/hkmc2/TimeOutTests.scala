@@ -1,5 +1,7 @@
 package hkmc2
 
+import scala.reflect.Selectable.reflectiveSelectable
+
 import org.scalatest.{funsuite, ParallelTestExecution}
 import org.scalatest.concurrent.{TimeLimitedTests, Signaler}
 

@@ -160,13 +160,13 @@ lambda10 = (undefined, function (Runtime2, k) {
   Runtime2.stackResume = k;
   return runtime.Unit
 });
-lambda9 = (undefined, function (FunctionContFrame1, f, currentArgList, argListLength) {
+lambda9 = (undefined, function (FunctionContFrameImpl1, f, currentArgList, argListLength) {
   let tmp, tmp1, tmp2, tmp3;
   tmp = currentArgList + 1;
   tmp1 = currentArgList + 1;
   tmp2 = tmp1 + argListLength;
-  tmp3 = runtime.safeCall(FunctionContFrame1.saved.slice(tmp, tmp2));
-  return runtime.safeCall(f.apply(FunctionContFrame1.saved.at(4), tmp3))
+  tmp3 = runtime.safeCall(FunctionContFrameImpl1.saved.slice(tmp, tmp2));
+  return runtime.safeCall(f.apply(FunctionContFrameImpl1.saved.at(4), tmp3))
 });
 lambda$ = (undefined, function (Runtime2, EffectHandle1, value) {
   return () => {
@@ -472,14 +472,29 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
       toString() { return runtime.render(this); }
       static [definitionMetadata] = ["object", "PrintStackEffect"];
     });
-    Runtime.FunctionContFrame = function FunctionContFrame(next, saved) {
-      return globalThis.Object.freeze(new FunctionContFrame.class(next, saved));
+    Runtime.FunctionContFrame = function FunctionContFrame(next) {
+      return globalThis.Object.freeze(new FunctionContFrame.class(next));
     };
     (class FunctionContFrame {
       static {
         Runtime.FunctionContFrame.class = this
       }
+      constructor(next) {
+        this.next = next;
+        this.isContCls = true;
+      }
+      toString() { return runtime.render(this); }
+      static [definitionMetadata] = ["class", "FunctionContFrame", ["next"]];
+    });
+    Runtime.FunctionContFrameImpl = function FunctionContFrameImpl(next, saved) {
+      return globalThis.Object.freeze(new FunctionContFrameImpl.class(next, saved));
+    };
+    (class FunctionContFrameImpl extends Runtime.FunctionContFrame.class {
+      static {
+        Runtime.FunctionContFrameImpl.class = this
+      }
       constructor(next, saved) {
+        super(next);
         this.next = next;
         this.saved = saved;
       }
@@ -576,7 +591,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
         return loc;
       }
       toString() { return runtime.render(this); }
-      static [definitionMetadata] = ["class", "FunctionContFrame", ["next", "saved"]];
+      static [definitionMetadata] = ["class", "FunctionContFrameImpl", ["next", "saved"]];
     });
     Runtime.HandlerContFrame = function HandlerContFrame(next, nextHandler, handler) {
       return globalThis.Object.freeze(new HandlerContFrame.class(next, nextHandler, handler));
@@ -1090,10 +1105,15 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
     if (scrut === true) {
       return runtime.Unit
     }
-    tmp = new Runtime.FunctionContFrame.class(null, saved);
+    tmp = new Runtime.FunctionContFrameImpl.class(null, saved);
     Runtime.curEffect.contTrace.last.next = tmp;
     Runtime.curEffect.contTrace.last = Runtime.curEffect.contTrace.last.next;
     return runtime.Unit;
+  }
+  static unwindFramed(frame) {
+    Runtime.curEffect.contTrace.last.next = frame;
+    Runtime.curEffect.contTrace.last = frame;
+    return runtime.Unit
   }
   static mkEffect(handler, handlerFun) {
     let res, tmp;
@@ -1232,39 +1252,49 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
     cont = contTrace.next;
     handlerCont = contTrace.nextHandler;
     lbl: while (true) {
-      let old, scrut, scrut1, scrut2, tmp, tmp1, tmp2;
-      if (cont instanceof Runtime.FunctionContFrame.class) {
-        Runtime.curEffect = null;
-        old = Runtime.stackDepth;
-        try {
-          tmp1 = Runtime.stackDepth + 3;
-          Runtime.stackDepth = tmp1;
-          tmp2 = runtime.safeCall(cont.resume(value));
-          tmp = tmp2;
-        } finally {
-          Runtime.stackDepth = old;
-        }
-        value = tmp;
-        scrut = Runtime.curEffect !== null;
-        if (scrut === true) {
-          value = Runtime.curEffect;
-        }
-        if (value instanceof Runtime.EffectSig.class) {
-          value.contTrace.last.next = cont.next;
-          value.contTrace.lastHandler.nextHandler = handlerCont;
-          scrut1 = contTrace.last !== cont;
-          if (scrut1 === true) {
-            value.contTrace.last = contTrace.last;
+      let old, scrut, scrut1, scrut2, tmp, tmp1, tmp2, tmp3, tmp4;
+      tmp = cont !== null;
+      if (tmp === true) {
+        tmp1 = cont.isContCls;
+        if (tmp1 === true) {
+          Runtime.curEffect = null;
+          old = Runtime.stackDepth;
+          try {
+            tmp3 = Runtime.stackDepth + 3;
+            Runtime.stackDepth = tmp3;
+            tmp4 = runtime.safeCall(cont.resume(value));
+            tmp2 = tmp4;
+          } finally {
+            Runtime.stackDepth = old;
           }
-          scrut2 = handlerCont !== null;
-          if (scrut2 === true) {
-            value.contTrace.lastHandler = contTrace.lastHandler;
-            return value
+          value = tmp2;
+          scrut = Runtime.curEffect !== null;
+          if (scrut === true) {
+            value = Runtime.curEffect;
           }
-          return value;
+          if (value instanceof Runtime.EffectSig.class) {
+            value.contTrace.last.next = cont.next;
+            value.contTrace.lastHandler.nextHandler = handlerCont;
+            scrut1 = contTrace.last !== cont;
+            if (scrut1 === true) {
+              value.contTrace.last = contTrace.last;
+            }
+            scrut2 = handlerCont !== null;
+            if (scrut2 === true) {
+              value.contTrace.lastHandler = contTrace.lastHandler;
+              return value
+            }
+            return value;
+          }
+          cont = cont.next;
+          continue lbl;
         }
-        cont = cont.next;
-        continue lbl;
+        if (handlerCont instanceof Runtime.HandlerContFrame.class) {
+          cont = handlerCont.next;
+          handlerCont = handlerCont.nextHandler;
+          continue lbl
+        }
+        return value;
       }
       if (handlerCont instanceof Runtime.HandlerContFrame.class) {
         cont = handlerCont.next;

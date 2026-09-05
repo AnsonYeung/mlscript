@@ -119,7 +119,7 @@ Runtime.debugEff(res.reified)
 //│ > handlerFun:  null
 //│ > resumed:  false
 //│ > <lastHandler is self>
-//│ > FunctionContFrame(pc=2, last) -> (null)
+//│ > FunctionContFrameImpl(pc=2, last) -> (null)
 //│ > 
 
 :expect Infinity

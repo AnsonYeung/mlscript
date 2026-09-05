@@ -168,7 +168,11 @@ object EffectException
 object FatalEffect
 object PrintStackEffect
 
-data class FunctionContFrame(next, saved) with
+data class FunctionContFrame(next) with
+  val isContCls = true
+  virtual fun resume(value)
+
+data class FunctionContFrameImpl(next, saved) extends FunctionContFrame(next) with
   fun resume(value) =
     let
       i = 0
@@ -353,9 +357,14 @@ fun debugEff(eff) =
 fun unwind(...saved) =
   if saved.[1] === -2 do internals.beginUnwind()
   set
-    curEffect.contTrace.last.next = new mut FunctionContFrame(null, saved)
+    curEffect.contTrace.last.next = new mut FunctionContFrameImpl(null, saved)
     curEffect.contTrace.last = curEffect.contTrace.last.next
   internals.beginUnwind()
+
+fun unwindFramed(frame) =
+  set
+    curEffect.contTrace.last.next = frame
+    curEffect.contTrace.last = frame
 
 fun mkEffect(handler, handlerFun) =
   let res = new mut EffectSig(new mut ContTrace(null, null, null, null, false), handler, handlerFun)
@@ -458,7 +467,7 @@ fun resumeContTrace(contTrace, value) =
   let cont = contTrace.next
   let handlerCont = contTrace.nextHandler
   while
-    cont is FunctionContFrame then
+    cont !== null && cont.isContCls then
       set curEffect = null
       set value = set stackDepth += 3 in cont.resume(value)
       if curEffect !== null do
