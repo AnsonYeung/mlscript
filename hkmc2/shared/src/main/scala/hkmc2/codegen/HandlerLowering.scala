@@ -18,6 +18,7 @@ import semantics.Elaborator.State
 import hkmc2.Config.EffectHandlers
 import hkmc2.codegen.handlers.StraightLineCodegen
 import hkmc2.codegen.handlers.ClassCodegen
+import hkmc2.codegen.handlers.ShadowStackCodegen
 
 object HandlerLowering:
 
@@ -25,6 +26,16 @@ object HandlerLowering:
     def beginUnwind(using State): Block
     def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
     def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
+    def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = identity
+    def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
+      blockBuilder
+        .ifthen(
+          paths.curEffect,
+          Case.Lit(Tree.UnitLit(true)),
+          End(),
+          S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(uid), savedVars)(using paths))
+        )
+        .staticif(withTransition, _.assign(pcVar, intLit(uid)))
 
   abstract class ExoticStrategy extends Strategy:
     override def beginUnwind(using State): Block =
@@ -55,6 +66,8 @@ object HandlerLowering:
       )
     override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = blockBuilder.assign(pcVar, intLit(uid))
+    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block = identity
   
   case class DoubleCompilation() extends Strategy:
     override def beginUnwind(using State): Block =
@@ -71,8 +84,22 @@ object HandlerLowering:
   case class ShadowStack() extends Strategy:
     override def beginUnwind(using State): Block =
       Throw(State.runtimeSymbol.asSimpleRef.selSN("ShadowStackMarker"))
-    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block = ???
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block = ???
+    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      val tmp = loweringCtx.registerTempSymbol(N)
+      val err = new TempSymbol(N, "e")
+      TryCatch(
+        Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
+        err,
+        Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("shadowRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
+        k(tmp.asSimpleRef)
+      )
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block =
+      // pc write back pattern
+      blockBuilder.assign(pcVar, Tuple(false, intLit(uid).asArg :: Nil))
+    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
+      blockBuilder.assign(pcVar, intLit(uid))
   
   def currentStrategy(using Config): Strategy =
     config.effectHandlers.fold(noneStrategy)(_.strategy)
@@ -135,9 +162,10 @@ object HandlerLowering:
   
   // currentFun: path to the current function for resumption
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
-  case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool, inNative: Bool, inAsync: Bool)(using State):
+  case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool, orig: FunDefn)(using State):
     val rVar = VarSymbol(Tree.Ident("resumeVar"))
-    var contClass: Opt[ClsLikeDefn] = N
+    var newDefns: List[Defn] = Nil
+    var replaceAnnotWithInline: Bool = false
     def unwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
       Call(paths.unwindPath, (
         currentFun ::
@@ -151,10 +179,16 @@ object HandlerLowering:
       ).map(_.asArg) ne_:: Nil)(CallMetadata.mlsFunWithEffect)
     def doUnwind(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
       Return(unwindCall(loc, state, restoreList)(using paths))
-    def addContCompanion(b: Block): Block =
-      contClass match
-      case N => b
-      case S(cd: ClsLikeDefn) => Scoped(Set.single(cd.sym), Define(cd, b))
+    def addExtraCompanionDefns(b: Block): Block =
+      newDefns.foldRight(b): (defn, b) =>
+        Scoped(Set.single(defn.sym), Define(defn, b))
+    def modifyAnnots(annot: List[Annot]): List[Annot] =
+      if replaceAnnotWithInline then
+        Annot.Inline :: Nil
+      else
+        annot
+    def inNative = orig.annotations.contains(Annot.Native)
+    def inAsync = orig.annotations.contains(Annot.Async)
   
   // argLists: length-encoded argument list used for resumption.
   // currentLocals: All locals to be saved and reloaded, this cannot include any variables in outer scopes
@@ -218,6 +252,7 @@ object HandlerLowering:
     val useExceptions = opt.exists(_.strategy.isInstanceOf[ExceptionRethrow])
     val estate = summon[Elaborator.State]
     val cfg = summon[Config]
+    val strategy = currentStrategy
     def freshTmp(dbgNme: Str = "tmp") = new TempSymbol(N, dbgNme)
     def freshLabel(nme: Str) = new LabelSymbol(N, nme)
     // First assign res to resumeValue, then jump to pc, possibly unwinding.
@@ -245,6 +280,7 @@ object HandlerLowering:
     postTransform: ((Opt[Result], StateId) => Block) => BlockTransformer,
     fallbackPostTransform: BlockTransformer,
     needsStackSafety: Bool,
+    mainLoopLbl: LabelSymbol,
   )
 
 import HandlerLowering.*
@@ -273,11 +309,15 @@ class HandlerPaths(using Elaborator.State):
   val resumeIdx: Path = runtimePath.selSN("resumeIdx")
   val resumeValueIdent = new Tree.Ident("resumeValue")
   val resumeValue: Path = runtimePath.selN(resumeValueIdent)
+  val topLevelTrampolinePath: Path = runtimePath.selSN("topLevelTrampoline")
+  val pushFramePath: Path = runtimePath.selSN("shadowPushFrame")
+  val popFramePath: Path = runtimePath.selSN("shadowPopFrame")
 
 class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, Raise, Elaborator.State, Elaborator.Ctx, Config):
 
   val ExceptionToggle = opt.exists(_.strategy.isInstanceOf[ExceptionRethrow])
   val DoubleCompilation = opt.exists(_.strategy.isInstanceOf[DoubleCompilation])
+  val ShadowStack = opt.exists(_.strategy.isInstanceOf[ShadowStack])
   
   val debugEnabled = opt.exists(_.debug)
   val stackSafety = opt.flatMap(_.stackSafety)
@@ -608,10 +648,10 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         intLit(pl.params.length) :: pl.params.map(p => p.sym.asSimpleRef)
       val allArgs = fun.params.flatMap(pl => pl.paramSyms)
       val newCtx: HandlerCtx.FunctionLike = HandlerCtx.FunctionLike(FunctionCtx(funcPath, thisPath, ResumeInfo(rtArgLists, sortedVars, allArgs, L(fun.sym)),
-        DebugInfo(debugNme, if debugEnabled then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty, fun.annotations.contains(Annot.Native), fun.async))
+        DebugInfo(debugNme, if debugEnabled then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty, fun))
       val bod2 = translateBlock(fun.body, newCtx, scopedVars)
       val fun2 = if fun.body is bod2 then fun else
-        FunDefn(fun.owner, fun.sym, fun.dSym, fun.params, bod2)(fun.configOverride, fun.annotations)
+        FunDefn(fun.owner, fun.sym, fun.dSym, fun.params, bod2)(fun.configOverride, newCtx.ctx.modifyAnnots(fun.annotations))
       (debugInfoSym, debugInfo, fun2, newCtx)
 
     // transform inner function/class and effect handler intrinsics to the runtime functions.
@@ -627,24 +667,24 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
           if h.currentBlockIsTrulyNested && opt.isDefined then
             raise(lifterReport(msg"Unexpected nested function: lambdas may not function correctly." -> fun.sym.toLoc :: Nil))
           val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(fun, fun.sym.asMemberRef(fun.dSym), N, fun.sym.nme)
-          ctx.ctx.addContCompanion(if debugEnabled then Scoped(Set.single(debugInfoSym), Assign(debugInfoSym, Tuple(false, debugInfo), k(fun2))) else k(fun2))
+          ctx.ctx.addExtraCompanionDefns(if debugEnabled then Scoped(Set.single(debugInfoSym), Assign(debugInfoSym, Tuple(false, debugInfo), k(fun2))) else k(fun2))
         case defn @ ClsLikeDefn(owner, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, methods, privateFields, publicFields, preCtor, ctor, companion, bufferable) =>
           if h.currentBlockIsTrulyNested && opt.isDefined then
             raise(lifterReport(msg"Unexpected nested class: lambdas may not function correctly." -> isym.toLoc :: Nil))
           val debugInfos = mutable.ArrayBuffer.empty[(TempSymbol, List[Arg])]
-          val newContCompanions = mutable.ArrayBuffer.empty[ClsLikeDefn]
+          val newDefns = mutable.ArrayBuffer.empty[Defn]
           val newMtds = methods.mapConserve: f =>
             val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(f, isym.asThis.sel(new Tree.Ident(f.sym.nme), f.dSym),
               S(isym.asThis), s"${sym.nme}#${f.sym.nme}")
             debugInfos += debugInfoSym -> debugInfo
-            newContCompanions ++= ctx.ctx.contClass
+            newDefns ++= ctx.ctx.newDefns
             fun2
           val companion2 = companion.mapConserve: bod =>
             val newMtds = bod.methods.mapConserve: f =>
               val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(f, bod.isym.asThis.sel(new Tree.Ident(f.sym.nme), f.dSym),
                 S(bod.isym.asThis), s"${sym.nme}.${f.sym.nme}")
               debugInfos += debugInfoSym -> debugInfo
-              newContCompanions ++= ctx.ctx.contClass
+              newDefns ++= ctx.ctx.newDefns
               fun2
             // We cannot use this bc there is no subblock transform...
             // val newCtor = translateTrivialOrTopLevel(bod.ctor)
@@ -669,7 +709,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
           if debugEnabled then
             r = Scoped(debugInfos.iterator.map(_._1).toSet, debugInfos.foldRight(r): (elem, blk) =>
               Assign(elem._1, Tuple(false, elem._2), blk))
-          r = Scoped(newContCompanions.iterator.map(_.sym).toSet, newContCompanions.foldRight(r)(Define(_, _)))
+          r = Scoped(newDefns.iterator.map(_.sym).toSet, newDefns.foldRight(r)(Define(_, _)))
           r
         case _ => super.applyDefn(defn)(k)
     val b = preTransform.applyBlock(blk)
@@ -715,15 +755,9 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     val fallbackPostTransform = postTransform:
       case (N, id) => Assign(pcVar, intLit(id), Continue(mainLoopLbl))
       case (S(res), id) => blockBuilder
-        .staticif(ExceptionToggle, _.assign(pcVar, intLit(id)))
+        .chain(currentStrategy.preResult(pcVar, id))
         .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-        .staticif(!ExceptionToggle, _
-          .ifthen(
-            paths.curEffect,
-            Case.Lit(Tree.UnitLit(true)),
-            End(),
-            S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(id), vars)(using paths)))
-          .assign(pcVar, intLit(id)))
+        .chain(currentStrategy.postResult(paths, ctx, pcVar, vars, id, res, true))
         .continue(mainLoopLbl)
     
     val flattenCtx = FlattenCtx(
@@ -735,10 +769,13 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
       postTransform,
       fallbackPostTransform,
       needsStackSafety,
+      mainLoopLbl,
     )
     
     if DoubleCompilation then
       return ClassCodegen(hctx, paths, flattenCtx).generate(b, parts, ctx)
+    else if ShadowStack then
+      return ShadowStackCodegen(hctx, paths, flattenCtx).generate(b, parts, ctx)
     
     var mainBody =
       if oneState then

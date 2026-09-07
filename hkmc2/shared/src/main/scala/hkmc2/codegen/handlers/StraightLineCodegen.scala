@@ -84,15 +84,9 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
         case (S(res), uid) =>
           assert(uid === nextState)
           blockBuilder
-            .staticif(useExceptions, _.assign(flattenCtx.pcVar, intLit(uid)))
+            .chain(strategy.preResult(flattenCtx.pcVar, uid))
             .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-            .staticif(!useExceptions, _
-              .ifthen(
-                paths.curEffect,
-                Case.Lit(Tree.UnitLit(true)),
-                End(),
-                S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(uid), flattenCtx.vars)(using paths))
-              ))
+            .chain(strategy.postResult(paths, flattenCtx.ctx, flattenCtx.pcVar, flattenCtx.vars, uid, res, false))
             .break(lblSym)
       val transformed = transform.applyBlock(blk.blk)
       Label(

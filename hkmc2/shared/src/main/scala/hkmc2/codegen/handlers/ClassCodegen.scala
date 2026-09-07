@@ -109,14 +109,14 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
     val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, PlainParamList(Param.simple(ctx.rVar) :: Nil) :: Nil, resumeBody)(N, Nil)
-    ctx.contClass = S(ClsLikeDefn(
+    ctx.newDefns ::= ClsLikeDefn(
       N,
       clsDSym,
       clsSym,
       N,
       syntax.Cls,
-      S(PlainParamList(params.map(Param.simple(_)))),
-      Nil,
+      N,
+      PlainParamList(params.map(Param.simple(_))) :: Nil,
       N,
       resumeMtd :: Nil,
       Nil,
@@ -125,7 +125,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       initFields,
       N,
       N,
-    )(N, Nil))
+    )(N, Nil)
     var scoped: Iterator[ScopedSymbol] = flattenCtx.scopedVars.iterator ++ Iterator.single(callTmpVar)
     var mainBody = transformedBody
     if flattenCtx.needsStackSafety then

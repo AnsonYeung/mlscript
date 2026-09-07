@@ -513,7 +513,10 @@ fun makeNewContTrace() =
   set
     curContTrace.last = curContTrace
     curContTrace.lastHandler = curContTrace
-makeNewContTrace()
+set curContTrace = new mut ContTrace(null, null, null, null, false)
+set
+  curContTrace.last = curContTrace
+  curContTrace.lastHandler = curContTrace
 
 fun shadowTopLevelTrampoline(limit, body) =
   makeNewContTrace()
@@ -524,7 +527,7 @@ fun shadowTopLevelTrampoline(limit, body) =
     set stackHandler = StackDelayHandler in...
     let result =
       RuntimeJS.try_catch(() => enterHandleBlock(StackDelayHandler, body), (err) =>
-        checkUnhandledErr(err)
+        shadowRethrow(err)
         handleEffects(curEffect)
       )
     while stackResume !== null do
@@ -532,13 +535,13 @@ fun shadowTopLevelTrampoline(limit, body) =
       set
         stackResume = null
         stackDepth = 1
-        result = RuntimeJS.try_catch(saved, checkUnhandledErr)
+        result = RuntimeJS.try_catch(saved, shadowRethrow)
       if curEffect !== null do
         set result = handleEffects(curEffect)
     result
   else
     RuntimeJS.try_catch(body, (err) =>
-      checkUnhandledErr(err)
+      shadowRethrow(err)
       handleEffects(curEffect)
     )
 
@@ -549,7 +552,7 @@ fun shadowPushFrame(fn, vars) =
   set curContTrace.next = newFrame
   // validateContTrace(curContTrace, "pushFrame")
 
-fun shadowPopFrame(id) =
+fun shadowPopFrame() =
   // if curContTrace.next === null do
   //   throw "INVALID CONT TRACE: next was null when popping " + id
   if curContTrace.next === curContTrace.last do
@@ -589,7 +592,7 @@ fun shadowEnterHandleBlock(handler, body) =
   shadowPopHandler(curContTrace)
   ret
 
-fun checkUnhandledErr(err) =
+fun shadowRethrow(err) =
   if curEffect === null do
     // console.log("unhandled error")
     throw err
