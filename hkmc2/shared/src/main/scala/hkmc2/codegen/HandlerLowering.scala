@@ -68,6 +68,12 @@ object HandlerLowering:
     override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
+  case class ShadowStack() extends Strategy:
+    override def beginUnwind(using State): Block =
+      Throw(State.runtimeSymbol.asSimpleRef.selSN("ShadowStackMarker"))
+    override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block = ???
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block = ???
+  
   def currentStrategy(using Config): Strategy =
     config.effectHandlers.fold(noneStrategy)(_.strategy)
   

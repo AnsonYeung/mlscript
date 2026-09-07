@@ -492,6 +492,109 @@ fun resumeContTrace(contTrace, value) =
     else
       return value
 
+// shadow stack
+
+let sfcfid = 0
+
+data class ShadowStackMarker
+data class ShadowFunctionContFrame(next, fn, varsClass) with
+  val id = sfcfid
+  set sfcfid += 1
+  fun resume(value) =
+    set resumeValue = value
+    fn(varsClass)
+  fun getLocals = ()
+  fun getNme = ""
+  fun getLoc = ""
+data class ShadowEffectSig(contTrace, handler, handlerFun, id)
+mut val curContTrace = null
+fun makeNewContTrace() =
+  set curContTrace = new mut ContTrace(null, null, null, null, false)
+  set
+    curContTrace.last = curContTrace
+    curContTrace.lastHandler = curContTrace
+makeNewContTrace()
+
+fun shadowTopLevelTrampoline(limit, body) =
+  makeNewContTrace()
+  if limit !== undefined then
+    set curEffect = null
+    set stackLimit = limit in...
+    set stackDepth = 1 in...
+    set stackHandler = StackDelayHandler in...
+    let result =
+      RuntimeJS.try_catch(() => enterHandleBlock(StackDelayHandler, body), (err) =>
+        checkUnhandledErr(err)
+        handleEffects(curEffect)
+      )
+    while stackResume !== null do
+      let saved = stackResume
+      set
+        stackResume = null
+        stackDepth = 1
+        result = RuntimeJS.try_catch(saved, checkUnhandledErr)
+      if curEffect !== null do
+        set result = handleEffects(curEffect)
+    result
+  else
+    RuntimeJS.try_catch(body, (err) =>
+      checkUnhandledErr(err)
+      handleEffects(curEffect)
+    )
+
+fun shadowPushFrame(fn, vars) =
+  let newFrame = new mut ShadowFunctionContFrame(curContTrace.next, fn, vars)
+  if curContTrace.last === curContTrace do
+    set curContTrace.last = newFrame
+  set curContTrace.next = newFrame
+  // validateContTrace(curContTrace, "pushFrame")
+
+fun shadowPopFrame(id) =
+  // if curContTrace.next === null do
+  //   throw "INVALID CONT TRACE: next was null when popping " + id
+  if curContTrace.next === curContTrace.last do
+    set curContTrace.last = curContTrace
+  set curContTrace.next = curContTrace.next.next
+  // validateContTrace(curContTrace, "popFrame")
+
+mut val latestId = 0
+fun shadowMkEffect(handler, handlerFun) =
+  let res = new mut ShadowEffectSig(curContTrace, handler, handlerFun, latestId)
+  set latestId += 1
+  set curEffect = res
+  makeNewContTrace()
+  throw ShadowStackMarker
+
+fun shadowPopHandler(tr) =
+  if tr.lastHandler === tr.nextHandler do
+    set tr.lastHandler = tr
+    if tr.last === tr.nextHandler do
+      set tr.last = tr
+  set
+    tr.next = tr.nextHandler.next
+    tr.nextHandler = tr.nextHandler.nextHandler
+  // validateContTrace(tr, "popHandler")
+
+fun shadowEnterHandleBlock(handler, body) =
+  let handlerFrame = new mut HandlerContFrame(curContTrace.next, curContTrace.nextHandler, handler)
+  set
+    curContTrace.nextHandler = handlerFrame
+    curContTrace.next = null
+  if curContTrace.lastHandler === curContTrace do
+    set curContTrace.lastHandler = handlerFrame
+  if curContTrace.last === curContTrace do
+    set curContTrace.last = handlerFrame
+  // validateContTrace(curContTrace, "enterHandleBlock")
+  let ret = body()
+  shadowPopHandler(curContTrace)
+  ret
+
+fun checkUnhandledErr(err) =
+  if curEffect === null do
+    // console.log("unhandled error")
+    throw err
+
+
 // js async
 object AsyncEffectMarker
 
