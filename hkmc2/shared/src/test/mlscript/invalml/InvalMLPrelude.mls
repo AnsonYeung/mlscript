@@ -84,6 +84,7 @@ declare module internals with
   fun effectfulCallToInternal
   fun beginUnwind
   fun runStackSafe
+  fun enterHandleBlock
 
 declare module annotations with
   object untyped

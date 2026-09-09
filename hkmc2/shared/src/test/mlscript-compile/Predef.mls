@@ -139,7 +139,7 @@ fun use[T](using instance: T) = instance
 fun enterHandleBlock(handler, body) =
   // This is a simple wrapper of a handler runtime function, which must not be instrumented so cannot be directly implemented here.
   // It also calls other internal runtime functions as well.
-  Runtime.enterHandleBlock(handler, body)
+  internals.enterHandleBlock(handler, body)
 
 @raiseEffects
 fun raiseUnhandledEffect() =

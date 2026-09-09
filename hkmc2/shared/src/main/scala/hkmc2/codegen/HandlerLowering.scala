@@ -38,8 +38,8 @@ object HandlerLowering:
           S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(uid), savedVars)(using paths))
         )
         .staticif(withTransition, _.assign(pcVar, intLit(uid)))
-    def mkEffectPath(using paths: HandlerPaths): Path = paths.mkEffectPath
-    def enterHandleBlockPath(using paths: HandlerPaths): Path = paths.enterHandleBlockPath
+    def mkEffectPath(using State): Path = HandlerPaths().mkEffectPath
+    def enterHandleBlockPath(using State): Path = HandlerPaths().enterHandleBlockPath
     
     def effectCheck(l: Assignable, r: Result, rst: Block, onEffect: Call, needsStackSafety: Opt[Int])(using paths: HandlerPaths)(using State): Block =
       val withStackSafe = needsStackSafety match
@@ -124,8 +124,8 @@ object HandlerLowering:
     override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
       blockBuilder.assign(pcVar, intLit(uid))
     
-    override def mkEffectPath(using paths: HandlerPaths): Path = paths.shadowMkEffectPath
-    override def enterHandleBlockPath(using paths: HandlerPaths): Path = paths.shadowEnterHandleBlockPath
+    override def mkEffectPath(using State): Path = HandlerPaths().shadowMkEffectPath
+    override def enterHandleBlockPath(using State): Path = HandlerPaths().shadowEnterHandleBlockPath
 
     override def effectCheck(l: Assignable, r: Result, rst: Block, onEffect: Call, needsStackSafety: Opt[Int])(using paths: HandlerPaths)(using State): Block =
       val bodSym = BlockMemberSymbol("‹top level body›", Nil, false)
@@ -218,7 +218,8 @@ object HandlerLowering:
         Scoped(Set.single(defn.sym), Define(defn, b))
     def modifyAnnots(annot: List[Annot]): List[Annot] =
       if replaceAnnotWithInline then
-        Annot.Inline :: Nil
+        // TODO
+        Annot.NoInline :: Nil
       else
         annot
     def inNative = orig.annotations.contains(Annot.Native)

@@ -334,7 +334,7 @@ lambda = (undefined, function (Predef2, a, b, field) {
     return instance
   }
   static enterHandleBlock(handler, body) {
-    return runtime.safeCall(runtime.enterHandleBlock(handler, body))
+    return runtime.enterHandleBlock(handler, body)
   }
   static raiseUnhandledEffect() {
     return runtime.safeCall(runtime.mkEffect(runtime.FatalEffect, null))

@@ -1293,7 +1293,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
   static resetEffects() {
     Runtime.curEffect = null;
     Runtime.resumePc = -1;
-    return runtime.Unit
+    return Runtime.makeNewContTrace()
   }
   static raisePrintStackEffect(showLocals) {
     return Runtime.mkEffect(Runtime.PrintStackEffect, showLocals)

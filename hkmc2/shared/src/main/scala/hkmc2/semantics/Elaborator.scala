@@ -290,6 +290,7 @@ object Elaborator:
         val effectfulCallToInternal = assumeObject("effectfulCallToInternal")
         val beginUnwind = assumeObject("beginUnwind")
         val runStackSafe = assumeObject("runStackSafe")
+        val enterHandleBlock = assumeObject("enterHandleBlock")
       object annotations extends VirtualModule(assumeBuiltinMod("annotations")):
         val untyped = assumeObject("untyped")
         val tailrec = assumeObject("tailrec")

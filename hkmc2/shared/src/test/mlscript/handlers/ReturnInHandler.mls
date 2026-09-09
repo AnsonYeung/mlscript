@@ -48,6 +48,9 @@ let l = () =>
 l()
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
+:exit
+====================================================================================================
+
 :e
 handle h1 = Effect with
   fun foo()(r) = r(())
