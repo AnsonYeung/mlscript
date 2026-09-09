@@ -494,19 +494,14 @@ fun resumeContTrace(contTrace, value) =
 
 // shadow stack
 
-let sfcfid = 0
-
-data class ShadowStackMarker
+data class ShadowStackMarker(reason)
 data class ShadowFunctionContFrame(next, fn, varsClass) with
-  val id = sfcfid
-  set sfcfid += 1
   fun resume(value) =
     set resumeValue = value
     fn(varsClass)
   fun getLocals = ()
   fun getNme = ""
   fun getLoc = ""
-data class ShadowEffectSig(contTrace, handler, handlerFun, id)
 mut val curContTrace = null
 fun makeNewContTrace() =
   set curContTrace = new mut ContTrace(null, null, null, null, false)
@@ -519,31 +514,7 @@ set
   curContTrace.lastHandler = curContTrace
 
 fun shadowTopLevelTrampoline(limit, body) =
-  makeNewContTrace()
-  if limit !== undefined then
-    set curEffect = null
-    set stackLimit = limit in...
-    set stackDepth = 1 in...
-    set stackHandler = StackDelayHandler in...
-    let result =
-      RuntimeJS.try_catch(() => enterHandleBlock(StackDelayHandler, body), (err) =>
-        shadowRethrow(err)
-        handleEffects(curEffect)
-      )
-    while stackResume !== null do
-      let saved = stackResume
-      set
-        stackResume = null
-        stackDepth = 1
-        result = RuntimeJS.try_catch(saved, shadowRethrow)
-      if curEffect !== null do
-        set result = handleEffects(curEffect)
-    result
-  else
-    RuntimeJS.try_catch(body, (err) =>
-      shadowRethrow(err)
-      handleEffects(curEffect)
-    )
+  ShadowStackImpl.topLevelTrampoline(limit, body)
 
 fun shadowPushFrame(fn, vars) =
   let newFrame = new mut ShadowFunctionContFrame(curContTrace.next, fn, vars)
@@ -560,42 +531,195 @@ fun shadowPopFrame() =
   set curContTrace.next = curContTrace.next.next
   // validateContTrace(curContTrace, "popFrame")
 
-mut val latestId = 0
 fun shadowMkEffect(handler, handlerFun) =
-  let res = new mut ShadowEffectSig(curContTrace, handler, handlerFun, latestId)
-  set latestId += 1
+  let res = new mut EffectSig(curContTrace, handler, handlerFun)
   set curEffect = res
   makeNewContTrace()
-  throw ShadowStackMarker
-
-fun shadowPopHandler(tr) =
-  if tr.lastHandler === tr.nextHandler do
-    set tr.lastHandler = tr
-    if tr.last === tr.nextHandler do
-      set tr.last = tr
-  set
-    tr.next = tr.nextHandler.next
-    tr.nextHandler = tr.nextHandler.nextHandler
-  // validateContTrace(tr, "popHandler")
+  throw ShadowStackMarker("mkEffect")
 
 fun shadowEnterHandleBlock(handler, body) =
-  let handlerFrame = new mut HandlerContFrame(curContTrace.next, curContTrace.nextHandler, handler)
-  set
-    curContTrace.nextHandler = handlerFrame
-    curContTrace.next = null
-  if curContTrace.lastHandler === curContTrace do
-    set curContTrace.lastHandler = handlerFrame
-  if curContTrace.last === curContTrace do
-    set curContTrace.last = handlerFrame
-  // validateContTrace(curContTrace, "enterHandleBlock")
-  let ret = body()
-  shadowPopHandler(curContTrace)
-  ret
+  ShadowStackImpl.enterHandleBlock(handler, body)
 
 fun shadowRethrow(err) =
-  if curEffect === null do
-    // console.log("unhandled error")
-    throw err
+  ShadowStackImpl.checkUnhandledErr(err)
+
+module ShadowStackImpl with
+  object StackDelayHandler with
+    fun delay() = shadowMkEffect of this, k =>
+      set stackResume = k
+  fun enterHandleBlock(handler, body) =
+    let handlerFrame = new mut HandlerContFrame(curContTrace.next, curContTrace.nextHandler, handler)
+    set
+      curContTrace.nextHandler = handlerFrame
+      curContTrace.next = null
+    if curContTrace.lastHandler === curContTrace do
+      set curContTrace.lastHandler = handlerFrame
+    if curContTrace.last === curContTrace do
+      set curContTrace.last = handlerFrame
+    // validateContTrace(curContTrace, "enterHandleBlock")
+    let ret = body()
+    popHandler(curContTrace)
+    ret
+  fun topLevelTrampoline(limit, body) =
+    makeNewContTrace()
+    if limit !== null then
+      set curEffect = null
+      set stackLimit = limit in...
+      set stackDepth = 1 in...
+      set stackHandler = StackDelayHandler in...
+      let result = 
+        RuntimeJS.try_catch(() => enterHandleBlock(StackDelayHandler, body), (err) =>
+          checkUnhandledErr(err)
+          handleEffects(curEffect)
+        )
+      while stackResume !== null do
+        let saved = stackResume
+        set
+          stackResume = null
+          stackDepth = 1
+          result = RuntimeJS.try_catch(saved, checkUnhandledErr)
+        if curEffect !== null do
+          set result = handleEffects(curEffect)
+      result
+    else
+      RuntimeJS.try_catch(body, (err) =>
+        checkUnhandledErr(err)
+        handleEffects(curEffect)
+      )
+  fun popHandler(tr) =
+    if tr.lastHandler === tr.nextHandler do
+      set tr.lastHandler = tr
+      if tr.last === tr.nextHandler do
+        set tr.last = tr
+    set
+      tr.next = tr.nextHandler.next
+      tr.nextHandler = tr.nextHandler.nextHandler
+    // validateContTrace(tr, "popHandler")
+  fun handleEffects(cur) =
+    while cur is
+      EffectSig then
+        let nxt = handleEffect(cur)
+        if cur === nxt then
+          set curEffect = cur
+          throw ShadowStackMarker("handleEffects")
+        else
+          set cur = nxt
+      else
+        return cur
+  fun checkUnhandledErr(err) =
+    if curEffect === null do
+      // console.log("unhandled error")
+      throw err
+  fun concatTraces(bottom, top) =
+    // let expected = countFramesInTrace(bottom) + countFramesInTrace(top)
+    if bottom.next !== null do
+      set top.last.next = bottom.next
+    if bottom.last !== bottom do
+      set top.last = bottom.last
+    if bottom.nextHandler !== null do
+      set top.lastHandler.nextHandler = bottom.nextHandler
+    if bottom.lastHandler !== bottom do
+      set top.lastHandler = bottom.lastHandler
+    // if countFramesInTrace(top) !== expected do
+    //   throw "Concat is wrong: incorrect number of frames"
+
+  // calling conventions:
+  // resume, resumeContTrace: throw exceptions when raising an effect, will link the newly called functions to the existing cont trace if an effect is raised
+  // handleEffect: does not throw exceptions, returns either a value or a cont trace
+  // handleEffects: throws an exception if there is an unhandled effect
+
+  // return either new effect, final result or the same continuation if there is no handler
+  fun handleEffect(cur) =
+    // console.log("handleEffect enter")
+    // console.log(cur.contTrace)
+    // validateContTrace(cur.contTrace, "handleEffect start")
+    // debugEff(cur)
+    // find the handle block corresponding to the current effect
+    let prevHandlerFrame = cur.contTrace
+    while prevHandlerFrame.nextHandler !== null and prevHandlerFrame.nextHandler.handler !== cur.handler do
+      set prevHandlerFrame = prevHandlerFrame.nextHandler
+
+    // no matching handle block
+    if prevHandlerFrame.nextHandler === null do
+      // console.log("bail out, no handle block")
+      return cur
+    // console.log("handle block found!")
+
+    // the matching handle block
+    let handlerFrame = prevHandlerFrame.nextHandler
+    
+    // unlink and save frames
+    let saved = new mut ContTrace(
+      handlerFrame.next,
+      cur.contTrace.last,
+      handlerFrame.nextHandler,
+      cur.contTrace.lastHandler,
+      false
+    )
+    if cur.contTrace.last === handlerFrame do set saved.last = saved
+    if cur.contTrace.lastHandler === handlerFrame do set saved.lastHandler = saved
+    
+    // validateContTrace(saved, "saved cont frame")
+    
+    set
+      cur.contTrace.last = handlerFrame
+      cur.contTrace.lastHandler = handlerFrame
+      handlerFrame.next = null
+      handlerFrame.nextHandler = null
+    
+    // validateContTrace(cur.contTrace, "frames passed to handler")
+    
+    // handle the effect
+    set curEffect = null
+    let tmp = set stackDepth += 2 in RuntimeJS.try_catch(() => cur.handlerFun(resume(cur.contTrace)), checkUnhandledErr)
+    if curEffect !== null then
+      set cur = curEffect
+      // validateContTrace(cur.contTrace, "frames after handling and effect raised")
+      // relink the saved frames
+      concatTraces(saved, cur.contTrace)
+      // validateContTrace(cur.contTrace, "relinked")
+      cur
+    else
+      // resume the unlinked handle blocks
+      let retVal = RuntimeJS.try_catch(() => resumeContTrace(saved, tmp), checkUnhandledErr)
+      if curEffect !== null then curEffect
+      else retVal
+
+  fun resume(contTrace)(value) =
+    if contTrace.resumed do
+      throw Error("Multiple resumption")
+    set contTrace.resumed = true
+    resumeContTrace(contTrace, value)
+
+  fun resumeContTrace(contTrace, value) =
+    // Append these onto the resume frames later
+    let savedResumeFrames = curContTrace
+    set curContTrace = contTrace
+    
+    while
+      contTrace.next is FunctionContFrame then
+        let curFrame = contTrace.next
+        set curEffect = null
+        set value = set stackDepth += 3 in
+          RuntimeJS.try_catch(() => curFrame.resume(value), err => checkUnhandledErr)
+        if curEffect !== null do
+          set value = curEffect
+        if value is EffectSig then
+          // add savedResumeFrames to the *bottom* of the current cont trace
+          set contTrace = curEffect.contTrace
+          set
+            contTrace.resumed = false
+            contTrace.last.next = savedResumeFrames.next
+            contTrace.lastHandler.nextHandler = savedResumeFrames.nextHandler
+          concatTraces(savedResumeFrames, contTrace)
+          // validateContTrace(curEffect.contTrace, "resumeContTrace")
+          throw ShadowStackMarker("resume")
+        else () // The frame is popped by the function upon returning
+      contTrace.nextHandler is HandlerContFrame then
+        popHandler(contTrace)
+      else
+        set curContTrace = savedResumeFrames
+        return value
 
 
 // js async

@@ -36,6 +36,27 @@ object HandlerLowering:
           S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(uid), savedVars)(using paths))
         )
         .staticif(withTransition, _.assign(pcVar, intLit(uid)))
+    def mkEffectPath(using paths: HandlerPaths): Path = paths.mkEffectPath
+    def enterHandleBlockPath(using paths: HandlerPaths): Path = paths.enterHandleBlockPath
+    
+    def effectCheck(l: Assignable, r: Result, rst: Block, onEffect: Call, needsStackSafety: Opt[Int])(using paths: HandlerPaths)(using State): Block =
+      val withStackSafe = needsStackSafety match
+        case S(stackLimit) =>
+          val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
+          val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+          blockBuilder
+            .scopedVars(Set.single(bodSym))
+            .define(bodFun)
+            .assign(l, Call(paths.runStackSafePath, (intLit(stackLimit).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+        case N =>
+          blockBuilder.assign(l, r)
+      withStackSafe
+        .ifthen(
+          paths.curEffect,
+          Case.Lit(Tree.UnitLit(true)),
+          End(),
+          S(Assign(l, onEffect, End())))
+        .rest(rst)
 
   abstract class ExoticStrategy extends Strategy:
     override def beginUnwind(using State): Block =
@@ -100,6 +121,18 @@ object HandlerLowering:
       blockBuilder.assign(pcVar, Tuple(false, intLit(uid).asArg :: Nil))
     override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
       blockBuilder.assign(pcVar, intLit(uid))
+    
+    override def mkEffectPath(using paths: HandlerPaths): Path = paths.shadowMkEffectPath
+    override def enterHandleBlockPath(using paths: HandlerPaths): Path = paths.shadowEnterHandleBlockPath
+
+    override def effectCheck(l: Assignable, r: Result, rst: Block, onEffect: Call, needsStackSafety: Opt[Int])(using paths: HandlerPaths)(using State): Block =
+      val bodSym = BlockMemberSymbol("‹top level body›", Nil, false)
+      val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+      blockBuilder
+        .scopedVars(Set.single(bodSym))
+        .define(bodFun)
+        .assign(l, Call(paths.topLevelTrampolinePath, (needsStackSafety.fold(unit)(intLit(_)).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+        .rest(rst)
   
   def currentStrategy(using Config): Strategy =
     config.effectHandlers.fold(noneStrategy)(_.strategy)
@@ -281,6 +314,7 @@ object HandlerLowering:
     fallbackPostTransform: BlockTransformer,
     needsStackSafety: Bool,
     mainLoopLbl: LabelSymbol,
+    curDepth: LocalVarSymbol,
   )
 
 import HandlerLowering.*
@@ -309,11 +343,14 @@ class HandlerPaths(using Elaborator.State):
   val resumeIdx: Path = runtimePath.selSN("resumeIdx")
   val resumeValueIdent = new Tree.Ident("resumeValue")
   val resumeValue: Path = runtimePath.selN(resumeValueIdent)
-  val topLevelTrampolinePath: Path = runtimePath.selSN("topLevelTrampoline")
+  val topLevelTrampolinePath: Path = runtimePath.selSN("shadowTopLevelTrampoline")
   val pushFramePath: Path = runtimePath.selSN("shadowPushFrame")
   val popFramePath: Path = runtimePath.selSN("shadowPopFrame")
+  val shadowMkEffectPath: Path = runtimePath.selSN("shadowMkEffect")
+  val shadowEnterHandleBlockPath: Path = runtimePath.selSN("shadowEnterHandleBlock")
 
 class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, Raise, Elaborator.State, Elaborator.Ctx, Config):
+  given HandlerPaths = paths
 
   val ExceptionToggle = opt.exists(_.strategy.isInstanceOf[ExceptionRethrow])
   val DoubleCompilation = opt.exists(_.strategy.isInstanceOf[DoubleCompilation])
@@ -658,9 +695,9 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     val preTransform = new BlockTransformer(SymbolSubst.Id):
       override def applyResult(r: Result)(k: Result => Block): Block = r match
         case Call(Value.MemberRef(sym, _), args) if sym is Elaborator.ctx.builtins.runtime.suspend =>
-          k(Call(paths.mkEffectPath, args)(CallMetadata.mlsFunWithEffect))
+          k(Call(currentStrategy.mkEffectPath, args)(CallMetadata.mlsFunWithEffect))
         case Call(Value.MemberRef(sym, _), args) if sym is Elaborator.ctx.builtins.runtime.handle_suspension =>
-          k(Call(paths.enterHandleBlockPath, args)(CallMetadata.mlsFunWithEffect))
+          k(Call(currentStrategy.enterHandleBlockPath, args)(CallMetadata.mlsFunWithEffect))
         case _ => super.applyResult(r)(k)
       override def applyDefn(defn: Defn)(k: Defn => Block): Block = defn match
         case fun: FunDefn =>
@@ -770,6 +807,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
       fallbackPostTransform,
       needsStackSafety,
       mainLoopLbl,
+      curDepth,
     )
     
     if DoubleCompilation then
@@ -849,35 +887,17 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     * it is assumed that the current block is at top level and lambda definition will be created for each call
     */
   private def postTranslateIllegalEffectCtx(b: Block, onEffect: Call, needsStackSafety: Opt[Int])(using HandlerCtx): Block =
-    def effectCheck(l: Assignable, r: Result, rst: Block): Block =
-      val withStackSafe = needsStackSafety match
-        case S(stackLimit) =>
-          val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
-          val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
-          blockBuilder
-            .scopedVars(Set.single(bodSym))
-            .define(bodFun)
-            .assign(l, Call(paths.runStackSafePath, (intLit(stackLimit).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
-        case N =>
-          blockBuilder.assign(l, r)
-      withStackSafe
-        .ifthen(
-          paths.curEffect,
-          Case.Lit(Tree.UnitLit(true)),
-          End(),
-          S(Assign(l, onEffect, End())))
-        .rest(rst)
     val topLevelPostTransform = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block) = b match
         case Assign(lhs, r @ EffectfulResult(), rest) =>
           // Optimization to reuse lhs instead of fresh local
-          effectCheck(lhs, r, applyBlock(rest))
+          currentStrategy.effectCheck(lhs, r, applyBlock(rest), onEffect, needsStackSafety)
         case _ => super.applyBlock(b)
       override def applyResult(r: Result)(k: Result => Block) = r match
         case r @ EffectfulResult() =>
           // Fallback case, this may lead to unnecessary assignments if it is assign-like
           val l = freshTmp()
-          Scoped(Set(l), effectCheck(l, r, k(l.asSimpleRef)))
+          Scoped(Set(l), currentStrategy.effectCheck(l, r, k(l.asSimpleRef), onEffect, needsStackSafety))
         case _ => super.applyResult(r)(k)
     topLevelPostTransform.applyBlock(b)
 

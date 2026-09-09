@@ -23,9 +23,9 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
     val workerSym = new BlockMemberSymbol(s"$baseName$$worker", Nil, true)
     val workerDSym = new TermSymbol(syntax.Fun, N, Tree.Ident(s"$baseName$$worker"))
     val workerVarsParam = new VarSymbol(Tree.Ident(s"$baseName$$vars"))
-    // TODO: rewrite `this`
-    val savedVars = flattenCtx.pcVar +: (ctx.resumeInfo.allArgs ++ flattenCtx.vars)
-    val varIndexes = savedVars.iterator.zipWithIndex.toMap
+    val dummyThisVar = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this")))
+    val savedVars = Iterator.single(flattenCtx.pcVar) ++ dummyThisVar.iterator ++ ctx.resumeInfo.allArgs.iterator ++ flattenCtx.vars.iterator
+    val varIndexes = savedVars.zipWithIndex.toMap
     def readFromIndex(idx: Int): Path =
       DynSelect(workerVarsParam.asSimpleRef, intLit(idx), true)
     def writeToIndex(idx: Int, res: Result)(rst: Block): Block =
@@ -70,12 +70,17 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
         override def applyPath(p: Path)(k: Path => Block): Block =
           p match
           case Value.SimpleRef(s: LocalVarSymbol) => super.applyPath(getVar(s))(k)
-          // case Value.This(s) => ???
+          case p if ctx.thisPath.contains(p) => super.applyPath(getVar(dummyThisVar.get))(k)
           case _ => super.applyPath(p)(k)
         override def applyArg(arg: Arg)(k: Arg => Block): Block =
           super.applyArg(arg)(k)
-      val extraVars = Set.single(flattenCtx.pcVar)
-      transformer.applyMainBlock(Scoped(flattenCtx.scopedVars ++ extraVars, mainBody))
+      val extraVars = if flattenCtx.needsStackSafety then Set(flattenCtx.pcVar, flattenCtx.curDepth) else Set.single(flattenCtx.pcVar)
+      val withStackSafe = if !flattenCtx.needsStackSafety then mainBody else
+        blockBuilder
+          .assign(NoSymbol, Call(paths.checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+          .assign(flattenCtx.curDepth, Call(estate.builtinOpsMap("+").asSimpleRef, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+          .rest(mainBody)
+      transformer.applyMainBlock(Scoped(flattenCtx.scopedVars ++ extraVars, withStackSafe))
 
     val tmp = freshTmp("vars")
     val initialVars = (Iterator.single(intLit(parts.entry)) ++ ctx.resumeInfo.allArgs.iterator.map[Path](_.asSimpleRef) ++ flattenCtx.vars.iterator.map[Path](_ => unit)).map(Arg(N, _)).toList
