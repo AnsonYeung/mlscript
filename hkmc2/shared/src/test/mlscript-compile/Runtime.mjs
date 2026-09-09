@@ -1076,7 +1076,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
         lbl: while (true) {
           let scrut, curFrame, old, scrut1, scrut2, tmp1, tmp2, tmp3, lambda$here, lambda$here1;
           scrut = contTrace.next;
-          if (scrut instanceof Runtime.FunctionContFrame.class) {
+          if (scrut instanceof Runtime.ShadowFunctionContFrame.class) {
             curFrame = contTrace.next;
             Runtime.curEffect = null;
             old = Runtime.stackDepth;

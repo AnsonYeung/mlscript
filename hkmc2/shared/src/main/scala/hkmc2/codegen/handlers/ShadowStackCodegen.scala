@@ -83,7 +83,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
       transformer.applyMainBlock(Scoped(flattenCtx.scopedVars ++ extraVars, withStackSafe))
 
     val tmp = freshTmp("vars")
-    val initialVars = (Iterator.single(intLit(parts.entry)) ++ ctx.resumeInfo.allArgs.iterator.map[Path](_.asSimpleRef) ++ flattenCtx.vars.iterator.map[Path](_ => unit)).map(Arg(N, _)).toList
+    val initialVars = (Iterator.single(intLit(parts.entry)) ++ ctx.thisPath.iterator ++ ctx.resumeInfo.allArgs.iterator.map[Path](_.asSimpleRef) ++ flattenCtx.vars.iterator.map[Path](_ => unit)).map(Arg(N, _)).toList
     blockBuilder
       .assignScoped(tmp, Tuple(true, initialVars))
       .assign(NoSymbol, Call(paths.pushFramePath, (Value.MemberRef(workerSym, workerDSym).asArg :: Value.SimpleRef(tmp).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))

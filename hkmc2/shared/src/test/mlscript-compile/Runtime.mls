@@ -697,7 +697,7 @@ module ShadowStackImpl with
     set curContTrace = contTrace
     
     while
-      contTrace.next is FunctionContFrame then
+      contTrace.next is ShadowFunctionContFrame then
         let curFrame = contTrace.next
         set curEffect = null
         set value = set stackDepth += 3 in
