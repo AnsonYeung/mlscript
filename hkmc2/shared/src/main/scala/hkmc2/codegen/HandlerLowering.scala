@@ -21,6 +21,8 @@ import hkmc2.codegen.handlers.ClassCodegen
 import hkmc2.codegen.handlers.ShadowStackCodegen
 
 object HandlerLowering:
+  
+  val defaultStrategy: Strategy = IfCheck()
 
   abstract class Strategy:
     def beginUnwind(using State): Block
@@ -137,7 +139,6 @@ object HandlerLowering:
   def currentStrategy(using Config): Strategy =
     config.effectHandlers.fold(noneStrategy)(_.strategy)
   
-  val defaultStrategy: Strategy = IfCheck()
   // These nofib options is also used for resolving `internals.runStackSafe` stub
   val nofibMaxStackDepth = 100
   val nofibEffectHandlers: Opt[EffectHandlers] =
