@@ -1,8 +1,6 @@
 :js
 :effectHandlers
 :lift
-:exit
-====================================================================================================
 
 import "../../mlscript-compile/Runtime.mls"
 
@@ -10,7 +8,4 @@ set Runtime.resumePc = 100
 
 :expect -1
 Runtime.resumePc
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:301)
-//│ ═══[RUNTIME ERROR] Expected: '-1', got: '100'
-//│ = 100
+//│ = -1

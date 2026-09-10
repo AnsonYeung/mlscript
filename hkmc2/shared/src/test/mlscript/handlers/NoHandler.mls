@@ -1,5 +1,4 @@
 :js
-:lift
 
 abstract class Effect with
   fun perform(arg: Str): Str
@@ -9,10 +8,10 @@ handle h = Effect with
   fun perform(arg)(k) = k(arg)
 h.perform("k")
 //│ ╔══[COMPILATION ERROR] Effect handlers are not enabled
-//│ ║  l.8: 	handle h = Effect with
+//│ ║  l.7: 	handle h = Effect with
 //│ ║       	           ^^^^^^^^^^^
-//│ ║  l.9: 	  fun perform(arg)(k) = k(arg)
+//│ ║  l.8: 	  fun perform(arg)(k) = k(arg)
 //│ ║       	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-//│ ║  l.10: 	h.perform("k")
-//│ ╙──      	^^^^^^^^^^^^^^
+//│ ║  l.9: 	h.perform("k")
+//│ ╙──     	^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.

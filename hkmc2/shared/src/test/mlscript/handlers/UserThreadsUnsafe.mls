@@ -1,26 +1,26 @@
 :js
 :effectHandlers debug
 :lift
-:rewriteWhile
+
 
 class ThreadEffect with
   fun fork(thread: () -> ()): ()
   fun yld(): ()
 
 
-fun f(h, x) = () =>
+fun f(h, x)() =
   print("f " + x)
   h.yld()
   print("f " + x)
   h.yld()
   print("f " + x)
 
-fun mainn(h) =
-  print("mainn start")
+fun main(h) =
+  print("main start")
   h.fork(f(h, 0))
   h.fork(f(h, 1))
   h.fork(f(h, 2))
-  print("mainn end")
+  print("main end")
 
 
 // task queue
@@ -33,7 +33,6 @@ fun drain() =
 
 // LIFO
 :re
-:ignore
 handle h = ThreadEffect with
   fun fork(thread)(k) =
     tasks.push(thread)
@@ -43,14 +42,19 @@ handle h = ThreadEffect with
     tasks.unshift(k)
     drain()
 in
-  mainn(h)
-//│ > mainn start
-//│ = 2
+  main(h)
+//│ > main start
+//│ > main end
+//│ > f 2
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
+//│ 	at f (UserThreadsUnsafe.mls:13:3)
+//│ 	at drain (UserThreadsUnsafe.mls:30:5)
+//│ 	at Handler$h$fork (UserThreadsUnsafe.mls:39:5)
+//│ 	at Handler$h$fork (UserThreadsUnsafe.mls:39:5)
 
 
 // FIFO
 :re
-:ignore
 handle h = ThreadEffect with
   fun fork(thread)(k) =
     tasks.unshift(thread)
@@ -60,8 +64,14 @@ handle h = ThreadEffect with
     tasks.unshift(k)
     drain()
 in
-  mainn(h)
-//│ > mainn start
-//│ = 4
+  main(h)
+//│ > main start
+//│ > main end
+//│ > f 1
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
+//│ 	at f (UserThreadsUnsafe.mls:13:3)
+//│ 	at drain (UserThreadsUnsafe.mls:30:5)
+//│ 	at Handler$h$fork (UserThreadsUnsafe.mls:61:5)
+//│ 	at Handler$h$fork (UserThreadsUnsafe.mls:61:5)
 
 

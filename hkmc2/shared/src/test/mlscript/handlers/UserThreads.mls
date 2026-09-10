@@ -1,9 +1,7 @@
 :js
 :effectHandlers
 :lift
-:rewriteWhile
 
-open annotations
 
 abstract class ThreadEffect with
   val tasks = mut []
@@ -26,7 +24,7 @@ fun f(h, x) =
   h.yld()
   print("f " + x)
 
-fun mainn(h) =
+fun main(h) =
   print("main start")
   h.fork(() => f(h, 0))
   h.fork(() => f(h, 1))
@@ -37,19 +35,29 @@ fun mainn(h) =
 // LIFO
 handle h = ThreadEffect with
   fun fork(thread)(k) =
-    @native this.tasks.unshift(thread)
+    this.tasks.unshift(thread)
     k(())
   fun yld()(k) =
-    @native this.tasks.push(() => k(()))
-    enterHandleBlock(this, () => (@native this.tasks.shift())())
+    this.tasks.push(() => k(()))
+    enterHandleBlock(this, () => this.tasks.shift()())
   fun start(main)(k) =
-    this.tasks.push(() => mainn(this))
+    this.tasks.push(() => main(this))
     while this.tasks.length != 0 do
-      enterHandleBlock(this, () => (@native this.tasks.shift())())
+      enterHandleBlock(this, () => this.tasks.shift()())
     k(())
 in
-  h.start(mainn)
-//│ = 2
+  h.start(main)
+//│ > main start
+//│ > main end
+//│ > f 2
+//│ > f 1
+//│ > f 0
+//│ > f 2
+//│ > f 1
+//│ > f 0
+//│ > f 2
+//│ > f 1
+//│ > f 0
 
 
 // FIFO
@@ -61,13 +69,23 @@ handle h = ThreadEffect with
     this.tasks.push(() => k(()))
     enterHandleBlock(this, () => this.tasks.shift()())
   fun start(main)(k) =
-    this.tasks.push(() => mainn(this))
+    this.tasks.push(() => main(this))
     while this.tasks.length != 0 do
       enterHandleBlock(this, () => this.tasks.shift()())
     k(())
 in
-  h.start(mainn)
-//│ = 2
+  h.start(main)
+//│ > main start
+//│ > main end
+//│ > f 0
+//│ > f 1
+//│ > f 2
+//│ > f 0
+//│ > f 1
+//│ > f 2
+//│ > f 0
+//│ > f 1
+//│ > f 2
 
 
 // Adapted from: https://ocaml.org/manual/5.3/effects.html
@@ -79,14 +97,14 @@ abstract class ThreadEffect with
 val tasks = mut []
 //│ tasks = []
 
-fun f(x) = h =>
+fun f(x)(h) =
   print("f " + x)
   h.yld()
   print("f " + x)
   h.yld()
   print("f " + x)
 
-fun mainn(h) =
+fun main(h) =
   print("main start")
   h.fork(f(0))
   h.fork(f(1))
@@ -95,21 +113,21 @@ fun mainn(h) =
 
 fun dequeue() =
   if tasks.length != 0 do
-    (@native tasks.shift())(())
+    tasks.shift()(())
 
 fun start(thread: ThreadEffect -> ()) =
   handle h = ThreadEffect with
     fun fork(new_thread)(k) =
-      @native tasks.push(k)
+      tasks.push(k)
       start(new_thread)
     fun yld()(k) =
-      @native tasks.push(k)
+      tasks.push(k)
       dequeue()
   in
     thread(h)
   dequeue()
 
-start(mainn)
+start(main)
 //│ > main start
 //│ > f 0
 //│ > f 1
@@ -133,16 +151,15 @@ abstract class ThreadEffect with
 
 val tasks = mut []
 fun enqueue(k, x) =
-  @native tasks.push(() => k(x))
+  tasks.push(() => k(x))
 fun dequeue() =
   if tasks.length != 0 do
-    (@native tasks.shift())()
+    tasks.shift()()
 //│ tasks = []
 
 let exchanger = None
 //│ exchanger = None
 
-:sir
 fun start(thread: ThreadEffect -> ()) =
   handle h = ThreadEffect with
     fun fork(new_thread)(k) =
@@ -163,120 +180,8 @@ fun start(thread: ThreadEffect -> ()) =
   in
     thread(h)
   dequeue()
-//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ let handleBlock$, Handler$h$fork, Handler$h$yld, Handler$h$xchg, Handler$h$, handleBlock$$, Handler$h$fork$, Handler$h$xchg$;
-//│ @inline
-//│ define Handler$h$xchg$ as fun Handler$h$xchg$⁰(k, x)(k1) {
-//│   let tmp;
-//│   set tmp = (k2, x1, k3) => {
-//│     return Handler$h$xchg⁰(k2, x1, k3)
-//│   };
-//│   return tmp(k, x, k1)
-//│ };
-//│ define Handler$h$xchg as fun Handler$h$xchg⁰(k, x, k1) {
-//│   let y, k11, arg$Some$0$, element1$, element0$, tmp, tmp1;
-//│   match exchanger⁰
-//│     Some⁰ =>
-//│       set arg$Some$0$ = exchanger⁰.value⁰;
-//│       match arg$Some$0$
-//│         Array(2) =>
-//│           let cpsCont$0;
-//│           set element0$ = runtime⁰.Tuple⁰.get⁰(arg$Some$0$, 0);
-//│           set element1$ = runtime⁰.Tuple⁰.get⁰(arg$Some$0$, 1);
-//│           set k11 = element1$;
-//│           set y = element0$;
-//│           set exchanger⁰ = Option⁰.None⁰;
-//│           define cpsCont$0 as fun cpsCont$0⁰(‹no symbol›) {
-//│             return k1(k, y)
-//│           };
-//│           return enqueue⁰(cpsCont$0⁰, k11, x)
-//│         else
-//│           throw new globalThis⁰.Error⁰("match error")
-//│       end
-//│     None⁰ =>
-//│       set tmp = [x, k1];
-//│       set tmp1 = Option⁰.Some¹(tmp);
-//│       set exchanger⁰ = tmp1;
-//│       return dequeue⁰(k)
-//│     else
-//│       throw new globalThis⁰.Error⁰("match error")
-//│   end
-//│ };
-//│ define Handler$h$yld as fun Handler$h$yld⁰(k, k1) {
-//│   let cpsCont$3;
-//│   define cpsCont$3 as fun cpsCont$3⁰(‹no symbol›) {
-//│     return dequeue⁰(k)
-//│   };
-//│   return enqueue⁰(cpsCont$3⁰, k1, runtime⁰.Unit⁰)
-//│ };
-//│ @inline
-//│ define Handler$h$fork$ as fun Handler$h$fork$⁰(k, new_thread)(k1) {
-//│   let tmp;
-//│   set tmp = (k2, new_thread1, k3) => {
-//│     return Handler$h$fork⁰(k2, new_thread1, k3)
-//│   };
-//│   return tmp(k, new_thread, k1)
-//│ };
-//│ define Handler$h$fork as fun Handler$h$fork⁰(k, new_thread, k1) {
-//│   let tmp, cpsCont$6;
-//│   define cpsCont$6 as fun cpsCont$6⁰(‹no symbol›) {
-//│     set tmp = (k2, thread) => {
-//│       return start⁰(k2, thread)
-//│     };
-//│     return tmp(k, new_thread)
-//│   };
-//│   return enqueue⁰(cpsCont$6⁰, k1, runtime⁰.Unit⁰)
-//│ };
-//│ @inline
-//│ define handleBlock$$ as fun handleBlock$$⁰(k, thread, h)() {
-//│   let tmp;
-//│   set tmp = (k1, thread1, h1) => {
-//│     return handleBlock$⁰(k1, thread1, h1)
-//│   };
-//│   return tmp(k, thread, h)
-//│ };
-//│ define Handler$h$ as class Handler$h$⁰ extends ThreadEffect⁰ {
-//│   method fork⁰ = fun fork¹(k, new_thread) {
-//│     let suspendRes, Handler$h$fork$here;
-//│     set Handler$h$fork$here = (k1, k2) => {
-//│       return Handler$h$fork$⁰(k1, new_thread)(k2)
-//│     };
-//│     return new mut runtime⁰.Suspend﹖(k, Handler$h$⁰.this, Handler$h$fork$here)
-//│   }
-//│   method yld⁰ = fun yld¹(k) {
-//│     let suspendRes, tmp;
-//│     set tmp = (k1, k2) => {
-//│       return Handler$h$yld⁰(k1, k2)
-//│     };
-//│     return new mut runtime⁰.Suspend﹖(k, Handler$h$⁰.this, tmp)
-//│   }
-//│   method xchg⁰ = fun xchg¹(k, x) {
-//│     let suspendRes, Handler$h$xchg$here;
-//│     set Handler$h$xchg$here = (k1, k2) => {
-//│       return Handler$h$xchg$⁰(k1, x)(k2)
-//│     };
-//│     return new mut runtime⁰.Suspend﹖(k, Handler$h$⁰.this, Handler$h$xchg$here)
-//│   }
-//│ };
-//│ define handleBlock$ as fun handleBlock$⁰(k, thread, h) {
-//│   return thread(k, h)
-//│ };
-//│ define start¹ as fun start⁰(k, thread) {
-//│   let h, tmp, handleBlock$$here, cpsCont$9;
-//│   set h = new mut Handler$h$⁰();
-//│   set handleBlock$$here = (k1) => {
-//│     return handleBlock$$⁰(k1, thread, h)()
-//│   };
-//│   define cpsCont$9 as fun cpsCont$9⁰(retVal) {
-//│     set tmp = retVal;
-//│     return dequeue⁰(k)
-//│   };
-//│   return runtime⁰.cpsHandlerImpl﹖(cpsCont$9⁰, h, handleBlock$$here)
-//│ };
-//│ end
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
-fun mainn(h) =
+fun main(h) =
   h.fork(h =>
     print("[t1] Sending 0")
     let v = h.xchg(0)
@@ -286,11 +191,7 @@ fun mainn(h) =
     let v = h.xchg(1)
     print("[t2] received " + v.toString()))
 
-:sjs
-start(mainn)
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ return start1(runtime.cpsId, mainn2)
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+start(main)
 //│ > [t1] Sending 0
 //│ > [t2] Sending 1
 //│ > [t2] received 0

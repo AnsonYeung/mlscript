@@ -2,6 +2,7 @@
 :effectHandlers
 :lift
 
+
 abstract class Effect with
   fun perform(arg: Str): Str
 
@@ -23,7 +24,7 @@ object Lol with
 :re
 Lol.x
 //│ ╔══[COMPILATION ERROR] Object 'Lol' does not contain member 'x'
-//│ ║  l.24: 	Lol.x
+//│ ║  l.25: 	Lol.x
 //│ ╙──      	   ^^
 //│ ═══[RUNTIME ERROR] Error: Access to required field 'x' yielded 'undefined'
 
@@ -42,7 +43,7 @@ object Lol with
 :re
 Lol.x
 //│ ╔══[COMPILATION ERROR] Object 'Lol' does not contain member 'x'
-//│ ║  l.43: 	Lol.x
+//│ ║  l.44: 	Lol.x
 //│ ╙──      	   ^^
 //│ ═══[RUNTIME ERROR] Error: Access to required field 'x' yielded 'undefined'
 

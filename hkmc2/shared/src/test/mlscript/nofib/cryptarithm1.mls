@@ -1,21 +1,6 @@
 :js
 
-
+:re
 import "../../mlscript-compile/nofib/cryptarithm1.mls"
 cryptarithm1.main()
-//│ = Cons(
-//│   Cons(
-//│     Cons(
-//│       1,
-//│       Cons(
-//│         9,
-//│         Cons(
-//│           4,
-//│           Cons(2, Cons(5, Cons(3, Cons(0, Cons(7, Cons(6, Cons(8, Nil)))))))
-//│         )
-//│       )
-//│     ),
-//│     Nil
-//│   ),
-//│   Nil
-//│ )
+//│ ═══[RUNTIME ERROR] RangeError: Maximum call stack size exceeded

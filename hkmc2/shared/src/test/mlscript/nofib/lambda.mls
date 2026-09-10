@@ -2,4 +2,4 @@
 
 import "../../mlscript-compile/nofib/lambda.mls"
 lambda.main()
-//│ = "Cons(\"C\", Cons(\"o\", Cons(\"n\", Cons(\" \", Cons(\"3\", Cons(\"2\", Cons(\"4\", Cons(\"0\", Nil)))))))),Cons(\"3\", Cons(\"2\", Cons(\"4\", Cons(\"0\", Cons(\" \", Cons(\" \", Cons(\"[\", Cons(\"]\", Nil))))))))"
+//│ = "[\"C\",\"o\",\"n\",\" \",\"3\",\"2\",\"4\",\"0\"],[\"3\",\"2\",\"4\",\"0\",\" \",\" \",\"[\",\"]\"]"

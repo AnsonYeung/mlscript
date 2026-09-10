@@ -83,7 +83,6 @@ declare module debug with
 declare module annotations with
   object untyped
   object tailrec
-  object native
   object tailcall
   object inline
   object noInline

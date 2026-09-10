@@ -2,8 +2,6 @@
 :effectHandlers
 :lift
 
-open annotations
-
 let id = 0
 //│ id = 0
 
@@ -19,9 +17,9 @@ fun handleEffects(g) =
       else
         set id += 1
         let cur = id
-        print("h1 start " + @native String(cur))
+        print("h1 start " + String(cur))
         let result = k(x)
-        print("h1 end " + @native String(cur))
+        print("h1 end " + String(cur))
         result
   handle h2 = MaybeStop with
     fun f(x)(k) =
@@ -30,9 +28,9 @@ fun handleEffects(g) =
       else
         set id += 1
         let cur = id
-        print("h2 start " + @native String(cur))
+        print("h2 start " + String(cur))
         let result = k(x)
-        print("h2 end " + @native String(cur))
+        print("h2 end " + String(cur))
         result
   g(h1, h2)
 
@@ -174,7 +172,6 @@ let d = 0
 //│ d = 0
 
 
-:rewriteWhile
 :expect 11
 handle h1 = Eff with
   fun perform()(k) =

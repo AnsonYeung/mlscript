@@ -1,5 +1,5 @@
 :js
-:lift
+
 
 // * This feature relies on `finally`
 :sjs
@@ -18,6 +18,7 @@ x
 
 :todo
 :effectHandlers
+:lift
 let x = 1
 handle h = Object with
   fun test()(k) =
@@ -32,15 +33,15 @@ set x += 1 in
   print("end")
 x
 //│ ╔══[COMPILATION ERROR] Backtracking assignment is not supported with effect handlers enabled
-//│ ║  l.28: 	set x += 1 in
+//│ ║  l.29: 	set x += 1 in
 //│ ║        	    ^^^^^^^^^
-//│ ║  l.29: 	  print("init")
+//│ ║  l.30: 	  print("init")
 //│ ║        	^^^^^^^^^^^^^^^
-//│ ║  l.30: 	  print(h.test())
+//│ ║  l.31: 	  print(h.test())
 //│ ║        	^^^^^^^^^^^^^^^^^
-//│ ║  l.31: 	  print(x)
+//│ ║  l.32: 	  print(x)
 //│ ║        	^^^^^^^^^^
-//│ ║  l.32: 	... (more lines omitted) ...
+//│ ║  l.33: 	... (more lines omitted) ...
 //│ ╙──      	^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 //│ x = 1

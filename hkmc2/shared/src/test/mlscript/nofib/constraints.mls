@@ -2,4 +2,4 @@
 
 import "../../mlscript-compile/nofib/constraints.mls"
 constraints.main()
-//│ = "Cons(4, Cons(4, Cons(4, Cons(4, Cons(4, Nil)))))"
+//│ = "[4,4,4,4,4]"

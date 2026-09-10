@@ -1,10 +1,9 @@
 :js
 :effectHandlers
+:lift
 
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
 abstract class Effect with
   fun perform(): ()
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
 
 let h1 = null
 handle h = Effect with
@@ -13,18 +12,15 @@ handle h = Effect with
     k()
     print("perform-end")
 set h1 = h
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
 //│ h1 = Handler$h$
 
-:ignore
+:re
 h1.perform()
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
-//│ = Suspend(fun cpsId, Handler$h$, fun Handler$h$perform)
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
 
-:ignore
 enterHandleBlock(h1, () => h1.perform())
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
-//│ = Suspend(undefined, Handler$h$, fun Handler$h$perform)
+//│ > perform
+//│ > perform-end
 
 let h2 = null
 handle h = Effect with
@@ -33,15 +29,17 @@ handle h = Effect with
     k()
     print("perform-end2")
 set h2 = h
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
 //│ h2 = Handler$h$
 
-:ignore
 // This causes the scenario where next is null but nextHandler is not null in the runtime
 enterHandleBlock(h1, () => enterHandleBlock(h2, () =>
   h1.perform()
   h2.perform()
   h1.perform()
 ))
-//│ /!!!\ Option ':effectHandlers' requires ':lift'
-//│ ═══[RUNTIME ERROR] Error: Function expected 1 argument but got 0
+//│ > perform
+//│ > perform2
+//│ > perform
+//│ > perform-end2
+//│ > perform-end
+//│ > perform-end

@@ -1,78 +1,87 @@
 :js
 :effectHandlers
+
+//│ /!!!\ Option ':effectHandlers' requires ':lift'
+
 :lift
-
-
 :sir
-fun f(x) = y => x + y
+fun f(x)(y) = x + y
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ let lambda, lambda$;
-//│ @inline @private
-//│ define lambda$ as fun lambda$⁰(k, x)(y) {
-//│   let tmp;
-//│   set tmp = (k1, x1, y1) => {
-//│     return lambda⁰(k1, x1, y1)
-//│   };
-//│   return tmp(k, x, y)
-//│ };
-//│ @private
-//│ define lambda as fun lambda⁰(k, x, y) {
-//│   let tmp;
-//│   set tmp = +⁰(x, y);
-//│   return k(tmp)
-//│ };
-//│ define f⁰ as fun f¹(k, x) {
-//│   let lambda$here;
-//│   set lambda$here = (k1, y) => { return lambda$⁰(k1, x)(y) };
-//│   return k(lambda$here)
-//│ };
-//│ end
+//│ do runtime⁰.resetEffects﹖(); define f⁰ as fun f¹(x)(y) { return +⁰(x, y) }; end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
+:lift
 :sir
 f(1)(2)
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
-//│ let baseCall; set baseCall = f¹(runtime⁰.cpsId﹖, 1); return baseCall(runtime⁰.cpsId﹖, 2)
+//│ let tmp;
+//│ do runtime⁰.resetEffects﹖();
+//│ set tmp = f¹(1)(2);
+//│ match runtime⁰.curEffect﹖
+//│   null =>
+//│     return tmp
+//│   else
+//│     set tmp = runtime⁰.topLevelEffect﹖(false);
+//│     return tmp
+//│ end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 3
 
+:lift
 :soir
-fun g(a) = b => f(a)(b) + f(b)(a)
+fun g(a)(b) = f(a)(b) + f(b)(a)
 //│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
-//│ define g⁰ as fun g¹(k, a) {
-//│   let lambda$here;
-//│   set lambda$here = (k1, b) => {
-//│     let k2, a1, b1, tmp;
-//│     set k2 = k1;
-//│     set a1 = a;
-//│     set b1 = b;
-//│     set tmp = (k3, a2, b2) => {
-//│       let k4, a3, b3, cpsCont$9;
-//│       set k4 = k3;
-//│       set a3 = a2;
-//│       set b3 = b2;
-//│       define cpsCont$9 as fun cpsCont$9⁰(baseCall) {
-//│         let cpsCont$6;
-//│         define cpsCont$6 as fun cpsCont$6⁰(tmp1) {
-//│           let cpsCont$3;
-//│           define cpsCont$3 as fun cpsCont$3⁰(baseCall1) {
-//│             let cpsCont$0;
-//│             define cpsCont$0 as fun cpsCont$0⁰(tmp2) {
-//│               let tmp3;
-//│               set tmp3 = +⁰(tmp1, tmp2);
-//│               return k4(tmp3)
-//│             };
-//│             return baseCall1(cpsCont$0⁰, a3)
-//│           };
-//│           return f¹(cpsCont$3⁰, b3)
-//│         };
-//│         return baseCall(cpsCont$6⁰, b3)
-//│       };
-//│       return f¹(cpsCont$9⁰, a3)
-//│     };
-//│     return tmp(k2, a1, b1)
-//│   };
-//│   return k(lambda$here)
+//│ let g$worker;
+//│ do runtime⁰.resetEffects﹖();
+//│ @inline
+//│ define g⁰ as fun g¹(a)(b) {
+//│   return g$worker⁰(a, b)
+//│ };
+//│ define g$worker as fun g$worker⁰(a, b) {
+//│   let tmp, tmp1, pc;
+//│   match runtime⁰.resumePc﹖
+//│     -1 =>
+//│       set pc = 0;
+//│       end
+//│     else
+//│       let saveOffset;
+//│       set pc = runtime⁰.resumePc﹖;
+//│       set saveOffset = runtime⁰.resumeIdx﹖;
+//│       set tmp = runtime⁰.resumeArr﹖.saveOffset;
+//│       set runtime⁰.resumePc﹖ = -1;
+//│       end
+//│   match pc
+//│     0 =>
+//│       let inlinedVal;
+//│       set inlinedVal = +⁰(a, b);
+//│       set runtime⁰.resumeValue﹖ = inlinedVal;
+//│       match runtime⁰.curEffect﹖
+//│         null =>
+//│           set pc = 2;
+//│           end
+//│         else
+//│           return runtime⁰.unwind﹖(g¹, 2, "CurriedFunctionCalls.mls:32:15", null, null, 2, 1, a, 1, b, 1, tmp)
+//│       end
+//│   match pc
+//│     2 =>
+//│       let inlinedVal;
+//│       set tmp = runtime⁰.resumeValue﹖;
+//│       set inlinedVal = +⁰(b, a);
+//│       set runtime⁰.resumeValue﹖ = inlinedVal;
+//│       match runtime⁰.curEffect﹖
+//│         null =>
+//│           set pc = 1;
+//│           end
+//│         else
+//│           return runtime⁰.unwind﹖(g¹, 1, "CurriedFunctionCalls.mls:32:25", null, null, 2, 1, a, 1, b, 1, tmp)
+//│       end
+//│   match pc
+//│     1 =>
+//│       set tmp1 = runtime⁰.resumeValue﹖;
+//│       return +⁰(tmp, tmp1)
+//│     else
+//│       end
+//│   end
 //│ };
 //│ end
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————

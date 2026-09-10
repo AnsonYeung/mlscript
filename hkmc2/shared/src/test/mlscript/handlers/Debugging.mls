@@ -1,14 +1,13 @@
 :js
 :effectHandlers debug
 :lift
-:exit
-====================================================================================================
 
 
 
 :re
 raiseUnhandledEffect()
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect FatalEffect
+//│ 	at tail position
 
 :sjs
 fun f() =
@@ -19,26 +18,80 @@ fun f() =
     print of raiseUnhandledEffect()
   j / i
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let f;
-//│ f = function f(k) {
-//│   let scrut;
-//│   scrut = Predef.equals(0, 0);
-//│   if (scrut === true) {
-//│     let tmp, inlinedVal;
-//│     inlinedVal = runtime.safeCall(Runtime.mkEffect(Runtime.FatalEffect, null));
-//│     Predef.print(inlinedVal);
-//│     tmp = 100 / 0;
-//│     return k(tmp)
+//│ let f, f$debugInfo;
+//│ runtime.resetEffects();
+//│ f$debugInfo = globalThis.Object.freeze([
+//│   "f",
+//│   0,
+//│   "i",
+//│   1,
+//│   "j",
+//│   2,
+//│   "k"
+//│ ]);
+//│ f = function f() {
+//│   let i, j, k, scrut, tmp, pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     let saveOffset;
+//│     pc = runtime.resumePc;
+//│     saveOffset = runtime.resumeIdx;
+//│     i = runtime.resumeArr.at(saveOffset);
+//│     saveOffset = saveOffset + 1;
+//│     j = runtime.resumeArr.at(saveOffset);
+//│     saveOffset = saveOffset + 1;
+//│     k = runtime.resumeArr.at(saveOffset);
+//│     saveOffset = saveOffset + 1;
+//│     scrut = runtime.resumeArr.at(saveOffset);
+//│     saveOffset = saveOffset + 1;
+//│     tmp = runtime.resumeArr.at(saveOffset);
+//│     runtime.resumePc = -1;
 //│   }
-//│   { let tmp; tmp = 100 / 0; return k(tmp); }
+//│   switch (pc) {
+//│     case 0:
+//│       i = 0;
+//│       j = 100;
+//│       k = 2000;
+//│       runtime.resumeValue = Predef.equals(0, 0);
+//│       if (runtime.curEffect === null) {
+//│         pc = 3;
+//│       } else {
+//│         return runtime.unwind(f, 3, "Debugging.mls:17:6", f$debugInfo, null, 1, 0, 5, 0, 100, 2000, scrut, tmp)
+//│       }
+//│     case 3:
+//│       scrut = runtime.resumeValue;
+//│       if (scrut === true) {
+//│         let inlinedVal1;
+//│         inlinedVal1 = runtime.safeCall(Runtime.mkEffect(Runtime.FatalEffect, null));
+//│         runtime.resumeValue = inlinedVal1;
+//│         if (runtime.curEffect === null) {
+//│           pc = 2;
+//│         } else {
+//│           return runtime.unwind(f, 2, "Debugging.mls:18:14", f$debugInfo, null, 1, 0, 5, i, j, k, scrut, tmp)
+//│         }
+//│       } else {
+//│         return j / i
+//│       }
+//│     case 2:
+//│       tmp = runtime.resumeValue;
+//│       runtime.resumeValue = Predef.print(tmp);
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(f, 1, "Debugging.mls:18:5", f$debugInfo, null, 1, 0, 5, i, j, k, scrut, tmp)
+//│       }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return j / i;
+//│   }
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 :re
 f()
-//│ > ()
-//│ = Infinity
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect FatalEffect
+//│ 	at f (Debugging.mls:18:14)
 
 :re
 fun lambda_test(f) =
@@ -47,8 +100,9 @@ fun lambda_test(f) =
 lambda_test(() =>
   raiseUnhandledEffect()
   100)
-//│ = 200
-//│ FAILURE: Unexpected lack of runtime error
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect FatalEffect
+//│ 	at lambda (Debugging.mls:101:3)
+//│ 	at lambda_test (Debugging.mls:98:3)
 
 
 import "../../mlscript-compile/Runtime.mls"
@@ -57,30 +111,21 @@ import "../../mlscript-compile/Runtime.mls"
 let res = Runtime._try(f)
 
 res.reified.contTrace.next.getLocals
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:260)
-//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of null (reading 'getLocals')
-//│     at REPL27:1:360
-//│     at ContextifyScript.runInThisContext (node:vm:138:12)
-//│     at defaultEval (node:repl:610:24)
-//│     at REPLEvalInContext (node:repl:693:9)
-//│     at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:66:14)
-//│     at REPLServer.REPLEval [as eval] (node:repl:692:19)
-//│     at REPLServer.onLine (node:repl:830:12)
-//│     at REPLServer.emit (node:events:514:20)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:477:12)
-//│     at [_normalWrite] [as _normalWrite] (node:internal/readline/interface:675:18)
+//│ = [LocalVarInfo("i", 0), LocalVarInfo("j", 100), LocalVarInfo("k", 2000)]
 
 Runtime.debugEff(res.reified)
-//│ > Not an effect:
-//│ > [Function: cpsId]
+//│ > Debug EffectSig:
+//│ > handler:  FatalEffect
+//│ > handlerFun:  null
+//│ > resumed:  false
+//│ > <lastHandler is self>
+//│ > FunctionContFrame(pc=2, last) -> (null)
+//│ > 
 
 :expect Infinity
 res.resumeWith(42)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:301)
-//│ ═══[RUNTIME ERROR] Expected: 'Infinity', got: 'fun cpsId'
-//│ = fun cpsId
+//│ > 42
+//│ = Infinity
 
 
 
@@ -103,67 +148,26 @@ let res =
   handle h = Debugger with
     fun break(payload)(resume) = resume
   using Debugger = h
-//│ res = ()
-<<<<<<< HEAD
-  Runtime.try(() => Test.main())
-//│ FAILURE: Unexpected warning
-//│ FAILURE LOCATION: applyFunDefn (CpsHandlerLowering.scala:205)
-//│ ═══[WARNING] The function term:lambda$ is not CPS-transformed because it has more than one parameter list.
-//│ FAILURE: Unexpected warning
-//│ FAILURE LOCATION: checkCall (CpsHandlerLowering.scala:240)
-//│ ╔══[WARNING] This call is not CPS-transformed because it has more than one argument list.
-//│ ║  l.160: 	  Runtime.try(() => Test.main())
-//│ ╙──       	                    ^^^^^^^^^^^
-//│ FAILURE: Unexpected warning
-//│ FAILURE LOCATION: checkCall (CpsHandlerLowering.scala:240)
-//│ ╔══[WARNING] This call is not CPS-transformed because it has more than one argument list.
-//│ ║  l.160: 	  Runtime.try(() => Test.main())
-//│ ╙──       	                    ^^^^^^^^^^^
-=======
   Runtime._try(() => Test.main())
->>>>>>> hkmc2
+//│ res = EffectHandle(_)
 
 :re
 res.raise()
-//│ ═══[RUNTIME ERROR] TypeError: res1.raise is not a function
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
+//│ 	at Test.test (Debugging.mls:140:15)
+//│ 	at Test.main (Debugging.mls:143:5)
 
 set res = res.resumeWith(42)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:260)
-//│ ═══[RUNTIME ERROR] TypeError: res1.resumeWith is not a function
-//│     at REPL49:1:46
-//│     at ContextifyScript.runInThisContext (node:vm:138:12)
-//│     at defaultEval (node:repl:610:24)
-//│     at REPLEvalInContext (node:repl:693:9)
-//│     at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:66:14)
-//│     at REPLServer.REPLEval [as eval] (node:repl:692:19)
-//│     at REPLServer.onLine (node:repl:830:12)
-//│     at REPLServer.emit (node:events:514:20)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:477:12)
-//│     at [_normalWrite] [as _normalWrite] (node:internal/readline/interface:675:18)
 
 :re
 res.raise()
-//│ ═══[RUNTIME ERROR] TypeError: res1.raise is not a function
+//│ ═══[RUNTIME ERROR] Error: Unhandled effect Handler$h$
+//│ 	at Test.test (Debugging.mls:140:15)
+//│ 	at Test.main (Debugging.mls:143:16)
 
 :expect 0.33676533676533676
 res.resumeWith(666)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: mkQuery (JSBackendDiffMaker.scala:260)
-//│ ═══[RUNTIME ERROR] TypeError: res1.resumeWith is not a function
-//│     at REPL55:1:44
-//│     at ContextifyScript.runInThisContext (node:vm:138:12)
-//│     at defaultEval (node:repl:610:24)
-//│     at REPLEvalInContext (node:repl:693:9)
-//│     at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:66:14)
-//│     at REPLServer.REPLEval [as eval] (node:repl:692:19)
-//│     at REPLServer.onLine (node:repl:830:12)
-//│     at REPLServer.emit (node:events:514:20)
-//│     at [_onLine] [as _onLine] (node:internal/readline/interface:477:12)
-//│     at [_normalWrite] [as _normalWrite] (node:internal/readline/interface:675:18)
-//│ FAILURE: Unexpected runtime error
-//│ FAILURE LOCATION: processIRBlock (JSBackendDiffMaker.scala:301)
-//│ ═══[RUNTIME ERROR] Expected: '0.33676533676533676', got: 'undefined'
+//│ = 0.33676533676533676
 
 let i = 100
 fun f() =
@@ -178,3 +182,9 @@ fun f() =
 //│ i = 100
 
 f()
+//│ > Stack Trace:
+//│ > 	at f (Debugging.mls:177:3) with locals: j=200
+//│ > Stack Trace:
+//│ > 	at f (Debugging.mls:179:3)
+//│ > Stack Trace:
+//│ > 	at tail position

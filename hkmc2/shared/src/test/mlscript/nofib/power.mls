@@ -2,5 +2,5 @@
 
 import "../../mlscript-compile/nofib/power.mls"
 power.main()
-//│ = "Cons(0, Cons(1, Cons(1, Cons(2, Cons(5, Cons(14, Cons(42, Cons(132, Cons(429, Cons(1430, Cons(4862, Cons(16796, Cons(58786, Cons(208012, Nil))))))))))))))"
+//│ = "[0,1,1,2,5,14,42,132,429,1430,4862,16796,58786,208012]"
 

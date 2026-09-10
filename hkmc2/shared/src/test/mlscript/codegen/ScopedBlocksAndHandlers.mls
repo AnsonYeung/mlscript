@@ -1,7 +1,7 @@
 :js
-:effectHandlers
 :lift
-:rewriteWhile
+:effectHandlers
+
 
 
 
@@ -24,28 +24,30 @@ fun f(x) =
       let z = 3
       fun g() = z
 //│ ——————————————| Optimized IR |——————————————————————————————————————————————————————————————————————
-//│ define f⁰ as fun f¹(k, x) {
+//│ do runtime⁰.resetEffects﹖();
+//│ define f⁰ as fun f¹(x) {
 //│   match x
 //│     true =>
 //│       match x
 //│         true =>
-//│           return k(runtime⁰.Unit⁰)
+//│           return runtime⁰.Unit⁰
 //│         else
-//│           return k(runtime⁰.Unit⁰)
+//│           return runtime⁰.Unit⁰
 //│       end
 //│     else
-//│       return k(runtime⁰.Unit⁰)
+//│       return runtime⁰.Unit⁰
 //│   end
 //│ };
 //│ end
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f;
-//│ f = function f(k, x) {
+//│ runtime.resetEffects();
+//│ f = function f(x) {
 //│   if (x === true) {
-//│     if (x === true) { return k(runtime.Unit) }
-//│     return k(runtime.Unit);
+//│     if (x === true) { return runtime.Unit }
+//│     return runtime.Unit;
 //│   }
-//│   return k(runtime.Unit);
+//│   return runtime.Unit;
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -129,18 +131,29 @@ fun f(x) =
       g() )
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f4;
-//│ f4 = function f(k, x) {
-//│   if (x === true) {
-//│     let tmp1, cpsCont$0;
-//│     tmp1 = (k1) => {
-//│       return k1()
-//│     };
-//│     cpsCont$0 = function cpsCont$0() {
-//│       return k(runtime.Unit)
-//│     };
-//│     return tmp1(cpsCont$0)
+//│ runtime.resetEffects();
+//│ f4 = function f(x) {
+//│   let pc;
+//│   if (runtime.resumePc === -1) {
+//│     pc = 0;
+//│   } else {
+//│     pc = runtime.resumePc;
+//│     runtime.resumePc = -1;
 //│   }
-//│   return k(runtime.Unit);
+//│   switch (pc) {
+//│     case 0:
+//│       if (x === true) {
+//│         runtime.resumeValue = 3;
+//│         if (runtime.curEffect === null) {
+//│           pc = 1;
+//│         } else {
+//│           return runtime.unwind(f4, 1, "ScopedBlocksAndHandlers.mls:131:7", null, null, 1, 1, x, 0)
+//│         }
+//│       } else { return runtime.Unit }
+//│     case 1:
+//│       runtime.resumeValue;
+//│       return runtime.Unit;
+//│   }
 //│ };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
@@ -153,7 +166,8 @@ fun f(x) =
       fun g() = z )
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f5;
-//│ f5 = function f(k, x) { if (x === true) { return k(runtime.Unit) } return k(runtime.Unit); };
+//│ runtime.resetEffects();
+//│ f5 = function f(x) { if (x === true) { return runtime.Unit } return runtime.Unit; };
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 
 

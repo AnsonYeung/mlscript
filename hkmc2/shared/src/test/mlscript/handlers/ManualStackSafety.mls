@@ -2,15 +2,13 @@
 :effectHandlers
 :lift
 
-open annotations
-
 // * This file demonstrates the handler-based mechanism of our stack safety implementation
 // * by manually applying the transformation of a recursive factorial function
 // * defined through the Z combinator.
 // * It is notably interesting in that it demonstrates the ability to preserve tail calls.
 // * The original function can be found in `hkmc2/shared/src/test/mlscript/handlers/ZCombinator.mls`
 
-:noOpt
+
 fun test(n, stackLimit) =
   let stackDepth = 0
   let stackOffset = 0
@@ -20,9 +18,9 @@ fun test(n, stackLimit) =
     fun perform()(resume) =
       let curOffset = stackOffset
       set stackOffset = stackDepth
-      @native console.log("resuming at offset:", curOffset)
+      console.log("resuming at offset:", curOffset)
       let tmp = resume()
-      @native console.log("finished at offset:", curOffset)
+      console.log("finished at offset:", curOffset)
       set stackOffset = curOffset
       tmp
   fun selfApp(f) = 
@@ -51,12 +49,12 @@ fun test(n, stackLimit) =
       fun b(x) =
         if stackDepth - stackOffset >= stackLimit do h.perform()
         if x == 0 then 1 else 
-          @native console.log(stackDepth, stackOffset)
+          console.log(stackDepth, stackOffset)
           let tmp = stackDepth
           set stackDepth += 1
           let prev = self(x - 1)
           set stackDepth = tmp
-          @native console.log("resumed:", x)
+          console.log("resumed:", x)
           x * prev
       b
     mkrec(a)
@@ -66,7 +64,7 @@ fun test(n, stackLimit) =
   ans
 
 :expect 3628800
-test(10, 10000)
+test(10, 100)
 //│ > 1 0
 //│ > 3 0
 //│ > 5 0

@@ -2,4 +2,4 @@
 
 import "../../mlscript-compile/nofib/integer.mls"
 integer.main()
-//│ = "Cons(true, Cons(false, Cons(false, Cons(false, Cons(false, Cons(false, Cons(true, Cons(true, Cons(false, Cons(false, Cons(false, Cons(false, Cons(true, Cons(true, Cons(true, Cons(false, Cons(false, Cons(false, Cons(true, Cons(true, Cons(true, Cons(true, Cons(false, Cons(false, Cons(true, Cons(true, Cons(true, Cons(true, Cons(true, Cons(false, Cons(true, Cons(true, Cons(true, Cons(true, Cons(true, Cons(true, Nil))))))))))))))))))))))))))))))))))))"
+//│ = "[true,false,false,false,false,false,true,true,false,false,false,false,true,true,true,false,false,false,true,true,true,true,false,false,true,true,true,true,true,false,true,true,true,true,true,true]"

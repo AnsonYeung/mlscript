@@ -1,6 +1,11 @@
 :js
-:effectHandlers
-:lift
-:d
+// :de
+// :sjs
+// :pt
+// :elt
 
-//│ Elab: { import /storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Predef.mjs from /storage/mark/Repos/mlscript/hkmc2/shared/src/test/mlscript-compile/Predef.mjs; }
+:global
+// :d
+// :todo
+
+

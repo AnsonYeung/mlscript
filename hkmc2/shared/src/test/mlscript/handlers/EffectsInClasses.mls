@@ -12,6 +12,7 @@ data class Lol(h) with
   print(h.perform("k"))
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let Lol1;
+//│ runtime.resetEffects();
 //│ Lol1 = function Lol(h) {
 //│   return globalThis.Object.freeze(new Lol.class(h));
 //│ };
@@ -22,8 +23,14 @@ data class Lol(h) with
 //│   constructor(h) {
 //│     let tmp;
 //│     this.h = h;
-//│     tmp = this.h.perform(runtime.cpsId, "k");
+//│     tmp = runtime.safeCall(this.h.perform("k"));
+//│     if (runtime.curEffect !== null) {
+//│       tmp = runtime.illegalEffect("in a constructor");
+//│     }
 //│     Predef.print(tmp);
+//│     if (runtime.curEffect !== null) {
+//│       runtime.illegalEffect("in a constructor");
+//│     }
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Lol", ["h"]];
@@ -35,7 +42,7 @@ data class Lol(h) with
 // * The most natural semantics (following what normal constructors currently do)
 // *  is for the handler to not yet be constructed but to be constructed and executed normally after resumption.
 // * See full discussion at: https://github.com/hkust-taco/mlscript/pull/268#discussion_r1938523085
-:ignore
+:fixme
 handle h = Effect with
   fun perform(arg)(k) =
     print(arg)
@@ -47,56 +54,54 @@ handle k = Eff with
   fun test()(k) = k()
 k.test()
 print("test")
-//│ > test
+//│ ═══[RUNTIME ERROR] Error: Effect Handler$h$ is raised in a constructor
 
 
 
-:ignore
+:fixme
 let oops = 
   handle h = Effect with
     fun perform(arg)(k) =
       print(arg)
       "b"
   Lol(h)
-//│ > Suspend(fun cpsId, Handler$h$, fun Handler$h$perform$here)
-//│ oops = Lol(Handler$h$)
+//│ ═══[RUNTIME ERROR] Error: Effect Handler$h$2 is raised in a constructor
+//│ oops = undefined
 
 :fixme
 :expect "b"
 oops
-//│ ═══[RUNTIME ERROR] Expected: '"b"', got: 'Lol(Handler$h$)'
-//│ = Lol(Handler$h$)
+//│ ═══[RUNTIME ERROR] Expected: '"b"', got: 'undefined'
 
-:ignore
+:fixme
 let oops = 
   handle h = Effect with
     fun perform(arg)(k) =
       print(arg)
       "b"
   new Lol(h)
-//│ > Suspend(fun cpsId, Handler$h$, fun Handler$h$perform$here)
-//│ oops = Lol(Handler$h$)
+//│ ═══[RUNTIME ERROR] Error: Effect Handler$h$4 is raised in a constructor
+//│ oops = undefined
 
 :fixme
 :expect "b"
 oops
-//│ ═══[RUNTIME ERROR] Expected: '"b"', got: 'Lol(Handler$h$)'
-//│ = Lol(Handler$h$)
+//│ ═══[RUNTIME ERROR] Expected: '"b"', got: 'undefined'
 
 
-:ignore
+:fixme
 let oops = 
   handle h = Effect with
     fun perform(arg)(k) =
       print(arg)
       k("b")
   Lol(h)
-//│ > Suspend(fun cpsId, Handler$h$, fun Handler$h$perform$here)
-//│ oops = Lol(Handler$h$)
+//│ ═══[RUNTIME ERROR] Error: Effect Handler$h$6 is raised in a constructor
+//│ oops = undefined
 
-:ignore
+:fixme
 oops.h
-//│ = Handler$h$
+//│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'h')
 
 let obj = mut {s: undefined}
 //│ obj = {s: undefined}
@@ -117,5 +122,5 @@ module A with
 let obj = new Object with
   fun foo() = print("Hello")
   foo()
-//│ > fun cpsId Hello
+//│ > Hello
 //│ obj = $anon

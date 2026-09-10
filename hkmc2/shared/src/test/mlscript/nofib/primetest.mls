@@ -3,7 +3,7 @@
 
 import "../../mlscript-compile/nofib/primetest.mls"
 primetest.main()
-//│ = "Cons(\"Composite\", Cons(\"Composite\", Cons(\"Probably prime\", Cons(\"Composite\", Cons(\"Composite\", Nil)))))"
+//│ = "[\"Composite\",\"Composite\",\"Probably prime\",\"Composite\",\"Composite\"]"
 
 
 

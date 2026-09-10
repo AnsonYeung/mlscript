@@ -1,6 +1,5 @@
 :js
-:exit
-====================================================================================================
+
 
 :e
 do root:
@@ -32,7 +31,7 @@ do root:
 
 :global
 :effectHandlers
-:rewriteWhile
+:lift
 
 
 fun breakFromNestedFunctionWithEffects() =
@@ -40,6 +39,7 @@ fun breakFromNestedFunctionWithEffects() =
     fun escape() = root.break(42)
     escape()
 breakFromNestedFunctionWithEffects()
+//│ = 42
 
 
 fun breakFromNestedLambdaWithEffects() =
@@ -47,6 +47,7 @@ fun breakFromNestedLambdaWithEffects() =
     let escape = () => root.break(42)
     escape()
 breakFromNestedLambdaWithEffects()
+//│ = 42
 
 
 fun breakFromNestedFunctionAndLambdaWithEffects() =
@@ -54,6 +55,7 @@ fun breakFromNestedFunctionAndLambdaWithEffects() =
     fun makeBreaker() = () => root.break(7)
     makeBreaker()()
 breakFromNestedFunctionAndLambdaWithEffects()
+//│ = 7
 
 
 :sir
@@ -65,18 +67,151 @@ fun continueFromNestedFunctionWithEffects() =
       root.continue
     loop()
 continueFromNestedFunctionWithEffects()
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
-//│ 	at: scala.Predef$.$qmark$qmark$qmark(Predef.scala:383)
-//│ 	at: hkmc2.codegen.CpsHandlerLowering$$anon$1.applyBlock(CpsHandlerLowering.scala:145)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySubBlock(BlockTransformer.scala:29)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySub$1(BlockTransformer.scala:50)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3$$anonfun$1(BlockTransformer.scala:56)
-//│ 	at: hkmc2.codegen.BlockTransformer.rec$1(BlockTransformer.scala:333)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyListOf(BlockTransformer.scala:334)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3(BlockTransformer.scala:59)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyValue(BlockTransformer.scala:196)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyPath(BlockTransformer.scala:191)
+//│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
+//│ let loop, handleBlock$, NonLocalLabelEffectbreak, NonLocalLabelEffectcontinue, NonLocalLabelEffect, Capture$scope0, handleBlock$$, NonLocalLabelEffectbreak$, tmp;
+//│ do runtime⁰.resetEffects﹖();
+//│ define NonLocalLabelEffectcontinue as fun NonLocalLabelEffectcontinue⁰(resume) {
+//│   return runtime⁰.Continue﹖
+//│ };
+//│ @inline
+//│ define NonLocalLabelEffectbreak$ as fun NonLocalLabelEffectbreak$⁰(value)(resume) {
+//│   return NonLocalLabelEffectbreak⁰(value, resume)
+//│ };
+//│ define NonLocalLabelEffectbreak as fun NonLocalLabelEffectbreak⁰(value, resume) {
+//│   return value
+//│ };
+//│ define loop as fun loop⁰(scope0$cap, nonLocalHandler$root) {
+//│   let scrut, tmp1, pc;
+//│   match runtime⁰.resumePc﹖
+//│     -1 =>
+//│       set pc = 0;
+//│       end
+//│     else
+//│       let saveOffset;
+//│       set pc = runtime⁰.resumePc﹖;
+//│       set runtime⁰.resumePc﹖ = -1;
+//│       end
+//│   loop main:
+//│     match pc
+//│       2 =>
+//│         do runtime⁰.resumeValue﹖;
+//│         set pc = 1;
+//│         end
+//│     match pc
+//│       1 =>
+//│         set tmp1 = +⁰(scope0$cap.i$0⁰, 1);
+//│         set scope0$cap.i$0⁰ = tmp1;
+//│         return nonLocalHandler$root.continue﹖()
+//│       0 =>
+//│         set scrut = >=⁰(scope0$cap.i$0⁰, 3);
+//│         match scrut
+//│           true =>
+//│             set runtime⁰.resumeValue﹖ = nonLocalHandler$root.break﹖(scope0$cap.i$0⁰);
+//│             match runtime⁰.curEffect﹖
+//│               null =>
+//│                 set pc = 2;
+//│                 continue main
+//│               else
+//│                 return runtime⁰.unwind﹖(loop⁰, 2, "NonLocalLabelControlFlow.mls:65:24", null, null, 1, 2, scope0$cap, nonLocalHandler$root, 0)
+//│             end
+//│           else
+//│             set pc = 1;
+//│             continue main
+//│         end
+//│       else
+//│         end
+//│     end
+//│   end
+//│ };
+//│ @inline
+//│ define handleBlock$$ as fun handleBlock$$⁰(scope0$cap, nonLocalHandler$root)() {
+//│   return handleBlock$⁰(scope0$cap, nonLocalHandler$root)
+//│ };
+//│ define NonLocalLabelEffect as class NonLocalLabelEffect⁰ extends runtime⁰.NonLocalReturn⁰ {
+//│   method break⁰ = fun break¹(value) {
+//│     let suspendRes, NonLocalLabelEffectbreak$here;
+//│     set NonLocalLabelEffectbreak$here = NonLocalLabelEffectbreak$⁰(value);
+//│     return runtime⁰.mkEffect﹖(NonLocalLabelEffect⁰.this, NonLocalLabelEffectbreak$here)
+//│   }
+//│   method continue⁰ = fun continue¹() {
+//│     let suspendRes;
+//│     return runtime⁰.mkEffect﹖(NonLocalLabelEffect⁰.this, NonLocalLabelEffectcontinue⁰)
+//│   }
+//│ };
+//│ define handleBlock$ as fun handleBlock$⁰(scope0$cap, nonLocalHandler$root) {
+//│   return loop⁰(scope0$cap, nonLocalHandler$root)
+//│ };
+//│ define Capture$scope0 as class Capture$scope0¹ {
+//│   constructor Capture$scope0⁰(i$0) {
+//│     define i$0¹ as val i$0⁰ = i$0;
+//│     end
+//│   }
+//│ };
+//│ define continueFromNestedFunctionWithEffects⁰ as fun continueFromNestedFunctionWithEffects¹() {
+//│   let i, root$result, nonLocalHandler$root, labelBodyResult, labelContinueDispatch, tmp1, scope0$cap, handleBlock$$here, pc;
+//│   match runtime⁰.resumePc﹖
+//│     -1 =>
+//│       set pc = 0;
+//│       end
+//│     else
+//│       let saveOffset;
+//│       set pc = runtime⁰.resumePc﹖;
+//│       set saveOffset = runtime⁰.resumeIdx﹖;
+//│       set scope0$cap = runtime⁰.resumeArr﹖.saveOffset;
+//│       set runtime⁰.resumePc﹖ = -1;
+//│       end
+//│   loop main:
+//│     match pc
+//│       0 =>
+//│         set scope0$cap = new mut Capture$scope0¹(i);
+//│         set scope0$cap.i$0⁰ = 0;
+//│         set pc = 1;
+//│         end
+//│     match pc
+//│       1 =>
+//│         block brk1:
+//│           set nonLocalHandler$root = new mut NonLocalLabelEffect⁰();
+//│           set handleBlock$$here = handleBlock$$⁰(scope0$cap, nonLocalHandler$root);
+//│           set runtime⁰.resumeValue﹖ = runtime⁰.enterHandleBlock﹖(nonLocalHandler$root, handleBlock$$here);
+//│           match runtime⁰.curEffect﹖
+//│             null =>
+//│               break brk1
+//│             else
+//│               return runtime⁰.unwind﹖(continueFromNestedFunctionWithEffects¹, 3, null, null, null, 1, 0, 1, scope0$cap)
+//│           end
+//│         set pc = 3;
+//│         end
+//│     match pc
+//│       3 =>
+//│         set tmp1 = runtime⁰.resumeValue﹖;
+//│         set labelBodyResult = tmp1;
+//│         set labelContinueDispatch = ===⁰(labelBodyResult, runtime⁰.Continue﹖);
+//│         match labelContinueDispatch
+//│           true =>
+//│             set pc = 1;
+//│             continue main
+//│           else
+//│             set root$result = labelBodyResult;
+//│             set pc = 2;
+//│             continue main
+//│         end
+//│       2 =>
+//│         return root$result
+//│       else
+//│         end
+//│     end
+//│   end
+//│ };
+//│ set tmp = continueFromNestedFunctionWithEffects¹();
+//│ match runtime⁰.curEffect﹖
+//│   null =>
+//│     return tmp
+//│   else
+//│     set tmp = runtime⁰.topLevelEffect﹖(false);
+//│     return tmp
+//│ end
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+//│ = 3
 
 
 fun continueFromNestedLambdaWithEffects() =
@@ -87,18 +222,7 @@ fun continueFromNestedLambdaWithEffects() =
       root.continue
     loop()
 continueFromNestedLambdaWithEffects()
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
-//│ 	at: scala.Predef$.$qmark$qmark$qmark(Predef.scala:383)
-//│ 	at: hkmc2.codegen.CpsHandlerLowering$$anon$1.applyBlock(CpsHandlerLowering.scala:145)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySubBlock(BlockTransformer.scala:29)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySub$1(BlockTransformer.scala:50)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3$$anonfun$1(BlockTransformer.scala:56)
-//│ 	at: hkmc2.codegen.BlockTransformer.rec$1(BlockTransformer.scala:333)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyListOf(BlockTransformer.scala:334)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3(BlockTransformer.scala:59)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyValue(BlockTransformer.scala:196)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyPath(BlockTransformer.scala:191)
+//│ = 2
 
 
 fun continueFromNestedFunctionAndLambdaWithEffects() =
@@ -110,17 +234,6 @@ fun continueFromNestedFunctionAndLambdaWithEffects() =
         root.continue
     mkContinue()()
 continueFromNestedFunctionAndLambdaWithEffects()
-//│ FAILURE: Unexpected exception
-//│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
-//│ 	at: scala.Predef$.$qmark$qmark$qmark(Predef.scala:383)
-//│ 	at: hkmc2.codegen.CpsHandlerLowering$$anon$1.applyBlock(CpsHandlerLowering.scala:145)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySubBlock(BlockTransformer.scala:29)
-//│ 	at: hkmc2.codegen.BlockTransformer.applySub$1(BlockTransformer.scala:50)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3$$anonfun$1(BlockTransformer.scala:56)
-//│ 	at: hkmc2.codegen.BlockTransformer.rec$1(BlockTransformer.scala:333)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyListOf(BlockTransformer.scala:334)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyBlock$$anonfun$3(BlockTransformer.scala:59)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyValue(BlockTransformer.scala:196)
-//│ 	at: hkmc2.codegen.BlockTransformer.applyPath(BlockTransformer.scala:191)
+//│ = 4
 
 

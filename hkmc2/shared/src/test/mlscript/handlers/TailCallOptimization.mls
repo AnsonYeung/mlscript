@@ -34,82 +34,30 @@ fun hi(n) =
 hi(0)
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let hi, tmp1, $_stack$_safe$_body$_;
-//│ hi = function hi(k, k1, n) {
-//│   let cpsCont$2, tmp2;
-//│   cpsCont$2 = function cpsCont$2(retVal) {
-//│     let tmp3;
-//│     tmp3 = runtime.cpsSetCheckDepth();
-//│     if (tmp3 === true) {
-//│       return runtime.cpsRaiseStack(cpsCont$2, retVal)
-//│     }
-//│     {
-//│       let scrut, tmp4;
+//│ runtime.resetEffects();
+//│ hi = function hi(n) {
+//│   loopLabel: while (true) {
+//│     let scrut, tmp2, curDepth;
+//│     runtime.checkDepth();
+//│     if (runtime.curEffect === null) {
+//│       curDepth = runtime.stackDepth + 1;
 //│       scrut = n === 0;
 //│       if (scrut === true) {
-//│         return k1(k, 0)
+//│         return 0
 //│       }
-//│       {
-//│         let tmp5;
-//│         tmp4 = n - 1;
-//│         tmp5 = (k2, k3, n1) => {
-//│           let cpsCont$0, tmp6;
-//│           cpsCont$0 = function cpsCont$0(retVal1) {
-//│             let tmp7;
-//│             tmp7 = runtime.cpsSetCheckDepth();
-//│             if (tmp7 === true) {
-//│               return runtime.cpsRaiseStack(cpsCont$0, retVal1)
-//│             }
-//│             return hi(k2, k3, n1);
-//│           };
-//│           tmp6 = runtime.cpsSetCheckDepth();
-//│           if (tmp6 === true) {
-//│             return runtime.cpsRaiseStack(cpsCont$0, undefined)
-//│           }
-//│           {
-//│             let tmp7;
-//│             tmp7 = runtime.cpsSetCheckDepth();
-//│             if (tmp7 === true) {
-//│               return runtime.cpsRaiseStack(cpsCont$0, undefined)
-//│             }
-//│             return hi(k2, k3, n1);
-//│           }
-//│         };
-//│         return tmp5(k, k1, tmp4);
-//│       }
+//│       tmp2 = n - 1;
+//│       runtime.stackDepth = curDepth;
+//│       n = tmp2;
+//│       continue loopLabel;
 //│     }
-//│   };
-//│   tmp2 = runtime.cpsSetCheckDepth();
-//│   if (tmp2 === true) {
-//│     return runtime.cpsRaiseStack(cpsCont$2, undefined)
-//│   }
-//│   return cpsCont$2(undefined);
-//│ };
-//│ tmp1 = (k, k1, n) => {
-//│   let cpsCont$4, tmp2;
-//│   cpsCont$4 = function cpsCont$4(retVal) {
-//│     let tmp3;
-//│     tmp3 = runtime.cpsSetCheckDepth();
-//│     if (tmp3 === true) {
-//│       return runtime.cpsRaiseStack(cpsCont$4, retVal)
-//│     }
-//│     return hi(k, k1, n);
-//│   };
-//│   tmp2 = runtime.cpsSetCheckDepth();
-//│   if (tmp2 === true) {
-//│     return runtime.cpsRaiseStack(cpsCont$4, undefined)
-//│   }
-//│   {
-//│     let tmp3;
-//│     tmp3 = runtime.cpsSetCheckDepth();
-//│     if (tmp3 === true) {
-//│       return runtime.cpsRaiseStack(cpsCont$4, undefined)
-//│     }
-//│     return hi(k, k1, n);
+//│     return runtime.unwind(hi, -1, "TailCallOptimization.mls:31:1", null, null, 1, 1, n, 0);
 //│   }
 //│ };
 //│ $_stack$_safe$_body$_ = (undefined, function () {
-//│   return tmp1(runtime.cpsId, runtime.cpsId2, 0)
+//│   return hi(0)
 //│ });
-//│ return runtime.runStackSafeCps(1000, $_stack$_safe$_body$_)
+//│ tmp1 = runtime.runStackSafe(1000, $_stack$_safe$_body$_);
+//│ if (runtime.curEffect === null) { return tmp1 }
+//│ return runtime.topLevelEffect(false);
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 0

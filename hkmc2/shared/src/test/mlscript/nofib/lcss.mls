@@ -3,6 +3,6 @@
 
 import "../../mlscript-compile/nofib/lcss.mls"
 lcss.main()
-//│ = "Cons(30, Cons(31, Cons(32, Cons(33, Cons(34, Cons(35, Cons(36, Cons(37, Cons(38, Cons(39, Cons(40, Cons(41, Cons(42, Cons(43, Cons(44, Cons(45, Cons(46, Cons(47, Cons(48, Cons(49, Cons(50, Cons(51, Cons(52, Cons(53, Cons(54, Cons(55, Cons(56, Cons(57, Cons(58, Cons(59, Cons(60, Nil)))))))))))))))))))))))))))))))"
+//│ = "[30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60]"
 
 

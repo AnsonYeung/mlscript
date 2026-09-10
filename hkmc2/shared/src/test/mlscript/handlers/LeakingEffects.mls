@@ -1,9 +1,6 @@
 :js
 :effectHandlers
 :lift
-:rewriteWhile
-
-open annotations
 
 
 abstract class Effect[A] with
@@ -17,7 +14,7 @@ fun main() =
   handle g = Effect with
     fun perform(arg1)(k1) =
       print("B " + arg1)
-      @native xs.push(k1)
+      xs.push(k1)
   print(g.perform("a"))
   print("—")
   print(g.perform("b"))
@@ -33,25 +30,28 @@ while
     print("?")
 //│ > B a
 //│ > [fun]
-//│ count = 0
+//│ > 1
+//│ > —
+//│ > B b
+//│ > ?
+//│ > [fun]
+//│ > 2
+//│ > —
+//│ > B c
+//│ > ?
+//│ > [fun]
+//│ > 3
+//│ > ?
+//│ > []
+//│ count = 3
 //│ xs = []
 
 // * Notes:
-:sjs
-(@native (mut []).pop()) === undefined
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp2, tmp3; tmp2 = []; tmp3 = runtime.safeCall(tmp2.pop()); return tmp3 === undefined
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+(mut []).pop() === undefined
 //│ = false
-(@native (mut []).pop()) === null
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp4, tmp5; tmp4 = []; tmp5 = runtime.safeCall(tmp4.pop()); return tmp5 === null
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+(mut []).pop() === null
 //│ = false
-(@native (mut []).pop()) === ()
-//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp6, tmp7; tmp6 = []; tmp7 = runtime.safeCall(tmp6.pop()); return tmp7 === runtime.Unit
-//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+(mut []).pop() === ()
 //│ = true
 
 
@@ -67,7 +67,7 @@ handle h = Effect with
     handle g = Effect with
       fun perform(arg1)(k1) =
         print("B " + arg + " " + arg1)
-        @native xs.push(k1)
+        xs.push(k1)
     k(g)
     while xs.pop() is
       null then print("Done.")

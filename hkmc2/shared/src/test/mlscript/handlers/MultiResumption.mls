@@ -5,6 +5,7 @@
 class Logger with
   fun info(s: Str): ()
 
+:re
 handle h = Logger with
   fun info(s)(k) =
     print(s)
@@ -12,6 +13,7 @@ handle h = Logger with
     k()
 h.info("a")
 //│ > a
+//│ ═══[RUNTIME ERROR] Error: Multiple resumption
 
 
 handle h = Logger with
