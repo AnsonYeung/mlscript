@@ -5,9 +5,9 @@ open NofibPrelude
 
 module eliza with ...
 
-open annotations
 
-fun toUpper(c) = @native c.toUpperCase()
+
+fun toUpper(c) = c.toUpperCase()
 
 fun lz_map(f, ls) = lazy of () =>
   if ls is

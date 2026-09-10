@@ -14,9 +14,6 @@ open LazyFingerTree
 open Benchmark
 open Runtime
 
-:exit
-====================================================================================================
-
 :silent
 let suite = mkSuite()
 

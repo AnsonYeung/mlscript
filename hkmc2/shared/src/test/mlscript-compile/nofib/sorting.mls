@@ -4,9 +4,9 @@ open NofibPrelude
 
 module sorting with ...
 
-open annotations
 
-fun int_of_char(c) = @native c.codePointAt(0)
+
+fun int_of_char(c) = c.codePointAt(0)
 
 object
   EQ
@@ -53,7 +53,7 @@ fun unlines(ls) = concat(map(l => l +: ("\n" :: Nil), ls))
 
 fun odd(x) = intMod(x, 2) === 0
 
-fun z_of_int(x) = @native globalThis.BigInt(x)
+fun z_of_int(x) = globalThis.BigInt(x)
 
 fun hash(str) = foldl(
   (acc, c) => z_of_int(int_of_char(c)) + (acc * z_of_int(31)),
@@ -212,7 +212,7 @@ fun mangle(inpt) =
   unlines(sort(lines(inpt)))
 
 fun testSorting_nofib(d) =
-  let f = nofibStringToList of (@native fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/Main.hs")).toString()
+  let f = nofibStringToList of fs.readFileSync("./hkmc2/shared/src/test/mlscript/nofib/input/Main.hs").toString()
   hash(mangle(f))
 
 fun main() = testSorting_nofib(0)

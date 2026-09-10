@@ -1,6 +1,5 @@
 import "../../../../../../hkmc2/shared/src/test/mlscript-compile/Predef.mls"
 open Predef
-open annotations
 
 module NofibPrelude with ...
 type Char = String
@@ -26,10 +25,10 @@ fun force(x) = if x is Lazy then x.Lazy#get()
 
 abstract class List[out T]: Cons[T] | Nil
 data class (::) Cons[out T](head: T, tail: List[T]) extends List[T] with
-  fun toStringImpl() =
+  fun toString() =
     "[" + _internal_cons_to_str(Cons(head, tail)) + "]"
 object Nil extends List with
-  fun toStringImpl() = "[]"
+  fun toString() = "[]"
 fun _internal_cons_to_str(ls) = if ls is
   Nil then ""
   h :: Nil then render(h)
@@ -68,10 +67,10 @@ fun until(p, f, i) = if p(i) then i else until(p, f, f(i))
 
 fun flip(f, x, y) = f(y)(x)
 
-fun power(a, n) = @native globalThis.Math.pow(a, n)
+fun power(a, n) = globalThis.Math.pow(a, n)
 
-fun intDiv(a, b) = @native globalThis.Math.floor(a / b)
-fun intQuot(a, b) = @native globalThis.Math.trunc(a / b)
+fun intDiv(a, b) = globalThis.Math.floor(a / b)
+fun intQuot(a, b) = globalThis.Math.trunc(a / b)
 
 fun intMod(a, b) = a - (b * intDiv(a, b))
 fun intRem(a, b) = a - (b * intQuot(a, b))
@@ -79,10 +78,10 @@ fun intRem(a, b) = a - (b * intQuot(a, b))
 fun quotRem(a, b) = [intQuot(a, b), intRem(a, b)]
 fun divMod(a, b) = [intDiv(a, b), intMod(a, b)]
 
-fun max(a, b) = @native globalThis.Math.max(a, b)
-fun min(a, b) = @native globalThis.Math.min(a, b)
+fun max(a, b) = globalThis.Math.max(a, b)
+fun min(a, b) = globalThis.Math.min(a, b)
 
-fun abs(x) = @native globalThis.Math.abs(x)
+fun abs(x) = globalThis.Math.abs(x)
 
 fun head(l) = if l is h :: t then h
 fun tail(l) = if l is h :: t then t
@@ -355,14 +354,14 @@ fun stringConcat(x, y) = x + y
 fun stringListConcat(ls) = if ls is
   Nil then ""
   h :: t then stringConcat(h, stringListConcat(t))
-fun sqrt(x) = @native globalThis.Math.sqrt(x)
-fun tan(x) = @native globalThis.Math.tan(x)
-fun sin(x) = @native globalThis.Math.sin(x)
-fun cos(x) = @native globalThis.Math.cos(x)
-fun round(x) = @native globalThis.Math.round(x)
-fun int_of_char(x) = @native x.charCodeAt(0)
+fun sqrt(x) = globalThis.Math.sqrt(x)
+fun tan(x) = globalThis.Math.tan(x)
+fun sin(x) = globalThis.Math.sin(x)
+fun cos(x) = globalThis.Math.cos(x)
+fun round(x) = globalThis.Math.round(x)
+fun int_of_char(x) = x.charCodeAt(0)
 fun nofibStringToList(s) =
-  fun go(i) = if i < s.length then (@native s.charAt(i)) :: go(i + 1) else Nil
+  fun go(i) = if i < s.length then s.charAt(i) :: go(i + 1) else Nil
   go(0)
 fun nofibListToString(ls) = if ls is
   Nil then ""

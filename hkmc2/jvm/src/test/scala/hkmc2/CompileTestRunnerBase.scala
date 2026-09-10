@@ -6,8 +6,6 @@ import org.scalatest.concurrent.{TimeLimitedTests, Signaler}
 
 import hkmc2.utils.*, shorthands.*
 import io.PlatformPath.given
-import hkmc2.Config.EffectHandlers
-import hkmc2.Config.StackSafety
 
 
 // Reusable base class for compile test runners. Subclasses provide the

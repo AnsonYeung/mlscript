@@ -132,8 +132,7 @@ fun writeSolutions(solutions, count, s) = if solutions is
 fun minSolutions(history) = if history is
   Nil then Nil
   history :: next then
-    // NOTE: CPS makes moves the tail calls outside of minAcc
-    // @tailrec
+    @tailrec
     fun minAcc(minSoFar, mins, ls) = if ls is
       Nil then mins
       history :: next then
