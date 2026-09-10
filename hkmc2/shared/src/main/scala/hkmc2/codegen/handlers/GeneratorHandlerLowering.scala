@@ -73,7 +73,7 @@ class GeneratorHandlerLowering(using Config, Elaborator.State, Elaborator.Ctx, T
         fun.dSym,
         fun.params,
         applyFunBodyLikeBlock(fun.body)
-      )(fun.configOverride, Annot.Generator :: fun.annotations)
+      )(fun.configOverride, Annot.HandlerInstrumented :: Annot.Generator :: fun.annotations)
   
   override def applyFunBodyLikeBlock(b: Block): Block =
     nestScope(false): t =>

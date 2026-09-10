@@ -700,6 +700,7 @@ final case class FunDefn(
   lazy val noInline: Bool = annotations.contains(Annot.NoInline) || generator || async || annotations.contains(Annot.Native)
   lazy val generator: Bool = annotations.contains(Annot.Generator)
   lazy val async: Bool = annotations.contains(Annot.Async)
+  lazy val handlerInstrumented = annotations.contains(Annot.HandlerInstrumented)
   lazy val visibility: Visibility = annotations.collectFirst:
     case Annot.Modifier(Keyword.`private`) => Visibility.Private
     case Annot.Modifier(Keyword.`public`) => Visibility.Public

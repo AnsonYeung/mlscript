@@ -108,7 +108,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
     val resumeBody = genResumeBody(parts, ctx, selfField.map(f => fieldFromTS(f._2)), allocatedVars, allocatedFields, fieldFromTS, clsDSym)
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
-    val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, PlainParamList(Param.simple(ctx.rVar) :: Nil) :: Nil, resumeBody)(N, Nil)
+    val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, PlainParamList(Param.simple(ctx.rVar) :: Nil) :: Nil, resumeBody)(N, Annot.HandlerInstrumented :: Nil)
     ctx.newDefns ::= ClsLikeDefn(
       N,
       clsDSym,

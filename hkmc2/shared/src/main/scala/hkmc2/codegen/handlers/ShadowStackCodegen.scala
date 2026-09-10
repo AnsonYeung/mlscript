@@ -46,7 +46,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
       workerDSym,
       PlainParamList(Param.simple(workerVarsParam) :: Nil) :: Nil,
       genWorkerBody()
-    )(N, Annot.Private :: ctx.orig.annotations)
+    )(N, Annot.Private :: Annot.HandlerInstrumented :: ctx.orig.annotations)
     ctx.replaceAnnotWithInline = true
 
     def genWorkerBody(): Block =

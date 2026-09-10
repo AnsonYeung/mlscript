@@ -75,7 +75,7 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
     val simplifier = BlockSimplifier(preservedSymbols, otl, printer)
     
     // * First simplification pass
-    runPass("BlockSimplifier 1")(simplifier.apply)
+    runPass("BlockSimplifier 1")(simplifier.apply(1))
     
     runPass("DeadParamElim")(otl.givenIn(DeadParamElim.apply))
     
@@ -93,6 +93,6 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
     runPass("TailRecOpt")(TailRecOpt(false).transform)
     
     // * Final simplification pass
-    runPass("BlockSimplifier 2")(simplifier.apply)
+    runPass("BlockSimplifier 2")(simplifier.apply(2))
     
     result

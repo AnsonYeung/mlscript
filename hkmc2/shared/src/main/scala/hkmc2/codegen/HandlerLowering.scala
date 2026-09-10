@@ -198,6 +198,7 @@ object HandlerLowering:
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
   case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool, orig: FunDefn)(using State):
     val rVar = VarSymbol(Tree.Ident("resumeVar"))
+    var instrumented = false
     var newDefns: List[Defn] = Nil
     var replaceAnnotWithInline: Bool = false
     def unwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
@@ -218,8 +219,9 @@ object HandlerLowering:
         Scoped(Set.single(defn.sym), Define(defn, b))
     def modifyAnnots(annot: List[Annot]): List[Annot] =
       if replaceAnnotWithInline then
-        // TODO
-        Annot.NoInline :: Nil
+        Annot.HandlerInstrumented :: Annot.Inline :: Nil
+      else if instrumented then
+        Annot.HandlerInstrumented :: annot
       else
         annot
     def inNative = orig.annotations.contains(Annot.Native)
@@ -770,6 +772,8 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     if oneState && !parts.containsError && !needsStackSafety then
       return b
     val vars = if debugEnabled then ctx.resumeInfo.currentLocals else computeRestoreList(parts)
+
+    ctx.instrumented = true
 
     val pcVar = freshTmp("pc")
     val curDepth = freshTmp("curDepth")

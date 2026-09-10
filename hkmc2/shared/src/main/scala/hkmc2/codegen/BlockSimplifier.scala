@@ -36,7 +36,7 @@ class BlockSimplifier
   private var remainingInlineFuel = 0
   
   
-  def apply(prog: Program): Program =
+  def apply(pass: Int)(prog: Program): Program =
     
     // Automatic inlining is individually bounded by the small-body threshold, but
     // repeated simplification can keep making a recursive worker look small after
@@ -95,7 +95,7 @@ class BlockSimplifier
         changed ||= coc.changed
         if coc.changed then log("▶ COC:\n" + printRes)
         
-        val inl = new Inliner(using cfg)
+        val inl = new Inliner(pass)(using cfg)
         res = inl.apply(res)
         changed ||= inl.changed
         if inl.changed then log("▶ INL:\n" + printRes)
@@ -1383,7 +1383,7 @@ class BlockSimplifier
   // ——————————————————————————————————————————————————————————————————————————————————————————— //
   
   
-  class Inliner(using Config.Inliner) extends Helper:
+  class Inliner(pass: Int)(using Config.Inliner) extends Helper:
     
     def apply(prog: Program): Program =
       val m = InlinerAnalyzer.walk(prog.main)
@@ -1546,6 +1546,8 @@ class BlockSimplifier
           if defn.dSym.getState.compilationUnitConfig.exists(_.noFreeze =/= config.noFreeze)
           then return false
           if defn.dSym.getState.compilationUnitConfig.exists(_.effectHandlers =/= config.effectHandlers)
+          then return false
+          if defn.handlerInstrumented && config.effectHandlers.isDefined && pass === 1
           then return false
           true
 
