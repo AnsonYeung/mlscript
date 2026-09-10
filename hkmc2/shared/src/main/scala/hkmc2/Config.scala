@@ -142,6 +142,8 @@ object Config:
     // One specific scenario is Rendering.mls, which Runtime.mls depends on, and hence using stack safety will
     // reference Runtime.mls during construction of the Rendering module, causing a cyclic dependency error.
     doNotInstrumentTopLevelModCtor: Bool = false,
+    // Reset effects at start, this must be disabled for compile tests and enabled for diff tests
+    resetEffects: Bool = false,
   )
   
   case class StackSafety(stackLimit: Int)

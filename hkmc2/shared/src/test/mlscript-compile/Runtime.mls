@@ -12,6 +12,9 @@ module Runtime with ...
 object Unit with
   fun toString() = "()"
 
+fun cpsId(x) = x
+fun cpsId2(k, x) = k(x)
+
 // This object is used as a marker for non-local label continues.
 object Continue
 
@@ -166,6 +169,62 @@ mut val resumePc = -1
 
 object FatalEffect
 object PrintStackEffect
+
+data class Suspend(k, tag, handlerFun)
+data class StackSuspend(k, tag, retVal)
+
+fun handlerTrampoline(k, tag, cur) =
+  while cur is
+    Suspend(resume, tag', handlerFun) do
+      if tag' === tag then
+        let handlerFunCont = (k1, v) =>
+          handlerTrampoline(k1, tag, resume(v))
+        set cur = handlerFun(cpsId, handlerFunCont)
+      else return Suspend(r => handlerTrampoline(k, tag, resume(r)), tag', handlerFun)
+  k(cur)
+
+fun cpsHandlerImpl(k, tag, f) =
+  handlerTrampoline(k, tag, f(cpsId))
+
+fun ss_handlerTrampoline(ss_k, k, tag, cur) =
+  if cpsSetCheckDepth() do
+    return cpsRaiseStack(_ => cpsSetCheckDepth(); ss_handlerTrampoline(ss_k, k, tag, cur), ())
+  fun loop(ss_k1, cur) =
+    if cpsSetCheckDepth() do
+      return cpsRaiseStack(_ => cpsSetCheckDepth(); loop(ss_k1, cur), ())
+    if cur is
+      Suspend(resume, tag', handlerFun) then
+        if tag' === tag then
+          fun handlerFunCont(hfc_k, k1, v) =
+            if cpsSetCheckDepth() do
+              return cpsRaiseStack(_ => cpsSetCheckDepth(); handlerFunCont(hfc_k, k1, v), ())
+            fun resumeCont(resume_r) =
+              if cpsSetCheckDepth() do
+                return cpsRaiseStack(resumeCont, resume_r)
+              ss_handlerTrampoline(hfc_k, k1, tag, resume_r)
+            resume(resumeCont, v)
+          fun cont(r) =
+            if cpsSetCheckDepth() do
+              return cpsRaiseStack(cont, r)
+            loop(ss_k1, r)
+          handlerFun(cont, cpsId2, handlerFunCont)
+        else
+          fun suspendCont1(resume_k, r) =
+            if cpsSetCheckDepth() do
+              return cpsRaiseStack(_ => cpsSetCheckDepth(); suspendCont1(resume_k, r), ())
+            fun resumeCont1(resume_r) =
+              if cpsSetCheckDepth() do
+                return cpsRaiseStack(resumeCont1, resume_r)
+              ss_handlerTrampoline(resume_k, k, tag, resume_r)
+            resume(resumeCont1, r)
+          ss_k1 of Suspend(suspendCont1, tag', handlerFun)
+      else
+        k(ss_k1, cur)
+  loop(ss_k, cur)
+
+fun ss_cpsHandlerImpl(ss_k, k, tag, f) =
+  let res = f(res => ss_handlerTrampoline(ss_k, k, tag, res), cpsId2)
+  res
 
 data class FunctionContFrame(next, saved) with
   fun resume(value) =
@@ -502,12 +561,22 @@ object StackDelayHandler with
   fun delay() = mkEffect of this, k =>
     set stackResume = k
 
+object StackDelayCpsHandler with
+  fun delay(k, retVal) = new StackSuspend(k, stackHandler, retVal)
+
 fun checkDepth() =
   if stackDepth >= stackLimit && stackHandler !== null then
     // this is a tail call to effectful function
     stackHandler.delay()
   else
     ()
+
+fun cpsSetCheckDepth() =
+  set stackDepth += 1
+  stackDepth >= stackLimit && stackHandler !== null
+
+fun cpsRaiseStack(k, retVal) =
+  stackHandler.delay(k, retVal)
 
 fun runStackSafe(limit, f) =
   set stackLimit = limit in...
@@ -524,6 +593,17 @@ fun runStackSafe(limit, f) =
       result = saved(())
     if curEffect !== null do
       throw new Error("Effect crossed through stack safe boundary")
+  result
+
+fun runStackSafeCps(limit, f) =
+  set stackLimit = limit in...
+  set stackDepth = 1 in...
+  set stackHandler = StackDelayCpsHandler in...
+  let result = f()
+  while result is 
+    StackSuspend(k, tag, retVal) do
+      set stackDepth = 1 in...
+      result = k(retVal)
   result
 
 class Int31(v) with
