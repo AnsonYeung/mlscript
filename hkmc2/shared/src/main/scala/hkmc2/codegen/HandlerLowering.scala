@@ -136,6 +136,11 @@ object HandlerLowering:
         .assign(l, Call(paths.topLevelTrampolinePath, (needsStackSafety.fold(unit)(intLit(_)).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
         .rest(rst)
   
+  case class Cps() extends ExoticStrategy:
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeCps"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+  
+  // NOTE: this applies even if the file does not enable effect handlers!
   def currentStrategy(using Config): Strategy =
     config.effectHandlers.fold(noneStrategy)(_.strategy)
   

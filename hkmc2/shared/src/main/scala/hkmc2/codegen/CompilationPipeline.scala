@@ -9,6 +9,8 @@ import hkmc2.semantics.Elaborator.{Ctx, State}
 import hkmc2.semantics.SymbolPrinter
 import hkmc2.utils.TL
 import hkmc2.codegen.handlers.GeneratorHandlerLowering
+import hkmc2.codegen.handlers.CpsHandlerLowering
+import hkmc2.codegen.HandlerLowering.Cps
 
 class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
   
@@ -62,9 +64,12 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
     runPass("ReflectionInstrumenter")(ReflectionInstrumenter(using summon).apply)
     preOptimizeHook(result)
     
+    val doingCps = config.effectHandlers.exists(_.strategy.isInstanceOf[Cps])
+    
     // * We run this pass here first, before inlining so that the @tailrec/@tailcall annotations
     // * can be properly checked.
-    runPass("TailRecOpt")(TailRecOpt(true).transform)
+    if !doingCps then
+      runPass("TailRecOpt")(TailRecOpt(true).transform)
     
     val preservedSymbols = symbolsToPreserve ++ extraSymbolsToPreserveFrom(result)
     
@@ -83,6 +88,8 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
       config.effectHandlers match
       case S(strategy = _: HandlerLowering.Generator) =>
         GeneratorHandlerLowering().applyProgram(prog)
+      case S(strategy = _: HandlerLowering.Cps) =>
+        CpsHandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
       case _ =>
         HandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
     runPass("AsyncLowering")(AsyncLowering().transform)
