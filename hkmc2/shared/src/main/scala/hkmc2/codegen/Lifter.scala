@@ -1095,7 +1095,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       Call.raw(
         auxSym.asMemberRef(auxDsym),
         formatArgs ne_:: Nil
-      )(CallMetadata.defaultMlsFun)
+      )(CallMetadata.mlsFunWithEffect)
     
     def rewriteImpl: LifterResult[FunDefn] =
       val LifterResult(lifted, extra) = mkFlattenedDefn

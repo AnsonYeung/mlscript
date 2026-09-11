@@ -114,9 +114,30 @@ result
 //│     super();
 //│   }
 //│   perform(arg) {
-//│     let Handler$h$perform$here;
-//│     Handler$h$perform$here = Handler$h$perform$4(arg);
-//│     return runtime.mkEffect(this, Handler$h$perform$here)
+//│     let Handler$h$perform$here, pc;
+//│     if (runtime.resumePc === -1) {
+//│       runtime.resumeValue = Handler$h$perform$4(arg);
+//│       if (runtime.curEffect === null) {
+//│         pc = 1;
+//│       } else {
+//│         return runtime.unwind(this.perform, 1, null, null, this, 1, 1, arg, 0)
+//│       }
+//│     } else {
+//│       pc = runtime.resumePc;
+//│       runtime.resumePc = -1;
+//│       if (pc === 0) {
+//│         runtime.resumeValue = Handler$h$perform$4(arg);
+//│         if (runtime.curEffect === null) {
+//│           pc = 1;
+//│         } else {
+//│           return runtime.unwind(this.perform, 1, null, null, this, 1, 1, arg, 0)
+//│         }
+//│       }
+//│     }
+//│     if (pc === 1) {
+//│       Handler$h$perform$here = runtime.resumeValue;
+//│       return runtime.mkEffect(this, Handler$h$perform$here)
+//│     }
 //│   }
 //│   toString() { return runtime.render(this); }
 //│   static [definitionMetadata] = ["class", "Handler$h$"];
@@ -476,28 +497,28 @@ handle h = Eff with
   fun perform()(k) = k(())
 foo(h)
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.471: 	    module A with
+//│ ║  l.492: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.467: 	    module A with
+//│ ║  l.488: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.463: 	    module A with
+//│ ║  l.484: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[WARNING] Modules are not yet lifted.
-//│ ║  l.459: 	    module A with
+//│ ║  l.480: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.459: 	    module A with
+//│ ║  l.480: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.463: 	    module A with
+//│ ║  l.484: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.467: 	    module A with
+//│ ║  l.488: 	    module A with
 //│ ╙──       	           ^
 //│ ╔══[INTERNAL ERROR] Unexpected nested class: lambdas may not function correctly.
-//│ ║  l.471: 	    module A with
+//│ ║  l.492: 	    module A with
 //│ ╙──       	           ^
 //│ = 123
 

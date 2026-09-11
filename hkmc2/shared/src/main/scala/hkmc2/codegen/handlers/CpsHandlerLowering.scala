@@ -156,38 +156,32 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
     val resMetadata = if stackSafety && !isStackSafetyPass then CallMetadata.mlsFunWithEffect else CallMetadata.defaultMlsFun
     
     var curContPath: Path = idPath
-    var isTopLevel = true
-    var inCtor = false
+    var inNativeCtx = true
     
     var substMap = Map[LocalVarSymbol, VarSymbol]()
     val thisFunSyms = mutable.Set[LocalVarSymbol]()
     
     inline def preserve[T](f: => T) =
       val saved = curContPath
-      val savedTopLevel = isTopLevel
-      val savedInCtor = inCtor
+      val savedInNativeCtx = inNativeCtx
       val savedSubstMap = substMap
       
       val ret = f
       
       curContPath = saved
-      isTopLevel = savedTopLevel
-      inCtor = savedInCtor
+      inNativeCtx = savedInNativeCtx
       substMap = savedSubstMap
       ret
     
-    // isMain is a hack!
-    def applyCpsOnFun(b: Block, contPath: Path, isMain: Bool): Block = preserve:
+    def applyCpsOnFun(b: Block, contPath: Path, blockInNativeCtx: Bool): Block = preserve:
       curContPath = contPath
-      isTopLevel = isMain || false
-      inCtor = false
+      inNativeCtx = blockInNativeCtx
       thisFunSyms.clear()
       applyScopedBlock(b)
     
     def applyCpsOnCtor(b: Block, isMod: Bool): Block = preserve:
       curContPath = idPath
-      if !isMod then isTopLevel = false
-      inCtor = true
+      inNativeCtx = true
       thisFunSyms.clear()
       applyScopedBlock(b)
     
@@ -249,8 +243,8 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
       val (ogParams, remainingParams) = fun.params match
         case head :: next => (head, next)
         case Nil => (PlainParamList(Nil), Nil)
-      
-      val cpsBod = applyCpsOnFun(fun.body, contSym.asPath, fun.dSym.name === "main")
+      val native = fun.annotations.contains(Annot.Native)
+      val cpsBod = applyCpsOnFun(fun.body, contSym.asPath, native)
       
       val mainBod = if !isStackSafetyPass then cpsBod else
         val paramSym = VarSymbol(Tree.Ident("retVal")) // will always receive unit
@@ -262,7 +256,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false)).asArg :: Nil) ne_:: Nil)(resMetadata))
         rest(bod)
       
-      if fun.dSym.name === "main" then // hack
+      if native then
         // make a non-cps forwarder
         val nestedFun = FunDefn(
           N, BlockMemberSymbol("main_cps", Nil, true),
@@ -344,12 +338,12 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         val lam = Lambda(params.copy(params = Param.simple(contSym) :: params.params), mainBod)(l.annot)
         k(lam)
       case _ =>
-        if inCtor || isTopLevel then r match
+        if inNativeCtx then r match
           case c: Call if c.metadata.mayRaiseEffects && checkCall(c) => applyPath(c.fun): newFun =>
             applyArgss(c.argss): newArgss =>
               val newCall = Call(newFun, (idPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata)
               opt.flatMap(_.stackSafety) match
-                case S(ss) if isTopLevel && isStackSafetyPass =>
+                case S(ss) if inNativeCtx && isStackSafetyPass =>
                   val (fn, rest) = createNestedFn("‹stack safe body›", PlainParamList(List.empty), Return(newCall), true)
                   rest(k(Call(
                     runStackSafeCpsPath,
@@ -396,12 +390,11 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         rst.ret(Call(curContPath, (pth.asArg :: Nil) ne_:: Nil)(resMetadata))
     
     override def applyBlock(b: Block): Block =
-      if inCtor || isTopLevel then super.applyBlock(b)
+      if inNativeCtx then super.applyBlock(b)
       else b match
       case Assign(lhs, c @ Call(path, args), rest_) if
           c.metadata.mayRaiseEffects
-          && !isTopLevel
-          && !inCtor =>
+          && !inNativeCtx =>
         def rewriteAssign: Block =
           if !checkCall(c) then
             super.applyBlock(b)
@@ -432,7 +425,8 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           retResult(c)
         else
           applyPath(c.fun): newPath =>
-            Return(Call(newPath, (curContPath.asArg :: c.argss.head) ne_:: c.argss.tail)(resMetadata))
+            applyArgss(c.argss): newArgss =>
+              Return(Call(newPath, (curContPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata))
       case Return(r: Result) => retResult(r)
       case _: Label => lastWords("undesugared label")
       case b: Begin =>
