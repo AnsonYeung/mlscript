@@ -117,7 +117,7 @@ object HandlerLowering:
         k(tmp.asSimpleRef)
       )
     override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("shadowTopLevelTrampoline"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
     override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block =
       // pc write back pattern
       blockBuilder.assign(pcVar, Tuple(false, intLit(uid).asArg :: Nil))
@@ -138,7 +138,13 @@ object HandlerLowering:
   
   case class Cps() extends ExoticStrategy:
     override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeCps"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      val sym = BlockMemberSymbol("stackSafeBody", Nil, false)
+      val fd = FunDefn.withFreshSymbol(N, sym, PlainParamList(Nil) :: Nil,
+        Return(Call(p, (State.runtimeSymbol.asSimpleRef.selSN("cpsId").asArg :: State.runtimeSymbol.asSimpleRef.selSN("cpsId2").asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      )(N, Annot.Inline :: Nil)
+      Scoped(Set.single(sym), Define(fd,
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeCps"),
+          (intLit(nofibMaxStackDepth).asArg :: sym.asMemberRef(fd.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))))
   
   // NOTE: this applies even if the file does not enable effect handlers!
   def currentStrategy(using Config): Strategy =

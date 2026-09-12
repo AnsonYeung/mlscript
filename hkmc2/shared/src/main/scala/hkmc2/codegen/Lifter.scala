@@ -15,6 +15,7 @@ import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.Map as MutMap
 import scala.collection.mutable.Set as MutSet
 import scala.collection.mutable.ListBuffer
+import hkmc2.codegen.HandlerLowering.Cps
 
   
 /** This loose type is only here as a legacy for the lifter to work,
@@ -1095,7 +1096,7 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       Call.raw(
         auxSym.asMemberRef(auxDsym),
         formatArgs ne_:: Nil
-      )(CallMetadata.mlsFunWithEffect)
+      )(if config.effectHandlers.exists(_.strategy.isInstanceOf[Cps]) then CallMetadata.mlsFunWithEffect else CallMetadata.defaultMlsFun)
     
     def rewriteImpl: LifterResult[FunDefn] =
       val LifterResult(lifted, extra) = mkFlattenedDefn
