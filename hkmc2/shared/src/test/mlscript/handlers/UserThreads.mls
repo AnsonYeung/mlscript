@@ -155,7 +155,7 @@ fun enqueue(k, x) =
   @native tasks.push(() => k(x))
 fun dequeue() =
   if tasks.length != 0 do
-    @native tasks.shift()()
+    (@native tasks.shift())()
 //│ tasks = []
 
 let exchanger = None
