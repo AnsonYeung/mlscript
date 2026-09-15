@@ -133,13 +133,16 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           var used = false
           val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil), applyBlock(rest), true)
           def rewriteTail(arm: Block) = mapTail(arm):
-            case End(_) => Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+            case End(_) =>
+              used = true
+              Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
             case arm => arm
           thunks.addOne(label, () =>
             used = true
             dfn
           )
-          val res = applyBlock(body)
+          // Both explicit breaks and normal fallthrough must invoke the label's continuation.
+          val res = applyBlock(rewriteTail(body))
           if used then blk(res) else res
         else
           ???
