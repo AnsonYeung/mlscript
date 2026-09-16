@@ -100,9 +100,15 @@ object HandlerLowering:
     override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
-  case class Generator() extends ExoticStrategy:
+  abstract class GeneratorBase(val isAsync: Bool) extends ExoticStrategy
+  
+  case class Generator() extends GeneratorBase(false):
     override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("topLevelCallGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+  
+  case class AsyncGenerator() extends GeneratorBase(true):
+    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeAsyncGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
   case class ShadowStack() extends Strategy:
     override def beginUnwind(using State): Block =

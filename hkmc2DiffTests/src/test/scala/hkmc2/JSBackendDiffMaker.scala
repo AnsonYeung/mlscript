@@ -15,6 +15,7 @@ import hkmc2.syntax.Tree.Ident
 import hkmc2.codegen.Path
 import hkmc2.Diagnostic.Source
 import hkmc2.Message.MessageContext
+import hkmc2.codegen.HandlerLowering.AsyncGenerator
 
 abstract class JSBackendDiffMaker extends MLsDiffMaker:
   
@@ -269,7 +270,7 @@ abstract class JSBackendDiffMaker extends MLsDiffMaker:
       // * Sometimes the JS block won't execute due to a syntax or runtime error so we always set this first
       host.execute(s"$resNme = undefined")
       
-      val awaitResult = (if await.isSet then s"; $resNme = await $resNme" else "")
+      val awaitResult = (if await.isSet || config.effectHandlers.exists(_.strategy.isInstanceOf[AsyncGenerator]) then s"; $resNme = await $resNme" else "")
       mkQuery(preStr, jsStr + awaitResult): stdout =>
         stdout.splitSane('\n').init // should always ends with "undefined" (TODO: check)
           .foreach: line =>

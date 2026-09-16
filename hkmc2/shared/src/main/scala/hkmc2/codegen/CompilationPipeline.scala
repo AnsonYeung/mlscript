@@ -86,8 +86,8 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
     
     runPass("HandlerLowering"): prog =>
       config.effectHandlers match
-      case S(strategy = _: HandlerLowering.Generator) =>
-        GeneratorHandlerLowering().applyProgram(prog)
+      case S(strategy = strat: HandlerLowering.GeneratorBase) =>
+        GeneratorHandlerLowering(strat).applyProgram(prog)
       case S(strategy = _: HandlerLowering.Cps) =>
         CpsHandlerLowering(new HandlerPaths, config.effectHandlers).translateProgram(prog)
       case _ =>

@@ -393,9 +393,6 @@ fun enterHandleBlock(handler, body) =
   else
     handleBlockImpl(curEffect, handler)
 
-val enterHandleBlockGenerator = RuntimeJS.enterHandleBlockGenerator
-val handlerTopLevelCall = RuntimeJS.handlerTopLevelCall
-
 fun handleEffects(cur) =
   while cur is
     EffectSig then
@@ -492,6 +489,23 @@ fun resumeContTrace(contTrace, value) =
       set handlerCont = handlerCont.nextHandler
     else
       return value
+
+// generator
+
+val JSRT = RuntimeJS
+
+// val enterHandleBlockGenerator = RuntimeJS.enterHandleBlockGenerator
+// val topLevelCallGenerator = RuntimeJS.topLevelCallGenerator
+// val runStackSafeGenerator = RuntimeJS.runStackSafeGenerator
+// val checkDepthGenerator = RuntimeJS.checkDepthGenerator
+// val GeneratorStackSafety = RuntimeJS.GeneratorStackSafety
+
+// val enterHandleBlockAsyncGenerator = RuntimeJS.enterHandleBlockAsyncGenerator
+// val topLevelCallAsyncGenerator = RuntimeJS.topLevelCallAsyncGenerator
+// val runStackSafeAsyncGenerator = RuntimeJS.runStackSafeAsyncGenerator
+// val checkDepthAsyncGenerator = RuntimeJS.checkDepthAsyncGenerator
+// val AsyncGeneratorStackSafety = RuntimeJS.AsyncGeneratorStackSafety
+
 
 // shadow stack
 
@@ -848,10 +862,6 @@ fun checkDepth() =
     stackHandler.delay()
   else
     ()
-
-val runStackSafeGenerator = RuntimeJS.runStackSafeGenerator
-val checkDepthGenerator = RuntimeJS.checkDepthGenerator
-val GeneratorStackSafety = RuntimeJS.GeneratorStackSafety
 
 fun runStackSafe(limit, f) =
   set stackLimit = limit in...

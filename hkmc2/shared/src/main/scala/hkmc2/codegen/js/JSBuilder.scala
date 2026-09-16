@@ -269,13 +269,13 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
   def operand(a: Arg)(using Raise, Scope): Document =
     if a.spread.nonEmpty then die else subexpression(a.value)
   
-  private def curriedFunctionBody(paramLists: Ls[ParamList], body: Block, generator: Bool): Block =
+  private def curriedFunctionBody(paramLists: Ls[ParamList], body: Block, callingConvention: List[Annot]): Block =
     paramLists match
     case Nil => body
     case params :: Nil =>
-      Return(Lambda(params, body)(if generator then Annot.Generator :: Nil else Nil))
+      Return(Lambda(params, body)(callingConvention))
     case params :: rest =>
-      Return(Lambda(params, curriedFunctionBody(rest, body, generator))(Nil))
+      Return(Lambda(params, curriedFunctionBody(rest, body, callingConvention))(Nil))
 
   def subexpression(r: Result)(using Raise, Scope): Document = r match
     case _: Lambda => doc"(${result(r)})"
@@ -344,12 +344,13 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
       else doc"$runtimeVar.safeCall(${calls})"
     case lam @ Lambda(ps, bod) => scope.nest givenIn:
       val (params, bodyDoc) = setupFunction(none, ps, bod, isLambda = true)
+      val asyncKw = if lam.annot.contains(Annot.NativeAsync) then "async " else ""
       if lam.annot.contains(Annot.Generator)
       then
         // JavaScript has no generator arrows, so bind `this` to preserve the
         // lexical-`this` behavior of the Lambda IR.
-        doc"(function* ($params) ${ braced(bodyDoc) }).bind(this)"
-      else doc"($params) => ${ braced(bodyDoc) }"
+        doc"(${asyncKw}function* ($params) ${ braced(bodyDoc) }).bind(this)"
+      else doc"$asyncKw($params) => ${ braced(bodyDoc) }"
     case s @ Select(qual, id) => 
       val checkCurrentSelection = checkSelections && s.sanitize
       val dotClass = s.symbol match
@@ -527,9 +528,10 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
           case FunDefn(params = Nil) =>
             lastWords("cannot generate function with no parameter list")
           case defn @ FunDefn(own, sym, dSym, ps :: pss, bod) =>
-            val result = curriedFunctionBody(pss, bod, defn.generator)
+            val result = curriedFunctionBody(pss, bod, defn.callingConvention)
             val displayName = if sym.nameIsMeaningful then S(dSym.name) else N
-            val functionKeyword = if defn.generator && pss.isEmpty then doc"function*" else doc"function"
+            val functionKeywordG = if defn.generator && pss.isEmpty then doc"function*" else doc"function"
+            val functionKeyword = if defn.nativeAsync && pss.isEmpty then doc"async $functionKeywordG" else functionKeywordG
             
             // * We may need to set up the function in a nested scope in one case below, so this is marked as lazy.
             lazy val (params, bodyDoc) = setupFunction(displayName, ps, result, isLambda = false)
@@ -581,11 +583,12 @@ class JSBuilder(using Config, TL, State, Ctx) extends CodeBuilder:
             def mkMethods(mtds: Ls[FunDefn], mtdPrefix: Str, owner: InnerSymbol)(using Scope): Document =
               mtds.map:
                 case td @ FunDefn(params = ps :: pss, body = bod) =>
-                  val result = curriedFunctionBody(pss, bod, td.generator)
+                  val result = curriedFunctionBody(pss, bod, td.callingConvention)
                   val (params, bodyDoc) = scope.nest.givenIn:
                     setupFunction(S(td.sym.nme), ps, result, isLambda = false)
                   val generatorPrefix = if td.generator && pss.isEmpty then "*" else ""
-                  doc" # $mtdPrefix$generatorPrefix${mkMethodName(td, owner)}($params) ${ braced(bodyDoc) }"
+                  val asyncPrefix = if td.nativeAsync && pss.isEmpty then "async " else ""
+                  doc" # $mtdPrefix$asyncPrefix$generatorPrefix${mkMethodName(td, owner)}($params) ${ braced(bodyDoc) }"
                 case td @ FunDefn(params = Nil, body = bod) =>
                   doc" # ${mtdPrefix}get ${mkMethodName(td, owner)}() ${ braced(body(bod, endSemi = true)) }"
               .mkDocument(doc"")

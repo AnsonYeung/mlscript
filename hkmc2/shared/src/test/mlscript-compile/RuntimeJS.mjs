@@ -14,55 +14,50 @@ function* resumeWithHandleBlock(tag, gen, val) {
 }
 
 function* enterHandleBlockGenerator(tag, bod) {
-  return yield* RuntimeJS.resumeWithHandleBlock(tag, bod(), undefined);
+  return yield* resumeWithHandleBlock(tag, bod(), undefined);
+}
+
+async function* resumeWithHandleBlockAsyncGenerator(tag, gen, val) {
+  while (true) {
+    let tmp = await gen.next(val);
+    if (tmp.done) {
+      return tmp.value;
+    }
+    if (tmp.value[0] === tag) {
+      return yield* tmp.value[1](async function* (r) {
+        return yield* resumeWithHandleBlockAsyncGenerator(tag, gen, r);
+      });
+    }
+    val = yield tmp.value;
+  }
+}
+
+async function* enterHandleBlockAsyncGenerator(tag, bod) {
+  return yield* resumeWithHandleBlockAsyncGenerator(tag, bod(), undefined);
 }
 
 
-
-const GeneratorStackSafety = {
-  stackLimit: 0,
+const AsyncGeneratorStackSafety = {
   stackDepth: 0,
-  stackHandler: null,
-  stackResume: null,
-  StackDelayHandlerGenerator: {
-    *delay() {
-      return yield [this, function *(k) {
-        GeneratorStackSafety.stackResume = k;
-        return null;
-      }];
+  stackLimit: 0,
+  async *checkDepth() {
+    if (AsyncGeneratorStackSafety.stackDepth >= AsyncGeneratorStackSafety.stackLimit) {
+      await 0;
+      AsyncGeneratorStackSafety.stackDepth = 0;
     }
   },
-  *checkDepth() {
-    if (GeneratorStackSafety.stackDepth >= GeneratorStackSafety.stackLimit && GeneratorStackSafety.stackHandler !== null) {
-      return yield* GeneratorStackSafety.stackHandler.delay();
-    } else {
-      return null;
-    }
-  },
-  runStackSafe(limit, f) {
-    GeneratorStackSafety.stackDepth = 1;
-    GeneratorStackSafety.stackLimit = limit;
-    GeneratorStackSafety.stackHandler = GeneratorStackSafety.StackDelayHandlerGenerator;
+  async runStackSafe(limit, f) {
+    AsyncGeneratorStackSafety.stackDepth = 1;
+    AsyncGeneratorStackSafety.stackLimit = limit;
     try {
-      let gen = enterHandleBlockGenerator(GeneratorStackSafety.stackHandler, f)
-      let r = gen.next();
-      if (!r.done) {
-        throw new Error("Effect crossed through stack safe boundary")
+      let result = await f().next();
+      if (result.done) {
+        return result.value;
       }
-      while (GeneratorStackSafety.stackResume !== null) {
-        let saved = GeneratorStackSafety.stackResume;
-        GeneratorStackSafety.stackResume = null;
-        GeneratorStackSafety.stackDepth = 1;
-        r = saved().next();
-        if (!r.done) {
-          throw new Error("Effect crossed through stack safe boundary")
-        }
-      }
-      return r.value;
+      throw Error("Effect crossed through stack safe boundary");
     } finally {
-      GeneratorStackSafety.stackHandler = null;
-      GeneratorStackSafety.stackLimit = 0;
-      GeneratorStackSafety.stackDepth = 0;
+      AsyncGeneratorStackSafety.stackLimit = 0;
+      AsyncGeneratorStackSafety.stackDepth = 0;
     }
   },
 }
@@ -95,13 +90,20 @@ const RuntimeJS = {
   short_or(lhs, rhs) {
     return lhs || rhs();
   },
-  resumeWithHandleBlock,
   enterHandleBlockGenerator,
-  checkDepthGenerator: GeneratorStackSafety.checkDepth,
-  runStackSafeGenerator: GeneratorStackSafety.runStackSafe,
-  GeneratorStackSafety,
-  handlerTopLevelCall(r) {
+  topLevelCallGenerator(r) {
     let result = r.next();
+    if (result.done) {
+      return result.value;
+    }
+    throw "Top level effect unhandled";
+  },
+  enterHandleBlockAsyncGenerator,
+  checkDepthAsyncGenerator: AsyncGeneratorStackSafety.checkDepth,
+  runStackSafeAsyncGenerator: AsyncGeneratorStackSafety.runStackSafe,
+  AsyncGeneratorStackSafety,
+  async topLevelCallAsyncGenerator(r) {
+    let result = await r.next();
     if (result.done) {
       return result.value;
     }

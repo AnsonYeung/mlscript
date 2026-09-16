@@ -31,6 +31,7 @@ enum Annot extends AutoLocated:
   case NoInline
   case Generator
   case Async
+  case NativeAsync
   case HandlerInstrumented
   case RaiseEffects
   // Whether the function is guaranteed to not raise effects.
@@ -55,13 +56,13 @@ enum Annot extends AutoLocated:
   def subTerms: Vector[Term] = this match
     case Trm(trm) => Vector.single(trm)
     case _: Modifier | Untyped | TailRec | TailCall | Inline | Native | NoInline
-      | Generator | Async | HandlerInstrumented | RaiseEffects | MayNotRaiseEffects | _: Config | _: Affine => Vector.empty
+      | Generator | Async | NativeAsync | HandlerInstrumented | RaiseEffects | MayNotRaiseEffects | _: Config | _: Affine => Vector.empty
   
   def children: Vector[Located] = this match
     case Trm(trm) => Vector.single(trm)
     // case Modifier(kw) => Vector.single(kw) // TODO: make `kw` a `Keywrd`
     case _: Modifier | Untyped | TailRec | TailCall | Inline | NoInline | Native
-      | Generator | Async | HandlerInstrumented | RaiseEffects | MayNotRaiseEffects | _: Config | _: Affine => Vector.empty
+      | Generator | Async | NativeAsync | HandlerInstrumented | RaiseEffects | MayNotRaiseEffects | _: Config | _: Affine => Vector.empty
   
   def show(using Scope, ShowCfg, Raise): Document = this match
     case Untyped => doc"@untyped"
@@ -69,6 +70,7 @@ enum Annot extends AutoLocated:
     case NoInline => doc"@noInline"
     case Generator => doc"@generator"
     case Async => doc"@async"
+    case NativeAsync => doc"@jsAsync"
     case HandlerInstrumented => doc"@handlerInstrumented"
     case RaiseEffects => doc"@raiseEffects"
     case TailRec => doc"@tailrec"
@@ -91,6 +93,7 @@ enum Annot extends AutoLocated:
     case NoInline => NoInline
     case Generator => Generator
     case Async => Async
+    case NativeAsync => NativeAsync
     case HandlerInstrumented => HandlerInstrumented
     case RaiseEffects => RaiseEffects
     case MayNotRaiseEffects => MayNotRaiseEffects
