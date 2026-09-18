@@ -7,6 +7,7 @@ import hkmc2.codegen.*, hkmc2.utils.*, shorthands.*
 import hkmc2.codegen.HandlerLowering.EffectfulResult
 import hkmc2.syntax.Tree
 import hkmc2.codegen.HandlerLowering.GeneratorBase
+import hkmc2.codegen.HandlerLowering.intLit
 
 case class GeneratorPaths(
   checkDepth: Path,
@@ -44,19 +45,18 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
   val generatorPaths = if async then GeneratorPaths.asyncGenerator else GeneratorPaths.generator
 
   var scopedTmp: List[LocalVarSymbol] = Nil
-  var stackDepthSyms: List[LocalVarSymbol] = Nil
+  var stackDepthSyms: List[Lazy[LocalVarSymbol]] = Nil
   var inNativeCtx: List[Bool] = Nil
 
   private def freshTmp(nme: Str = "tmp") = TempSymbol(N, nme)
   private def getCurScopedTmp = scopedTmp.head
-  private def getCurDepthSym = stackDepthSyms.head
+  private def getCurDepthSym = stackDepthSyms.head.force_!
   private def unwrapGenerators = inNativeCtx.head
 
   private inline def nestScope[T](nativeCtx: Bool)(inline thunk: LocalVarSymbol => T): T =
     val t = freshTmp()
-    val curDepth = freshTmp("curDepth")
     scopedTmp = t :: scopedTmp
-    stackDepthSyms = curDepth :: stackDepthSyms
+    stackDepthSyms = Lazy(freshTmp("curDepth")) :: stackDepthSyms
     inNativeCtx = nativeCtx :: inNativeCtx
     val r = thunk(t)
     inNativeCtx = inNativeCtx.tail
@@ -104,15 +104,16 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
   
   override def applyFunBodyLikeBlock(b: Block): Block =
     nestScope(false): t =>
+      val rest = super.applyFunBodyLikeBlock(b)
       blockBuilder
         .scopedVars(Set.single(t))
-        .staticif(stackSafetyConfig.isDefined, _
+        .staticif(!stackDepthSyms.head.isEmpty, _
           .scopedVars(Set.single(getCurDepthSym))
           .assign(t, callRuntimeMethod(generatorPaths.checkDepth, Nil))
           .assign(getCurDepthSym, Call(Value.SimpleRef(Elaborator.State.builtinOpsMap("+")),
             (generatorPaths.stackDepth.asArg :: Value.Lit(Tree.IntLit(1)).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
           .assign(NoSymbol, runtimeYieldStar(t.asSimpleRef)))
-        .rest(super.applyFunBodyLikeBlock(b))
+        .rest(rest)
   
   override def applyResult(r: Result)(k: Result => Block): Block =
     val tmp = getCurScopedTmp
@@ -143,7 +144,14 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
           .rest(k(tmp.asSimpleRef))
       else
         blockBuilder
-          .staticif(stackSafetyConfig.isDefined, _.assignFieldS(generatorPaths.stackDepth, getCurDepthSym.asSimpleRef))
+          .staticif(stackSafetyConfig.isDefined, _
+            .assign(tmp, Call(Elaborator.State.builtinOpsMap(">").asSimpleRef, (generatorPaths.stackDepth.asArg :: getCurDepthSym.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+            .ifthen(
+              tmp.asSimpleRef,
+              Case.Lit(Tree.BoolLit(true)),
+              blockBuilder.assignFieldS(generatorPaths.stackDepth, getCurDepthSym.asSimpleRef).end,
+              S(blockBuilder.assignFieldS(generatorPaths.stackDepth, intLit(0)).end)
+            ))
           .assign(tmp, r)
           .rest(k(runtimeYieldStar(tmp.asSimpleRef)))
     case _ => super.applyResult(r)(k)

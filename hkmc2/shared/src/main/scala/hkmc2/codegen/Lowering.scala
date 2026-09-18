@@ -929,7 +929,7 @@ class Lowering()(using Config, TL, Raise, State, Ctx, SymbolPrinter):
             loweredArg match
             case Arg(N, p) :: Nil =>
               if HandlerLowering.nofibEffectHandlers.isDefined then
-                HandlerLowering.runtimeStrategy.runStackSafe(loweringCtx, p, k)
+                HandlerLowering.runtimeStrategy.runStackSafe(HandlerLowering.nofibEffectHandlers.get.stackSafety.isDefined, loweringCtx, p, k)
               else
                 k(Call(p, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
             case _ =>

@@ -27,7 +27,7 @@ object HandlerLowering:
   abstract class Strategy:
     def beginUnwind(using State): Block
     def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
-    def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
+    def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
     def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = identity
     def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
       blockBuilder
@@ -71,8 +71,11 @@ object HandlerLowering:
       Return(unit)
     override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      if stackSafe then
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      else
+        k(Call(p, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
 
   case class ExceptionRethrow() extends Strategy:
     override def beginUnwind(using State): Block =
@@ -87,8 +90,11 @@ object HandlerLowering:
         Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("effectRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
         k(tmp.asSimpleRef)
       )
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      if stackSafe then
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      else
+        k(Call(p, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
     override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = blockBuilder.assign(pcVar, intLit(uid))
     override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block = identity
   
@@ -97,18 +103,32 @@ object HandlerLowering:
       Return(unit)
     override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       k(Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      if stackSafe then
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafe"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      else
+        k(Call(p, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
   
   abstract class GeneratorBase(val isAsync: Bool) extends ExoticStrategy
   
   case class Generator() extends GeneratorBase(false):
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("topLevelCallGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      if stackSafe then ???
+      val tmp = loweringCtx.registerTempSymbol(N)
+      Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect),
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("JSRT").selSN("topLevelCallGenerator"), (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      )
   
   case class AsyncGenerator() extends GeneratorBase(true):
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeAsyncGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      if stackSafe then
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeAsyncGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+      else
+        val tmp = loweringCtx.registerTempSymbol(N)
+        Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect),
+          k(Call(State.runtimeSymbol.asSimpleRef.selSN("JSRT").selSN("topLevelCallAsyncGenerator"), (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+        )
+
   
   case class ShadowStack() extends Strategy:
     override def beginUnwind(using State): Block =
@@ -122,8 +142,9 @@ object HandlerLowering:
         Assign(tmp, Call(State.runtimeSymbol.asSimpleRef.selSN("shadowRethrow"), (Arg(N, err.asSimpleRef) :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
         k(tmp.asSimpleRef)
       )
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      k(Call(State.runtimeSymbol.asSimpleRef.selSN("shadowTopLevelTrampoline"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      val firstArg = if stackSafe then intLit(nofibMaxStackDepth) else unit
+      k(Call(State.runtimeSymbol.asSimpleRef.selSN("shadowTopLevelTrampoline"), (firstArg.asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
     override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block =
       // pc write back pattern
       blockBuilder.assign(pcVar, Tuple(false, intLit(uid).asArg :: Nil))
@@ -143,14 +164,17 @@ object HandlerLowering:
         .rest(rst)
   
   case class Cps() extends ExoticStrategy:
-    override def runStackSafe(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      val sym = BlockMemberSymbol("stackSafeBody", Nil, false)
-      val fd = FunDefn.withFreshSymbol(N, sym, PlainParamList(Nil) :: Nil,
-        Return(Call(p, (State.runtimeSymbol.asSimpleRef.selSN("cpsId").asArg :: State.runtimeSymbol.asSimpleRef.selSN("cpsId2").asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
-      )(N, Annot.Inline :: Nil)
-      Scoped(Set.single(sym), Define(fd,
-        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeCps"),
-          (intLit(nofibMaxStackDepth).asArg :: sym.asMemberRef(fd.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))))
+    override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
+      if stackSafe then
+        val sym = BlockMemberSymbol("stackSafeBody", Nil, false)
+        val fd = FunDefn.withFreshSymbol(N, sym, PlainParamList(Nil) :: Nil,
+          Return(Call(p, (State.runtimeSymbol.asSimpleRef.selSN("cpsId").asArg :: State.runtimeSymbol.asSimpleRef.selSN("cpsId2").asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+        )(N, Annot.Inline :: Nil)
+        Scoped(Set.single(sym), Define(fd,
+          k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeCps"),
+            (intLit(nofibMaxStackDepth).asArg :: sym.asMemberRef(fd.dSym).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))))
+      else
+        k(Call(p, (State.runtimeSymbol.asSimpleRef.selSN("cpsId").asArg :: State.runtimeSymbol.asSimpleRef.selSN("cpsId2").asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
   
   // NOTE: this applies even if the file does not enable effect handlers!
   def currentStrategy(using Config): Strategy =
