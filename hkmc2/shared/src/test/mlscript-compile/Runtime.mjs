@@ -5,7 +5,7 @@ import RuntimeJS from "./RuntimeJS.mjs";
 import Rendering from "./Rendering.mjs";
 import LazyArray from "./LazyArray.mjs";
 import Iter from "./Iter.mjs";
-let resumeCont, handlerFunCont, cont, resumeCont1, CpsSuspendCont1, loop, continuation, Runtime1, lambda, lambda1, lambda2, lambda3, lambda4, lambda5, lambda6, lambda7, lambda8, lambda9, lambda10, lambda11, lambda12, lambda13, lambda14, lambda15, lambda16, lambda17, lambda18, lambda19, lambda20, lambda21, lambda22, lambda23, lambda24, handlerFunCont1, lambda$, lambda$1, lambda$2, lambda$3, lambda$4, Capture$handleEffect2, lambda$5, lambda$6, Capture$resumeContTrace1, lambda$7, lambda$8, Capture$handlerTrampoline1, Capture$scope331, lambda$9, handlerFunCont$, lambda$10, CpsSuspendCont1$, cont$, handlerFunCont$1, lambda$11, lambda$12, resumeCont1$, lambda$13, resumeCont$, lambda$14, lambda$15, Capture$scope591, Capture$scope661, lambda$16, Capture$scope681, lambda$17, Capture$handleEffect3, Capture$scope801, lambda$18, continuation$;
+let resumeCont, handlerFunCont, cont, resumeCont1, CpsSuspendCont1, loop, continuation, Runtime1, lambda, lambda1, lambda2, lambda3, lambda4, lambda5, lambda6, lambda7, lambda8, lambda9, lambda10, lambda11, lambda12, lambda13, lambda14, lambda15, lambda16, lambda17, lambda18, lambda19, lambda20, lambda21, lambda22, lambda23, lambda24, handlerFunCont1, lambda$, lambda$1, lambda$2, lambda$3, lambda$4, Capture$handleEffect2, lambda$5, lambda$6, Capture$resumeContTrace1, lambda$7, lambda$8, Capture$handlerTrampoline1, Capture$scope21, lambda$9, handlerFunCont$, lambda$10, CpsSuspendCont1$, cont$, handlerFunCont$1, lambda$11, lambda$12, resumeCont1$, lambda$13, resumeCont$, lambda$14, lambda$15, Capture$scope591, Capture$scope661, lambda$16, Capture$scope681, lambda$17, Capture$handleEffect3, Capture$scope801, lambda$18, continuation$;
 lambda7 = (undefined, function (saved) {
   return runtime.safeCall(saved(runtime.Unit))
 });
@@ -367,9 +367,9 @@ handlerFunCont1 = function handlerFunCont(Runtime2, CpsImpl1, tag, resume, k1, v
   tmp = runtime.safeCall(resume(v));
   return CpsImpl1.handlerTrampoline(k1, tag, tmp)
 };
-(class Capture$scope33 {
+(class Capture$scope2 {
   static {
-    Capture$scope331 = this
+    Capture$scope21 = this
   }
   constructor(handlerFunCont$0, tmp$1, tmp$2) {
     this.tmp$2 = tmp$2;
@@ -377,7 +377,7 @@ handlerFunCont1 = function handlerFunCont(Runtime2, CpsImpl1, tag, resume, k1, v
     this.handlerFunCont$0 = handlerFunCont$0;
   }
   toString() { return runtime.render(this); }
-  static [definitionMetadata] = ["class", "Capture$scope33"];
+  static [definitionMetadata] = ["class", "Capture$scope2"];
 });
 lambda$9 = (undefined, function (Runtime2, CpsImpl1, k, tag, resume) {
   return (r) => {
@@ -1414,18 +1414,18 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
         let handlerTrampoline$cap;
         handlerTrampoline$cap = new Capture$handlerTrampoline1(cur);
         lbl: while (true) {
-          let scrut, arg$CpsSuspend$0$, arg$CpsSuspend$1$, arg$CpsSuspend$2$, scope33$cap, lambda$here;
-          scope33$cap = new Capture$scope331(undefined, undefined, undefined);
+          let scrut, arg$CpsSuspend$0$, arg$CpsSuspend$1$, arg$CpsSuspend$2$, scope2$cap, lambda$here;
+          scope2$cap = new Capture$scope21(undefined, undefined, undefined);
           if (handlerTrampoline$cap.cur$0 instanceof Runtime.CpsSuspend.class) {
             arg$CpsSuspend$0$ = handlerTrampoline$cap.cur$0.k;
             arg$CpsSuspend$1$ = handlerTrampoline$cap.cur$0.tag;
             arg$CpsSuspend$2$ = handlerTrampoline$cap.cur$0.handlerFun;
             scrut = arg$CpsSuspend$1$ === tag;
             if (scrut === true) {
-              scope33$cap.handlerFunCont$0 = handlerFunCont$(CpsImpl, tag, arg$CpsSuspend$0$);
-              scope33$cap.tmp$1 = runtime.safeCall(arg$CpsSuspend$2$(Runtime.cpsId, scope33$cap.handlerFunCont$0));
-              handlerTrampoline$cap.cur$0 = scope33$cap.tmp$1;
-              scope33$cap.tmp$2 = runtime.Unit;
+              scope2$cap.handlerFunCont$0 = handlerFunCont$(CpsImpl, tag, arg$CpsSuspend$0$);
+              scope2$cap.tmp$1 = runtime.safeCall(arg$CpsSuspend$2$(Runtime.cpsId, scope2$cap.handlerFunCont$0));
+              handlerTrampoline$cap.cur$0 = scope2$cap.tmp$1;
+              scope2$cap.tmp$2 = runtime.Unit;
               continue lbl
             }
             lambda$here = lambda$9(Runtime, CpsImpl, k, tag, arg$CpsSuspend$0$);
@@ -2338,7 +2338,7 @@ export { Capture$resumeContTrace1 as _$_modulePrivate_$_Capture$resumeContTrace 
 export { lambda$7 as _$_modulePrivate_$_lambda$7 };
 export { lambda$8 as _$_modulePrivate_$_lambda$8 };
 export { Capture$handlerTrampoline1 as _$_modulePrivate_$_Capture$handlerTrampoline };
-export { Capture$scope331 as _$_modulePrivate_$_Capture$scope33 };
+export { Capture$scope21 as _$_modulePrivate_$_Capture$scope2 };
 export { lambda$9 as _$_modulePrivate_$_lambda$9 };
 export { handlerFunCont$ as _$_modulePrivate_$_handlerFunCont$ };
 export { lambda$10 as _$_modulePrivate_$_lambda$10 };

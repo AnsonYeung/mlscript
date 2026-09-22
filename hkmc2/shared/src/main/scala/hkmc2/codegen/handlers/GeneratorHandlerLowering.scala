@@ -34,8 +34,20 @@ object GeneratorPaths:
     rt.selSN("topLevelCallAsyncGenerator"),
   )
 
-class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator.State, Elaborator.Ctx, TL) extends BlockTransformer(SymbolSubst.Id):
+// A hack that make static initialization be able to await for its field initialization
+class AsyncTopLevelAwait(using Elaborator.State) extends BlockTransformer(SymbolSubst.Id):
+  
+  override def applyBlock(b: Block): Block = b match
+    case Define(c @ ClsLikeDefn(companion = S(mod)), rst) =>
+      applyDefn(c): defn2 =>
+        val r = mod.publicFields.foldRight(applyBlock(rst)): (fld, acc) =>
+          val field = Select(Value.MemberRef(c.sym, mod.isym), Tree.Ident(fld._1.nme))(S(fld._2))(false)
+          AssignField(field, Call(Elaborator.State.builtinOpsMap("await").asSimpleRef, (field.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun), acc)
+        Define(defn2, r)
+    case _ => super.applyBlock(b)
 
+class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator.State, Elaborator.Ctx, TL) extends BlockTransformer(SymbolSubst.Id):
+  
   val yieldStar = Elaborator.State.builtinOpsMap("yield*")
   val yieldOp = Elaborator.State.builtinOpsMap("yield")
   val unit = Value.Lit(Tree.UnitLit(true))
@@ -43,25 +55,26 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
   val stackSafetyConfig = summon[Config].stackSafety.filter(_ => async)
   val rt = Elaborator.State.runtimeSymbol.asSimpleRef
   val generatorPaths = if async then GeneratorPaths.asyncGenerator else GeneratorPaths.generator
+  
+  case class ScopeState(
+    tmp: LocalVarSymbol,
+    inNativeCtx: Bool,
+  )
 
-  var scopedTmp: List[LocalVarSymbol] = Nil
-  var stackDepthSyms: List[Lazy[LocalVarSymbol]] = Nil
-  var inNativeCtx: List[Bool] = Nil
+  var scopeStates: List[ScopeState] = Nil
 
   private def freshTmp(nme: Str = "tmp") = TempSymbol(N, nme)
-  private def getCurScopedTmp = scopedTmp.head
-  private def getCurDepthSym = stackDepthSyms.head.force_!
-  private def unwrapGenerators = inNativeCtx.head
+  private def getCurScopedTmp = scopeStates.head.tmp
+  private def unwrapGenerators = scopeStates.head.inNativeCtx
 
   private inline def nestScope[T](nativeCtx: Bool)(inline thunk: LocalVarSymbol => T): T =
     val t = freshTmp()
-    scopedTmp = t :: scopedTmp
-    stackDepthSyms = Lazy(freshTmp("curDepth")) :: stackDepthSyms
-    inNativeCtx = nativeCtx :: inNativeCtx
+    scopeStates = ScopeState(
+      t,
+      nativeCtx,
+    ) :: scopeStates
     val r = thunk(t)
-    inNativeCtx = inNativeCtx.tail
-    stackDepthSyms = stackDepthSyms.tail
-    scopedTmp = scopedTmp.tail
+    scopeStates = scopeStates.tail
     r
   
   private def runtimeYield(p: Path): Result =
@@ -107,12 +120,8 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
       val rest = super.applyFunBodyLikeBlock(b)
       blockBuilder
         .scopedVars(Set.single(t))
-        .staticif(!stackDepthSyms.head.isEmpty, _
-          .scopedVars(Set.single(getCurDepthSym))
-          .assign(t, callRuntimeMethod(generatorPaths.checkDepth, Nil))
-          .assign(getCurDepthSym, Call(Value.SimpleRef(Elaborator.State.builtinOpsMap("+")),
-            (generatorPaths.stackDepth.asArg :: Value.Lit(Tree.IntLit(1)).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
-          .assign(NoSymbol, runtimeYieldStar(t.asSimpleRef)))
+        .staticif(stackSafetyConfig.isDefined, _
+          .assign(NoSymbol, Call(Elaborator.State.builtinOpsMap("await").asSimpleRef, (intLit(0).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun)))
         .rest(rest)
   
   override def applyResult(r: Result)(k: Result => Block): Block =
@@ -144,15 +153,13 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
           .rest(k(tmp.asSimpleRef))
       else
         blockBuilder
-          .staticif(stackSafetyConfig.isDefined, _
-            .assign(tmp, Call(Elaborator.State.builtinOpsMap(">").asSimpleRef, (generatorPaths.stackDepth.asArg :: getCurDepthSym.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
-            .ifthen(
-              tmp.asSimpleRef,
-              Case.Lit(Tree.BoolLit(true)),
-              blockBuilder.assignFieldS(generatorPaths.stackDepth, getCurDepthSym.asSimpleRef).end,
-              S(blockBuilder.assignFieldS(generatorPaths.stackDepth, intLit(0)).end)
-            ))
           .assign(tmp, r)
           .rest(k(runtimeYieldStar(tmp.asSimpleRef)))
     case _ => super.applyResult(r)(k)
-    
+  
+  override def applyProgram(prog: Program): Program =
+    val prog2 = super.applyProgram(prog)
+    if async then
+      AsyncTopLevelAwait().applyProgram(prog2)
+    else
+      prog2
