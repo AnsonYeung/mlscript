@@ -1,0 +1,10 @@
+In the constructive programming community it is commonplace to
+see formal developments of textbook algorithms. In the algorithm
+design community, on the other hand, it may be well known that
+the textbook solution to a problem is not the most efficient
+possible. However, in presenting the more efficient solution, the
+algorithm designer will usually omit some of the implementation
+details, this creating an algorithm gap between the abstract
+algorithm and its concrete implementation. This is in contrast
+to the formal development, which usually presents the complete
+concrete implementation of the less efficient solution.

@@ -4,6 +4,8 @@ module Benchmark with...
 
 let prefixPath = "hkmc2Benchmarks/src/test/logs/"
 
+fun runStackSafe(fn) = internals.runStackSafe(fn)
+
 class SuiteWrapper(suite) with
   fun add(nme, fn) =
     suite.add(nme, () => internals.runStackSafe(fn))

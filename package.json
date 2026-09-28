@@ -3,6 +3,7 @@
   "dependencies": {
     "benchmark": "^2.1.4",
     "binaryen": "github:hkust-taco/binaryen.js#mlscript",
+    "tinybench": "^6.2.0",
     "typescript": "^4.7.4"
   }
 }
