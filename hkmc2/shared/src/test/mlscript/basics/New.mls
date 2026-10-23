@@ -19,11 +19,11 @@ new
   Foo
   Foo
 //│ ╔══[COMPILATION ERROR] Expected a statically known class; found block.
-//│ ║  l.20: 	  Foo
+//│ ║  l.+3: 	  Foo
 //│ ║        	  ^^^
 //│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.19: 	  Foo
+//│ ║  l.+2: 	  Foo
 //│ ╙──      	  ^^^
 //│ = Foo
 
@@ -33,7 +33,7 @@ new
 new
   Foo()
 //│ ╔══[COMPILATION ERROR] Expected a statically known class; found application.
-//│ ║  l.34: 	  Foo()
+//│ ║  l.+2: 	  Foo()
 //│ ║        	  ^^^^^
 //│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
 //│ ═══[RUNTIME ERROR] TypeError: Class constructor Foo cannot be invoked without 'new'
@@ -43,7 +43,7 @@ new
   Foo
     ()
 //│ ╔══[COMPILATION ERROR] Illegal juxtaposition right-hand side (unit).
-//│ ║  l.44: 	    ()
+//│ ║  l.+3: 	    ()
 //│ ╙──      	    ^^
 //│ = Foo
 
@@ -54,11 +54,11 @@ new
   Foo
   ()
 //│ ╔══[COMPILATION ERROR] Expected a statically known class; found block.
-//│ ║  l.55: 	  ()
+//│ ║  l.+3: 	  ()
 //│ ║        	  ^^
 //│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.54: 	  Foo
+//│ ║  l.+2: 	  Foo
 //│ ╙──      	  ^^^
 //│ ═══[RUNTIME ERROR] TypeError: runtime.Unit is not a constructor
 
@@ -66,7 +66,7 @@ new
 new Foo
   ()
 //│ ╔══[COMPILATION ERROR] Illegal juxtaposition right-hand side (unit).
-//│ ║  l.67: 	  ()
+//│ ║  l.+2: 	  ()
 //│ ╙──      	  ^^
 //│ = Foo
 

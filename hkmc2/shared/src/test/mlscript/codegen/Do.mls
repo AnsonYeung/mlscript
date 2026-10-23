@@ -17,7 +17,7 @@ do console.log("ok")
 :w
 do 1
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.18: 	do 1
+//│ ║  l.+1: 	do 1
 //│ ╙──      	   ^
 
 do

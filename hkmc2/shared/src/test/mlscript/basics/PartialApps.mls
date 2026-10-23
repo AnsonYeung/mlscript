@@ -5,21 +5,21 @@
 :re
 .
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.6: 	.
-//│ ╙──     	^
+//│ ║  l.+1: 	.
+//│ ╙──      	^
 //│ ╔══[PARSE ERROR] Expected end of input; found period instead
-//│ ║  l.6: 	.
-//│ ╙──     	^
+//│ ║  l.+1: 	.
+//│ ╙──      	^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :pe
 :re
 . //
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.17: 	. //
+//│ ║  l.+1: 	. //
 //│ ╙──      	^
 //│ ╔══[PARSE ERROR] Expected end of input; found period instead
-//│ ║  l.17: 	. //
+//│ ║  l.+1: 	. //
 //│ ╙──      	^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -27,10 +27,10 @@
 :fixme
 id(.)
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.28: 	id(.)
+//│ ║  l.+1: 	id(.)
 //│ ╙──      	   ^
 //│ ╔══[PARSE ERROR] Unexpected period here
-//│ ║  l.28: 	id(.)
+//│ ║  l.+1: 	id(.)
 //│ ╙──      	   ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -52,10 +52,10 @@ passTo(2, incr @ _)()
 :fixme
 passTo(2, incr(.) @ _)()
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.53: 	passTo(2, incr(.) @ _)()
+//│ ║  l.+1: 	passTo(2, incr(.) @ _)()
 //│ ╙──      	               ^
 //│ ╔══[PARSE ERROR] Unexpected period here
-//│ ║  l.53: 	passTo(2, incr(.) @ _)()
+//│ ║  l.+1: 	passTo(2, incr(.) @ _)()
 //│ ╙──      	               ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -70,10 +70,10 @@ passTo(2, add(_, 2))()
 :fixme
 passTo(2, add(., 2))()
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.71: 	passTo(2, add(., 2))()
+//│ ║  l.+1: 	passTo(2, add(., 2))()
 //│ ╙──      	              ^
 //│ ╔══[PARSE ERROR] Unexpected period here
-//│ ║  l.71: 	passTo(2, add(., 2))()
+//│ ║  l.+1: 	passTo(2, add(., 2))()
 //│ ╙──      	              ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -91,21 +91,21 @@ passTo(1, (add(_, 1)) @ _ + _)(2)
 :fixme
 passTo(1, incr(.) @ _ + _)(2)
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.92: 	passTo(1, incr(.) @ _ + _)(2)
+//│ ║  l.+1: 	passTo(1, incr(.) @ _ + _)(2)
 //│ ╙──      	               ^
 //│ ╔══[PARSE ERROR] Unexpected period here
-//│ ║  l.92: 	passTo(1, incr(.) @ _ + _)(2)
+//│ ║  l.+1: 	passTo(1, incr(.) @ _ + _)(2)
 //│ ╙──      	               ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :fixme
 passTo(1, add(., 1) @ _ + _)(2)
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.102: 	passTo(1, add(., 1) @ _ + _)(2)
-//│ ╙──       	              ^
+//│ ║  l.+1: 	passTo(1, add(., 1) @ _ + _)(2)
+//│ ╙──      	              ^
 //│ ╔══[PARSE ERROR] Unexpected period here
-//│ ║  l.102: 	passTo(1, add(., 1) @ _ + _)(2)
-//│ ╙──       	              ^
+//│ ║  l.+1: 	passTo(1, add(., 1) @ _ + _)(2)
+//│ ╙──      	              ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 
@@ -120,11 +120,11 @@ let f = add(_, 1)
 :fixme
 let f = add(., 1)
 //│ ╔══[PARSE ERROR] Expected an expression; found period instead
-//│ ║  l.121: 	let f = add(., 1)
-//│ ╙──       	            ^
+//│ ║  l.+1: 	let f = add(., 1)
+//│ ╙──      	            ^
 //│ ╔══[PARSE ERROR] Unexpected period here
-//│ ║  l.121: 	let f = add(., 1)
-//│ ╙──       	            ^
+//│ ║  l.+1: 	let f = add(., 1)
+//│ ╙──      	            ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 //│ f = undefined
 

@@ -48,13 +48,13 @@ h'(2)
 :e
 case (0 | 1)
 //│ ╔══[COMPILATION ERROR] Unrecognized pattern split (parenthesis section).
-//│ ║  l.49: 	case (0 | 1)
+//│ ║  l.+1: 	case (0 | 1)
 //│ ╙──      	     ^^^^^^^
 //│ = fun
 
 :e
 case 0 | 1
 //│ ╔══[COMPILATION ERROR] Unrecognized pattern split (infix operator '|').
-//│ ║  l.56: 	case 0 | 1
+//│ ║  l.+1: 	case 0 | 1
 //│ ╙──      	     ^^^^^
 //│ = fun

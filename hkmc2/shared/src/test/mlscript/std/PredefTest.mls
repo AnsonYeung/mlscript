@@ -10,7 +10,7 @@ id(123)
 :re
 id()
 //│ ╔══[COMPILATION ERROR] Expected 1 arguments, got 0
-//│ ║  l.11: 	id()
+//│ ║  l.+1: 	id()
 //│ ╙──      	  ^^
 //│ ═══[RUNTIME ERROR] Error: MLscript call unexpectedly returned `undefined`, the forbidden value.
 
@@ -184,8 +184,8 @@ foldr(tuple)(0, 1, 2, 3)
 :todo
 foldr(+)()
 //│ ╔══[COMPILATION ERROR] Expected at least 1 arguments, got 0
-//│ ║  l.185: 	foldr(+)()
-//│ ╙──       	        ^^
+//│ ║  l.+1: 	foldr(+)()
+//│ ╙──      	        ^^
 //│ ═══[RUNTIME ERROR] Error: MLscript call unexpectedly returned `undefined`, the forbidden value.
 
 

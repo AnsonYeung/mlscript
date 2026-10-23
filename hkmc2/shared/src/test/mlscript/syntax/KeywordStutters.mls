@@ -30,7 +30,7 @@ abstract class
     Foo(a)
     Bar(b)
 //│ ╔══[PARSE ERROR] Unexpected identifier here
-//│ ║  l.31: 	    Bar(b)
+//│ ║  l.+3: 	    Bar(b)
 //│ ╙──      	    ^^^
 
 
@@ -46,10 +46,10 @@ object \$ extends Foo
   A
   B
 //│ ╔══[LEXICAL ERROR] unexpected character '$'
-//│ ║  l.45: 	object \$ extends Foo
+//│ ║  l.+1: 	object \$ extends Foo
 //│ ╙──      	        ^
 //│ ╔══[PARSE ERROR] Expected end of input; found error instead
-//│ ║  l.45: 	object \$ extends Foo
+//│ ║  l.+1: 	object \$ extends Foo
 //│ ╙──      	        ^
 
 

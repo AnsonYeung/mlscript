@@ -51,7 +51,7 @@ xs \map(x => x * 2) \print()
 xs \
   map(x => x * 2)
 //│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
-//│ ║  l.52: 	  map(x => x * 2)
+//│ ║  l.+2: 	  map(x => x * 2)
 //│ ╙──      	     ^^^^^^^^^^^^
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let lambda5, tmp;
@@ -68,7 +68,7 @@ xs \
 xs\
   map(x => x * 2)
 //│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
-//│ ║  l.69: 	  map(x => x * 2)
+//│ ║  l.+2: 	  map(x => x * 2)
 //│ ╙──      	     ^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] Error: Function 'map' expected 2 arguments but got 1
 

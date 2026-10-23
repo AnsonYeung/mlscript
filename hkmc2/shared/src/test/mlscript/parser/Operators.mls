@@ -92,7 +92,7 @@ x =>
  2,
  3
 //│ ╔══[PARSE ERROR] Unexpected comma in this position
-//│ ║  l.92: 	 2,
+//│ ║  l.+2: 	 2,
 //│ ╙──      	  ^
 //│ Parsed:
 //│ 	OpApp(IntLit(1),Ident(+),List(Block(List(IntLit(2), IntLit(3)))))

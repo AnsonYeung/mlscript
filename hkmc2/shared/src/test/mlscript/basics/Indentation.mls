@@ -48,11 +48,11 @@ tuple(
     tuple()
   tuple()
 //│ ╔══[COMPILATION ERROR] Illegal juxtaposition right-hand side (juxtaposition).
-//│ ║  l.47: 	      tuple()
+//│ ║  l.+4: 	      tuple()
 //│ ║        	      ^^^^^^^
-//│ ║  l.48: 	    tuple()
+//│ ║  l.+5: 	    tuple()
 //│ ║        	^^^^^^^^^^^
-//│ ║  l.49: 	  tuple()
+//│ ║  l.+6: 	  tuple()
 //│ ╙──      	^^
 //│ = [[4]]
 
@@ -72,12 +72,12 @@ tuple(
 1
 )
 //│ ╔══[WARNING] This literal should be indented
-//│ ║  l.72: 	1
+//│ ║  l.+2: 	1
 //│ ║        	^
 //│ ╟── since it is a continuation of the new line here
-//│ ║  l.71: 	tuple(
+//│ ║  l.+1: 	tuple(
 //│ ║        	      ^
-//│ ║  l.72: 	1
+//│ ║  l.+2: 	1
 //│ ╙──
 //│ = [1]
 
@@ -139,8 +139,8 @@ id
 //│ Parsed:
 //│ 	Jux(Ident(id),Block(List(IntLit(1))))
 //│ ╔══[COMPILATION ERROR] Illegal juxtaposition right-hand side (integer literal).
-//│ ║  l.137: 	  1
-//│ ╙──       	  ^
+//│ ║  l.+2: 	  1
+//│ ╙──      	  ^
 //│ = fun id
 
 :e
@@ -152,8 +152,8 @@ id(0
 //│ Parsed:
 //│ 	App(App(Ident(id),Tup(List(Jux(IntLit(0),Block(List(Ident(id))))))),Tup(List(IntLit(1))))
 //│ ╔══[COMPILATION ERROR] Illegal juxtaposition right-hand side (identifier).
-//│ ║  l.150: 	  id)(1)
-//│ ╙──       	  ^^
+//│ ║  l.+2: 	  id)(1)
+//│ ╙──      	  ^^
 //│ ═══[RUNTIME ERROR] TypeError: 0 is not a function
 
 

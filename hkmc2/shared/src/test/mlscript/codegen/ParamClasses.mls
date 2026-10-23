@@ -170,11 +170,11 @@ Foo(10, 20, 30, 40, 50)
 class Foo(val z, val z)
 //│ ╔══[COMPILATION ERROR] Duplicate definition of member named 'z'.
 //│ ╟── Defined at: 
-//│ ║  l.170: 	class Foo(val z, val z)
-//│ ║         	          ^^^^^
+//│ ║  l.+1: 	class Foo(val z, val z)
+//│ ║        	          ^^^^^
 //│ ╟── Defined at: 
-//│ ║  l.170: 	class Foo(val z, val z)
-//│ ╙──       	                 ^^^^^
+//│ ║  l.+1: 	class Foo(val z, val z)
+//│ ╙──      	                 ^^^^^
 
 Foo(1, 2)
 //│ = Foo(undefined, undefined)

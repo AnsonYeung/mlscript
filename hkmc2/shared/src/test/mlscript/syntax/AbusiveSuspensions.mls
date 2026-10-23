@@ -30,22 +30,22 @@ fun foo(expr1) =
   Ok(a) then...
   a
 //│ ╔══[PARSE ERROR] Expected start of expression in this position; found new line instead
-//│ ║  l.28: 	  if expr1 is
+//│ ║  l.+2: 	  if expr1 is
 //│ ║        	             ^
-//│ ║  l.29: 	  Error(b) then b
+//│ ║  l.+3: 	  Error(b) then b
 //│ ╙──      	^^
 //│ ╔══[COMPILATION ERROR] Unrecognized pattern split (‹erroneous syntax›).
-//│ ║  l.28: 	  if expr1 is
+//│ ║  l.+2: 	  if expr1 is
 //│ ║        	             ^
-//│ ║  l.29: 	  Error(b) then b
+//│ ║  l.+3: 	  Error(b) then b
 //│ ╙──      	^^
 //│ ╔══[COMPILATION ERROR] Unexpected infix use of keyword 'then' here
-//│ ║  l.29: 	  Error(b) then b
+//│ ║  l.+3: 	  Error(b) then b
 //│ ╙──      	  ^^^^^^^^^^^^^^^
 //│ ╔══[COMPILATION ERROR] Unexpected infix use of keyword 'then' here
-//│ ║  l.30: 	  Ok(a) then...
+//│ ║  l.+4: 	  Ok(a) then...
 //│ ║        	  ^^^^^^^^^^^^^
-//│ ║  l.31: 	  a
+//│ ║  l.+5: 	  a
 //│ ╙──      	^^^
 
 fun foo(expr1) =
@@ -61,13 +61,13 @@ fun foo(expr1) =
   is Ok(a) then...
   a
 //│ ╔══[PARSE ERROR] Expected start of expression in this position; found 'is' keyword instead
-//│ ║  l.60: 	  is Error(b) then b
+//│ ║  l.+3: 	  is Error(b) then b
 //│ ╙──      	  ^^
 //│ ╔══[PARSE ERROR] Unexpected identifier here
-//│ ║  l.60: 	  is Error(b) then b
+//│ ║  l.+3: 	  is Error(b) then b
 //│ ╙──      	     ^^^^^
 //│ ╔══[COMPILATION ERROR] Unrecognized term split (identifier)
-//│ ║  l.59: 	  if expr1
+//│ ║  l.+2: 	  if expr1
 //│ ╙──      	     ^^^^^
 
 

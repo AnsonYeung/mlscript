@@ -20,13 +20,13 @@ while
   do
     print(arrMatches)
 //│ ╔══[COMPILATION ERROR] Unexpected infix use of keyword 'do' here
-//│ ║  l.18: 	    let arrMatches = true
+//│ ║  l.+2: 	    let arrMatches = true
 //│ ║        	        ^^^^^^^^^^^^^^^^^
-//│ ║  l.19: 	    arrMatches
+//│ ║  l.+3: 	    arrMatches
 //│ ║        	^^^^^^^^^^^^^^
-//│ ║  l.20: 	  do
+//│ ║  l.+4: 	  do
 //│ ║        	^^^^
-//│ ║  l.21: 	    print(arrMatches)
+//│ ║  l.+5: 	    print(arrMatches)
 //│ ╙──      	^^^^^^^^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -49,7 +49,7 @@ if
   do
     ()
 //│ ╔══[COMPILATION ERROR] Unrecognized term split (null)
-//│ ║  l.48: 	  arrMatches !== null
+//│ ║  l.+2: 	  arrMatches !== null
 //│ ╙──      	                 ^^^^
 //│ ═══[RUNTIME ERROR] Error: match error
 

@@ -28,7 +28,7 @@ concat of
 :e
 (~)("a", "b", "c")
 //│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 3
-//│ ║  l.29: 	(~)("a", "b", "c")
+//│ ║  l.+1: 	(~)("a", "b", "c")
 //│ ╙──      	   ^^^^^^^^^^^^^^^
 //│ = "ab"
 
@@ -36,14 +36,14 @@ concat of
 :e
 (~)("a")
 //│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
-//│ ║  l.37: 	(~)("a")
+//│ ║  l.+1: 	(~)("a")
 //│ ╙──      	   ^^^^^
 //│ = "aundefined"
 
 :ge
 ~"a"
 //│ ╔══[COMPILATION ERROR] Unexpected term form in expression position (negation type)
-//│ ║  l.44: 	~"a"
+//│ ║  l.+1: 	~"a"
 //│ ╙──      	 ^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -51,7 +51,7 @@ concat of
 :ge
 ~("a", "b")
 //│ ╔══[COMPILATION ERROR] Unexpected term form in expression position (negation type)
-//│ ║  l.52: 	~("a", "b")
+//│ ║  l.+1: 	~("a", "b")
 //│ ╙──      	       ^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -60,13 +60,13 @@ concat of
 :ge
 ~ of "a", "b"
 //│ ╔══[PARSE ERROR] Expected start of expression in this position; found 'of' keyword instead
-//│ ║  l.61: 	~ of "a", "b"
+//│ ║  l.+1: 	~ of "a", "b"
 //│ ╙──      	  ^^
 //│ ╔══[PARSE ERROR] Expected end of input; found literal instead
-//│ ║  l.61: 	~ of "a", "b"
+//│ ║  l.+1: 	~ of "a", "b"
 //│ ╙──      	     ^^^
 //│ ╔══[COMPILATION ERROR] Unexpected term form in expression position (negation type)
-//│ ║  l.61: 	~ of "a", "b"
+//│ ║  l.+1: 	~ of "a", "b"
 //│ ╙──      	     ^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 

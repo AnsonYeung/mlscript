@@ -25,7 +25,7 @@ module A with
     A
   val y = 2
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.25: 	    A
+//│ ║  l.+5: 	    A
 //│ ╙──      	    ^
 //│ > 1 undefined
 

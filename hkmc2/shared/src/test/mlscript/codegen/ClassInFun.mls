@@ -70,7 +70,7 @@ test(123)
 :re
 test()
 //│ ╔══[COMPILATION ERROR] Expected 1 arguments, got 0
-//│ ║  l.71: 	test()
+//│ ║  l.+1: 	test()
 //│ ╙──      	    ^^
 //│ ═══[RUNTIME ERROR] Error: Function 'test' expected 1 argument but got 0
 

@@ -5,8 +5,8 @@
 
 get foo = 123
 //│ ╔══[COMPILATION ERROR] Unrecognized definitional assignment left-hand side: juxtaposition
-//│ ║  l.6: 	get foo = 123
-//│ ╙──     	^^^^^^^
+//│ ║  l.+1: 	get foo = 123
+//│ ╙──      	^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 

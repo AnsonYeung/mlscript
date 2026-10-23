@@ -6,11 +6,11 @@ print of
   let x = 1
   x + 1
 //│ ╔══[COMPILATION ERROR] Expected a body for let bindings in expression position
-//│ ║  l.6: 	  let x = 1
-//│ ╙──     	      ^^^^^
+//│ ║  l.+2: 	  let x = 1
+//│ ╙──      	      ^^^^^
 //│ ╔══[COMPILATION ERROR] Name not found: x
-//│ ║  l.7: 	  x + 1
-//│ ╙──     	  ^
+//│ ║  l.+3: 	  x + 1
+//│ ╙──      	  ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 print of 
@@ -18,13 +18,13 @@ print of
   let x = 1
   x + 1
 //│ ╔══[COMPILATION ERROR] Illegal position for 'open' statement.
-//│ ║  l.17: 	  open Predef
+//│ ║  l.+2: 	  open Predef
 //│ ╙──      	  ^^^^^^^^^^^
 //│ ╔══[COMPILATION ERROR] Expected a body for let bindings in expression position
-//│ ║  l.18: 	  let x = 1
+//│ ║  l.+3: 	  let x = 1
 //│ ╙──      	      ^^^^^
 //│ ╔══[COMPILATION ERROR] Name not found: x
-//│ ║  l.19: 	  x + 1
+//│ ║  l.+4: 	  x + 1
 //│ ╙──      	  ^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 

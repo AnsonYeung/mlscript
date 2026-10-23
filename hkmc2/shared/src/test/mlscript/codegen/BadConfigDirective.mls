@@ -4,11 +4,11 @@
 :w
 @config(tailRecOpt: false) "hi"
 //│ ╔══[WARNING] This annotation has no effect.
-//│ ║  l.5: 	@config(tailRecOpt: false) "hi"
-//│ ║       	^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ║  l.+1: 	@config(tailRecOpt: false) "hi"
+//│ ║        	^^^^^^^^^^^^^^^^^^^^^^^^^^
 //│ ╟── This annotation is not supported on string literal terms.
-//│ ║  l.5: 	@config(tailRecOpt: false) "hi"
-//│ ╙──     	                           ^^^^
+//│ ║  l.+1: 	@config(tailRecOpt: false) "hi"
+//│ ╙──      	                           ^^^^
 //│ = "hi"
 
 // TODO: report useless `tailRecOpt` config annotation on non-function term
@@ -20,7 +20,7 @@
 :e
 #lang(1.0.x)
 //│ ╔══[COMPILATION ERROR] Unknown language version '1.0.x'
-//│ ║  l.21: 	#lang(1.0.x)
+//│ ║  l.+1: 	#lang(1.0.x)
 //│ ║        	      ^^^^^
 //│ ╙── Available language versions: 0.2.x, 0.3.x
 
@@ -28,12 +28,12 @@
 :e
 #lang(unknownLanguageField: true)
 //│ ╔══[COMPILATION ERROR] Unsupported Language argument
-//│ ║  l.29: 	#lang(unknownLanguageField: true)
+//│ ║  l.+1: 	#lang(unknownLanguageField: true)
 //│ ╙──      	      ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 :e
 #lang(versionName: "custom")
 //│ ╔══[COMPILATION ERROR] Unsupported Language argument
-//│ ║  l.36: 	#lang(versionName: "custom")
+//│ ║  l.+1: 	#lang(versionName: "custom")
 //│ ╙──      	      ^^^^^^^^^^^^^^^^^^^^^

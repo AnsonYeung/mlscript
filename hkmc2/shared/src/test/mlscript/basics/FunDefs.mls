@@ -36,13 +36,13 @@ fun (>>) foo(a, b) = a * b
 :e
 fun ~ concat(a, b) = a + b
 //│ ╔══[COMPILATION ERROR] Expected a valid parameter, found application
-//│ ║  l.37: 	fun ~ concat(a, b) = a + b
+//│ ║  l.+1: 	fun ~ concat(a, b) = a + b
 //│ ╙──      	      ^^^^^^^^^^^^
 //│ ╔══[COMPILATION ERROR] Name not found: a
-//│ ║  l.37: 	fun ~ concat(a, b) = a + b
+//│ ║  l.+1: 	fun ~ concat(a, b) = a + b
 //│ ╙──      	                     ^
 //│ ╔══[COMPILATION ERROR] Name not found: b
-//│ ║  l.37: 	fun ~ concat(a, b) = a + b
+//│ ║  l.+1: 	fun ~ concat(a, b) = a + b
 //│ ╙──      	                         ^
 
 // * Note the strange parsing
@@ -50,7 +50,7 @@ fun ~ concat(a, b) = a + b
 :todo // better error?
 fun not(b) = !b
 //│ ╔══[PARSE ERROR] Expected an expression; found dynamic selector instead
-//│ ║  l.51: 	fun not(b) = !b
+//│ ║  l.+1: 	fun not(b) = !b
 //│ ╙──      	             ^^
 //│ ———————————————| Parsed tree |——————————————————————————————————————————————————————————————————————
 //│ DynAccess:
@@ -64,7 +64,7 @@ fun not(b) = !b
 //│     rhs = S of Error
 //│   fld = Ident of "b"
 //│ ╔══[COMPILATION ERROR] Illegal definition in term position.
-//│ ║  l.51: 	fun not(b) = !b
+//│ ║  l.+1: 	fun not(b) = !b
 //│ ╙──      	^^^^^^^^^^^^^^^
 
 

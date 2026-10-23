@@ -59,7 +59,7 @@ data class A(...r)
 let x = new A(1, 2, 3)
 x.r
 //│ ╔══[COMPILATION ERROR] Spread parameters are not supported in class parameters.
-//│ ║  l.58: 	data class A(...r)
+//│ ║  l.+1: 	data class A(...r)
 //│ ╙──      	             ^^^^
 //│ ═══[RUNTIME ERROR] Error: Access to required field 'r' yielded 'undefined'
 //│ ═══[RUNTIME ERROR] Expected: '[1, 2, 3]', got: 'undefined'
@@ -71,13 +71,13 @@ data class A(...r) with
   fun getR = r
 new A(1, 2, 3).getR
 //│ ╔══[COMPILATION ERROR] Spread parameters are not supported in class parameters.
-//│ ║  l.70: 	data class A(...r) with
+//│ ║  l.+1: 	data class A(...r) with
 //│ ╙──      	             ^^^^
 //│ ╔══[COMPILATION ERROR] No definition found in scope for member 'r'
-//│ ║  l.71: 	  fun getR = r
+//│ ║  l.+2: 	  fun getR = r
 //│ ║        	             ^
 //│ ╟── which references the symbol introduced here
-//│ ║  l.70: 	data class A(...r) with
+//│ ║  l.+1: 	data class A(...r) with
 //│ ╙──      	                ^
 //│ ═══[RUNTIME ERROR] ReferenceError: r is not defined
 //│ ═══[RUNTIME ERROR] Expected: '[1, 2, 3]', got: 'undefined'

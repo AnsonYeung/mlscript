@@ -11,7 +11,7 @@
 val n: Int = true && 42
 n
 //│ ╔══[COMPILATION ERROR] Cannot use a value of type 'Bool' at an unrelated type 'Int'
-//│ ║  l.11: 	val n: Int = true && 42
+//│ ║  l.+1: 	val n: Int = true && 42
 //│ ╙──      	             ^^^^^^^^^^
 //│ = 42
 //│ n = 42
@@ -21,7 +21,7 @@ n
 val s: Str = false || "ok"
 s
 //│ ╔══[COMPILATION ERROR] Cannot use a value of type 'Bool' at an unrelated type 'Str'
-//│ ║  l.21: 	val s: Str = false || "ok"
+//│ ║  l.+1: 	val s: Str = false || "ok"
 //│ ╙──      	             ^^^^^^^^^^^^^
 //│ = "ok"
 //│ s = "ok"

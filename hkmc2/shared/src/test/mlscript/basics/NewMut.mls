@@ -61,7 +61,7 @@ f.y
 :e
 let f = mut new Foo
 //│ ╔══[COMPILATION ERROR] Illegal position for 'mut' modifier.
-//│ ║  l.62: 	let f = mut new Foo
+//│ ║  l.+1: 	let f = mut new Foo
 //│ ╙──      	        ^^^
 //│ f = Foo { x: 0 }
 
@@ -69,7 +69,7 @@ let f = mut new Foo
 :re
 new mut Foo.x
 //│ ╔══[COMPILATION ERROR] Expected a statically known class; found selection.
-//│ ║  l.70: 	new mut Foo.x
+//│ ║  l.+1: 	new mut Foo.x
 //│ ║        	        ^^^^^
 //│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
 //│ ═══[RUNTIME ERROR] Error: Access to required field 'x' yielded 'undefined'

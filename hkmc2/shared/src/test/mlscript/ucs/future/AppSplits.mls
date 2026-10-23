@@ -12,11 +12,11 @@ if foo of
   0 then "a"
   1 then "b"
 //│ ╔══[COMPILATION ERROR] Unrecognized term split (application)
-//│ ║  l.11: 	if foo of
+//│ ║  l.+1: 	if foo of
 //│ ║        	   ^^^^^^
-//│ ║  l.12: 	  0 then "a"
+//│ ║  l.+2: 	  0 then "a"
 //│ ║        	^^^^^^^^^^^^
-//│ ║  l.13: 	  1 then "b"
+//│ ║  l.+3: 	  1 then "b"
 //│ ╙──      	^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] Error: match error
 
@@ -27,11 +27,11 @@ if foo of 1,
   0 then "a"
   1 then "b"
 //│ ╔══[COMPILATION ERROR] Unrecognized term split (application)
-//│ ║  l.26: 	if foo of 1,
+//│ ║  l.+1: 	if foo of 1,
 //│ ║        	   ^^^^^^^^^
-//│ ║  l.27: 	  0 then "a"
+//│ ║  l.+2: 	  0 then "a"
 //│ ║        	^^^^^^^^^^^^
-//│ ║  l.28: 	  1 then "b"
+//│ ║  l.+3: 	  1 then "b"
 //│ ╙──      	^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] Error: match error
 
@@ -42,9 +42,9 @@ if foo
   (0) then "a"
   (1) then "b"
 //│ ╔══[COMPILATION ERROR] Unrecognized term split (juxtaposition)
-//│ ║  l.41: 	if foo
+//│ ║  l.+1: 	if foo
 //│ ║        	   ^^^
-//│ ║  l.42: 	  (0) then "a"
+//│ ║  l.+2: 	  (0) then "a"
 //│ ╙──      	^^
 //│ ═══[RUNTIME ERROR] Error: match error
 

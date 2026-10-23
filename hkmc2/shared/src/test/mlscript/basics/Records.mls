@@ -16,7 +16,7 @@ let r = {}
 :w
 {1, 2}
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.17: 	{1, 2}
+//│ ║  l.+1: 	{1, 2}
 //│ ╙──      	 ^
 //│ = 2
 
@@ -73,10 +73,10 @@ let rcd =
   bar =
     "..."
 //│ ╔══[COMPILATION ERROR] Name not found: foo
-//│ ║  l.72: 	  foo = 1
+//│ ║  l.+2: 	  foo = 1
 //│ ╙──      	  ^^^
 //│ ╔══[COMPILATION ERROR] Name not found: bar
-//│ ║  l.73: 	  bar =
+//│ ║  l.+3: 	  bar =
 //│ ╙──      	  ^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 //│ rcd = undefined
@@ -90,10 +90,10 @@ let rcd = new with
   bar =
     "..."
 //│ ╔══[COMPILATION ERROR] Name not found: foo
-//│ ║  l.89: 	  foo = 1
+//│ ║  l.+2: 	  foo = 1
 //│ ╙──      	  ^^^
 //│ ╔══[COMPILATION ERROR] Name not found: bar
-//│ ║  l.90: 	  bar =
+//│ ║  l.+3: 	  bar =
 //│ ╙──      	  ^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 //│ rcd = undefined
@@ -136,8 +136,8 @@ m0.get(41)
 :e
 {get(k): _}
 //│ ╔══[COMPILATION ERROR] Unexpected record key shape.
-//│ ║  l.137: 	{get(k): _}
-//│ ╙──       	 ^^^^^^
+//│ ║  l.+1: 	{get(k): _}
+//│ ╙──      	 ^^^^^^
 //│ = fun
 
 
@@ -191,15 +191,15 @@ display(x: 88, y: 99, i: 0)
 :todo
 t("group")
 //│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
-//│ ║  l.192: 	t("group")
-//│ ╙──       	 ^^^^^^^^^
+//│ ║  l.+1: 	t("group")
+//│ ╙──      	 ^^^^^^^^^
 //│ ═══[RUNTIME ERROR] Error: Function 't' expected 2 arguments but got 1
 
 :todo
 t("group")
 //│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
-//│ ║  l.199: 	t("group")
-//│ ╙──       	 ^^^^^^^^^
+//│ ║  l.+1: 	t("group")
+//│ ╙──      	 ^^^^^^^^^
 //│ ═══[RUNTIME ERROR] Error: Function 't' expected 2 arguments but got 1
 
 let empty = Object.create of null

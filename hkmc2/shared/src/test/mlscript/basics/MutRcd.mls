@@ -77,7 +77,7 @@ r.foo
 :e
 mut()
 //│ ╔══[COMPILATION ERROR] Illegal position for 'mut' modifier.
-//│ ║  l.78: 	mut()
+//│ ║  l.+1: 	mut()
 //│ ╙──      	^^^
 
 

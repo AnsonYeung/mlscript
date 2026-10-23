@@ -76,7 +76,7 @@ fun f(x, y, z) =
   if
     x then y else z
 //│ ╔══[PARSE ERROR] Unexpected 'else' keyword here
-//│ ║  l.77: 	    x then y else z
+//│ ║  l.+3: 	    x then y else z
 //│ ╙──      	             ^^^^
 
 
@@ -107,8 +107,8 @@ else
   else 1
 ) + 3
 //│ ╔══[PARSE ERROR] Unexpected 'else' keyword here
-//│ ║  l.107: 	  else 1
-//│ ╙──       	  ^^^^
+//│ ║  l.+4: 	  else 1
+//│ ╙──      	  ^^^^
 //│ = 8
 
 :fixme
@@ -117,8 +117,8 @@ else
     5 else 1
 ) + 3
 //│ ╔══[PARSE ERROR] Unexpected 'else' keyword here
-//│ ║  l.117: 	    5 else 1
-//│ ╙──       	      ^^^^
+//│ ║  l.+3: 	    5 else 1
+//│ ╙──      	      ^^^^
 //│ = 8
 
 
@@ -132,11 +132,11 @@ fun foo(x) = if x is
   else "I don't want to tell you what's inside the box."
   else "I shouldn't tell you what's inside the box."
 //│ ╔══[WARNING] This catch-all clause makes the following branches unreachable.
-//│ ║  l.131: 	  else "I can't tell you what's inside the box."
-//│ ║         	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ║  l.+4: 	  else "I can't tell you what's inside the box."
+//│ ║        	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //│ ╟── This branch is unreachable.
-//│ ║  l.132: 	  else "I don't want to tell you what's inside the box."
-//│ ║         	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ║  l.+5: 	  else "I don't want to tell you what's inside the box."
+//│ ║        	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //│ ╟── This branch is unreachable.
-//│ ║  l.133: 	  else "I shouldn't tell you what's inside the box."
-//│ ╙──       	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ║  l.+6: 	  else "I shouldn't tell you what's inside the box."
+//│ ╙──      	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -29,14 +29,14 @@ class Foo[A] with
 :e
 class Foo[A](x: Foo[A, A])
 //│ ╔══[COMPILATION ERROR] Expected 1 type arguments, got 2
-//│ ║  l.30: 	class Foo[A](x: Foo[A, A])
+//│ ║  l.+1: 	class Foo[A](x: Foo[A, A])
 //│ ╙──      	                ^^^^^^^^^
 
 :e
 class Foo[A](x: Bar[A])
 class Bar(x: Foo[Int])
 //│ ╔══[COMPILATION ERROR] Expected no type arguments, got 1
-//│ ║  l.36: 	class Foo[A](x: Bar[A])
+//│ ║  l.+1: 	class Foo[A](x: Bar[A])
 //│ ╙──      	                ^^^^^^
 
 

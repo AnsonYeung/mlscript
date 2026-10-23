@@ -32,7 +32,7 @@ f(true, true)
 :e
 x => if x is 0 | 1 then 1
 //│ ╔══[COMPILATION ERROR] Unexpected term form in expression position (alternation)
-//│ ║  l.33: 	x => if x is 0 | 1 then 1
+//│ ║  l.+1: 	x => if x is 0 | 1 then 1
 //│ ╙──      	        ^^^^^^^^^^
 //│ = fun
 
@@ -66,7 +66,7 @@ if (foo of x => x + 1) then 1
 :e
 if foo of x => x + 1 then 1
 //│ ╔══[COMPILATION ERROR] Unrecognized term split (application)
-//│ ║  l.67: 	if foo of x => x + 1 then 1
+//│ ║  l.+1: 	if foo of x => x + 1 then 1
 //│ ╙──      	   ^^^^^^^^^^^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] Error: match error
 

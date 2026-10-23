@@ -15,7 +15,7 @@
 1
 2
 //│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.15: 	1
+//│ ║  l.+1: 	1
 //│ ╙──      	^
 //│ —————————————| Lowered IR Tree |————————————————————————————————————————————————————————————————————
 //│ Program:
