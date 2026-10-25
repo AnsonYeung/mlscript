@@ -122,7 +122,7 @@ object HandlerLowering:
   case class AsyncGenerator() extends GeneratorBase(true):
     override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       if stackSafe then
-        k(Call(State.runtimeSymbol.asSimpleRef.selSN("runStackSafeAsyncGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
+        k(Call(State.runtimeSymbol.asSimpleRef.selSN("JSRT").selSN("runStackSafeAsyncGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
       else
         val tmp = loweringCtx.registerTempSymbol(N)
         Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect),

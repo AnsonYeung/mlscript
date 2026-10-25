@@ -50,6 +50,7 @@ let nofibList = [
 ];
 
 for (const suiteName of nofibList) {
+  console.log(suiteName);
   const mod = (await import(`../../../../hkmc2/shared/src/test/mlscript-compile/nofib/${suiteName}.mjs`)).default;
   const result = await Benchmark.runStackSafe(mod.main);
   const file = await fse.open(`./hkmc2Benchmarks/src/test/bench/out/${suiteName}.txt`, "w");
@@ -61,6 +62,7 @@ for (const suiteName of nofibList) {
   await file.close();
   bench.add(suiteName, () => Benchmark.runStackSafe(mod.main));
 }
+console.log("Running benchmarks...");
 
 await bench.run();
 
@@ -68,8 +70,13 @@ console.table(bench.table());
 
 const csvRows = bench.tasks.map(task => {
   const name = task.name;
-  const time = task.result?.period || 0; 
-  return `${name},${time / 1000}`;
+  const result = task.result;
+  if (result.state === "completed") {
+    const time = result.period;
+    const moe = result.latency.moe;
+    return `${name},${time / 1000},${moe / 1000}`;
+  }
+  return `${name},-1,-1`;
 }).join('\n');
 
 fs.writeFileSync('hkmc2Benchmarks/src/test/logs/nofibs.csv', csvRows, 'utf-8');
