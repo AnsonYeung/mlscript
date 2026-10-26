@@ -713,7 +713,7 @@ lambda8 = (undefined, function (Runtime2, EffectHandle1, value) {
       static take(string, n) {
         return runtime.safeCall(string.slice(0, n))
       }
-      static leave(string, n) {
+      static leaveOut(string, n) {
         return runtime.safeCall(string.slice(n))
       }
       toString() { return runtime.render(this); }

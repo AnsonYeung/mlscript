@@ -82,7 +82,7 @@ class BlockSimplifier
         do ()
       
       if summon[Config].optimizer.dataFlowAnalysis then
-        val vp = new DataFlowAnalysis(LocalVars.analyze(res.main))
+        val vp = new DataFlowAnalysis(localVars(res.main))
         res = vp.apply(res)
         changed ||= vp.changed
         if vp.changed then log("▶ VP:\n" + printRes)
@@ -124,27 +124,24 @@ class BlockSimplifier
   // * Only such variables can be assigned directly in the IR
   type LocalVar = LocalVarSymbol
   
-  object LocalVars extends CachedAnalysis[Block, Set[LocalVar]]:
-    
-    def analyzeUncached(block: Block): Set[LocalVar] =
-      def paramsOf(paramLists: IterableOnce[ParamList]): Iterator[LocalVar] =
-        paramLists.iterator.flatMap(_.paramSyms).collect:
-          case v: LocalVar => v
-      def default =
-        block.subBlocks.iterator.flatMap(analyze)
-      block match
-      case Define(fd: FunDefn, rest) =>
-        (paramsOf(fd.params) ++ default).toSet
-      case Define(cd: ClsLikeDefn, rest) =>
-        (paramsOf(cd.paramsOpt.iterator ++ cd.auxParams.iterator) ++
-          paramsOf(cd.methods.iterator.flatMap(_.params)) ++
-          paramsOf(cd.companion.iterator.flatMap(_.methods).flatMap(_.params)) ++
-          default).toSet
-      case Scoped(syms, rest) =>
-        (rest.analyze.iterator ++ syms.iterator.collect { case v: LocalVar => v }).toSet
-      case _ => default.toSet
-    
-  end LocalVars
+  def localVars(block: Block): Set[LocalVar] =
+    val locals: MutSet[LocalVar] = MutSet.empty[LocalVar]
+    def paramsOf(paramLists: IterableOnce[ParamList]): Unit =
+      locals ++= paramLists.iterator.flatMap(_.paramSyms)
+    def rec(current: Block): Unit =
+      current match
+      case Define(fd: FunDefn, _) =>
+        paramsOf(fd.params)
+      case Define(cd: ClsLikeDefn, _) =>
+        paramsOf(cd.paramsOpt.iterator ++ cd.auxParams.iterator)
+        paramsOf(cd.methods.iterator.flatMap(_.params))
+        paramsOf(cd.companion.iterator.flatMap(_.methods).flatMap(_.params))
+      case Scoped(syms, _) =>
+        locals ++= syms.iterator.collect { case v: LocalVar => v }
+      case _ => ()
+      current.subBlocks.foreach(child => rec(child))
+    rec(block)
+    locals.toSet
   
   
   // ——————————————————————————————————————————————————————————————————————————————————————————— //
@@ -184,8 +181,30 @@ class BlockSimplifier
               usedVars += loc
             case Value.MemberRef(loc, _) =>
               usedVars += loc
+            case Cast(_, target, _) => markCastTarget(target)
             case _ =>
           super.applyPath(p)
+
+        /** Marks the class a cast tests against at run time as used.
+          *
+          * A `Cast` stores its target as an `ErasedValueType` rather than a path, so no `Value.Ref` records the
+          * dependency and a class used only as a cast target is dropped as an unused pure definition, leaving the
+          * backend a cast it cannot emit. This cannot live in `Result.freeVars`: resolving a target to its
+          * `BlockMemberSymbol` needs a `Ctx` that the context-free `lazy val` does not have.
+          *
+          * Both traversal entry points must call this: `applyResult` matches `Cast` before its `Path` case, so
+          * `applyPath` never sees a returned or assigned cast, only the ones a `ValDefn` binds.
+          */
+        def markCastTarget(target: ErasedValueType): Unit =
+          target.canonicalize match
+            case ErasedType.AnyRef(_, tpeSym) => usedVars += tpeSym.bms.get
+            case _ =>
+
+        override def applyResult(r: Result): Unit =
+          r match
+            case Cast(_, target, _) => markCastTarget(target)
+            case _ =>
+          super.applyResult(r)
         
         override def applyClsLikeDefn(defn: ClsLikeDefn): Unit =
           privateVars ++= defn.privateFields
@@ -280,7 +299,7 @@ class BlockSimplifier
       case Assign(lhs: LocalVarSymbol, rhs, rst) if localVars(lhs) && !usedVars(lhs) && !symbolsToPreserve(lhs) =>
         registerChange(s"rm ${lhs.showDbg} = ${rhs.showDbg}")
         applyResult(rhs)(r => Assign.discard(r, applyBlock(rst)))
-
+      
       // * Discard writes to private fields that are never read
       case assign @ AssignField(lhs, _, rhs, rst) =>
         assign.symbol match
@@ -290,7 +309,9 @@ class BlockSimplifier
             applyResult(rhs): rhs2 =>
               Assign.discard(lhs2, Assign.discard(rhs2, applyBlock(rst)))
         case _ => super.applyBlock(b)
-
+      case Define(defn: ValDefn, rest) if privateFieldsToRemove(defn.tsym) =>
+        Assign.discard(defn.rhs, applyBlock(rest))
+      
       // * Remove local pure definitions that are never read (and are not preserved)
       case Define(defn, rest) =>
         val defnSym = defn.sym
@@ -536,8 +557,8 @@ class BlockSimplifier
     // *   - `false` means no known value.
     // *   - `true` means definitely uninitialized,
     // *     meaning any variable access can be replaced by `undefined`, ie, `Value.Lit(UnitLit(false))`.
-    // *   - `Value` means this exact value is still available for propagation.
-    type KnownValue = Bool | Value
+    // *   - `Value`/`Cast` means this exact value is still available for propagation.
+    type KnownValue = Bool | Value | Cast
     
     // * The propagated value fact for an assignment, plus equivalent
     // * references that could be substituted while their requirements hold.
@@ -552,9 +573,9 @@ class BlockSimplifier
         (l, r) match
         case (false, _) | (_, false) => false
         case (true, true) => true
-        case (true, v: Value) => v
-        case (v: Value, true) => v
-        case (v1: Value, v2: Value) if v1 === v2 => v1
+        case (true, v: (Value | Cast)) => v
+        case (v: (Value | Cast), true) => v
+        case (v1: (Value | Cast), v2: (Value | Cast)) if v1 === v2 => v1
         case _ => false
       
       def mergeRefs(l: List[TrackedRef], r: List[TrackedRef]): List[TrackedRef] =
@@ -591,7 +612,17 @@ class BlockSimplifier
         rhsRequirements: Set[LocalVar -> AssignInfo],
       )(val originalAssignment: Assign)
       case Merge(asst1: AssignInfo, asst2: AssignInfo)
-      
+
+      // * These nodes form a shared DAG (through `Merge`) and are always compared by object identity in
+      // * this analysis (see the `is` uses throughout and the `IdentityHashMap`s in dead-assignment removal).
+      // * The default *structural* `hashCode`/`equals` would re-traverse the shared substructure on every
+      // * insertion into a requirement or `assigns` set, which is exponential in the DAG's sharing.
+      // * We therefore give `AssignInfo` reference semantics, consistent with how it is otherwise compared.
+      final override def hashCode: Int = System.identityHashCode(this)
+      final override def equals(that: Any): Bool = that match
+        case that: AnyRef => this eq that
+        case _ => false
+
       override def toString: String = this match
         case Unknown => "?"
         case Uninitialized => "∅"
@@ -650,6 +681,12 @@ class BlockSimplifier
         case Assigned(lhs, rhs, opt, _) =>
           val litValue = rhs match
             case v @ Value.Lit(_) => v
+            // * A cast of a literal propagates as the whole `Cast`, not as the bare literal: dropping the node
+            // * would lose its target in the one position a backend reads off the value rather than off the
+            // * slot - a `return`, which Wasm validates against the declared result instead of coercing into it.
+            // * Consumers wanting the literal look through the cast with `litThroughUncheckedCasts`.
+            // * A *checked* cast is excluded: propagating it would duplicate a test that can throw.
+            case c @ Cast(Value.Lit(_), _, false) => c
             case _ => false
           val refs = opt match
             case S((r @ Value.SimpleRef(lv: LocalVar)) -> rhs) =>
@@ -1129,7 +1166,7 @@ class BlockSimplifier
         super.applyScopedBlock(b)
     
     
-    override def applyValue(v: Value)(k: Value => Block): Block =
+    override def applyPath(v: Path)(k: Path => Block): Block =
       v match
       case Value.SimpleRef(loc: LocalVar) if !inDryRun && !capturedVars(loc) =>
         
@@ -1144,7 +1181,7 @@ class BlockSimplifier
         case true =>
           registerChange(s"${loc.showDbg} ~> undefined")
           return k(Value.Lit(syntax.Tree.UnitLit(false)))
-        case lit: Value =>
+        case lit: (Value | Cast) =>
           registerChange(s"${loc.showDbg} ~> ${lit.showDbg}")
           return k(lit)
         case false =>
@@ -1155,7 +1192,7 @@ class BlockSimplifier
             registerChange(s"${loc.showDbg} ~> ${v2.showDbg} (via ${refs.map(_.showDbg).mkString(", ")})")
             k(v2)
         
-      case _ => super.applyValue(v)(k)
+      case _ => super.applyPath(v)(k)
     
     
     private def assignedPureCallPrefix(loc: LocalVar): Opt[Call] =
@@ -1259,41 +1296,13 @@ class BlockSimplifier
         case Begin(sub, rest) => loop(sub, shape)(loop(rest, _)(k))
         case _ => N
       loop(body, N)(identity)
-    
-    def isSubtypeOf(actual: ClassLikeSymbol, expected: ClassLikeSymbol): Opt[Bool] =
-      def parentOf(sym: ClassLikeSymbol): Opt[Opt[ClassLikeSymbol]] =
-        (sym match
-          case sym: ClassSymbol => sym.irClsLikeDefn
-          case sym: ModuleOrObjectSymbol => sym.irClsLikeDefn
-        ).flatMap: defn =>
-          defn.parentPath match
-            case S(parent) => getInstCtorShape(parent).map(S(_))
-            case N => S(N)
-        .orElse:
-          // FIXME: remove this fallback once imported classes have their `irClsLikeDefn` properly linked
-          (sym match
-            case sym: ClassSymbol => sym.defn
-            case sym: ModuleOrObjectSymbol => sym.defn
-          ).flatMap: defn =>
-            defn.ext match
-              case S(parent) => parent.cls.resolvedSym.flatMap(_.asClsOrMod).map(S(_))
-              case N => S(N)
-      @tailrec
-      def loop(cur: ClassLikeSymbol, seen: Set[ClassLikeSymbol]): Opt[Bool] =
-        if cur is expected then S(true)
-        else if seen(cur) then N
-        else parentOf(cur) match
-          case S(S(parent)) => loop(parent, seen + cur)
-          case S(N) => S(false)
-          case N => N
-      loop(actual, Set.empty)
-    
+
     /** Return whether a known shape matches a case, or `None` if deciding would
       * require reasoning that this optimization deliberately does not attempt. */
     def matches(cse: Case, shape: Shape): Opt[Bool] = (cse, shape) match
       case (Case.Lit(expected), actual: Literal) => S(expected == actual)
       case (Case.Lit(_), _: ClassLikeSymbol) => S(false)
-      case (Case.Cls(expected, _), actual: ClassLikeSymbol) => isSubtypeOf(actual, expected)
+      case (Case.Cls(expected: TypeSymbol, _), actual: TypeSymbol) => ErasedType.isSubtypeOf(actual, expected)
       case _ => N
     
     def select(shape: Shape, arms: Ls[Case -> Block], dflt: Opt[Block]): Opt[Selected] =
@@ -1922,7 +1931,11 @@ class BlockSimplifier
                 def go(acc: Block => Block, args: List[(VarSymbol, Result)], mapping: Map[Symbol, Symbol]): Block =
                   args match
                   case Nil =>
-                    val resSym = TempSymbol(N, "inlinedVal")
+                    val resSym = TempSymbol(
+                      N,
+                      erasedType = if extraArgss.isEmpty then call.erasedValueType else N,
+                      "inlinedVal",
+                    )
                     val copier = Copier(resSym, mapping, thisMapping)
                     val newBlk = copier.applyBlock(blk)
                     if extraArgss.isEmpty then
@@ -1934,7 +1947,7 @@ class BlockSimplifier
                             annotations = call.metadata.annotations.filterNot(_ == Annot.TailCall),
                           ))))))
                   case (sym, value) :: argRest =>
-                    val newSym = VarSymbol(sym.id)
+                    val newSym = VarSymbol(sym.id, erasedType = sym.erasedType)
                     go(acc.assignScoped(newSym, value), argRest, mapping + (sym -> newSym))
                 go(blockBuilder, matchedArgs, Map.empty)
         

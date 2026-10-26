@@ -82,8 +82,8 @@ object HandlerLowering:
       Throw(State.runtimeSymbol.asSimpleRef.selSN("EffectException"))
     override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block = 
 
-      val tmp = loweringCtx.registerTempSymbol(N)
-      val err = new TempSymbol(N, "e")
+      val tmp = loweringCtx.registerTempSymbol(N, N)
+      val err = new TempSymbol(N, N, "e")
       TryCatch(
         Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
         err,
@@ -114,7 +114,7 @@ object HandlerLowering:
   case class Generator() extends GeneratorBase(false):
     override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       if stackSafe then ???
-      val tmp = loweringCtx.registerTempSymbol(N)
+      val tmp = loweringCtx.registerTempSymbol(N, N)
       Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect),
         k(Call(State.runtimeSymbol.asSimpleRef.selSN("JSRT").selSN("topLevelCallGenerator"), (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
       )
@@ -124,7 +124,7 @@ object HandlerLowering:
       if stackSafe then
         k(Call(State.runtimeSymbol.asSimpleRef.selSN("JSRT").selSN("runStackSafeAsyncGenerator"), (intLit(nofibMaxStackDepth).asArg :: p.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
       else
-        val tmp = loweringCtx.registerTempSymbol(N)
+        val tmp = loweringCtx.registerTempSymbol(N, N)
         Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect),
           k(Call(State.runtimeSymbol.asSimpleRef.selSN("JSRT").selSN("topLevelCallAsyncGenerator"), (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
         )
@@ -134,8 +134,8 @@ object HandlerLowering:
     override def beginUnwind(using State): Block =
       Throw(State.runtimeSymbol.asSimpleRef.selSN("ShadowStackMarker"))
     override def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
-      val tmp = loweringCtx.registerTempSymbol(N)
-      val err = new TempSymbol(N, "e")
+      val tmp = loweringCtx.registerTempSymbol(N, N)
+      val err = new TempSymbol(N, N, "e")
       TryCatch(
         Assign(tmp, Call(p, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect), End()),
         err,
@@ -238,7 +238,7 @@ object HandlerLowering:
   // currentFun: path to the current function for resumption
   // thisPath: path to `this` binding if the function is a method, `this` will be rebinded on resumption
   case class FunctionCtx(currentFun: Path, thisPath: Option[Value.This], resumeInfo: ResumeInfo, debugInfo: DebugInfo, inGetter: Bool, orig: FunDefn)(using State):
-    val rVar = VarSymbol(Tree.Ident("resumeVar"))
+    val rVar = VarSymbol(Tree.Ident("resumeVar"), N)
     var instrumented = false
     var newDefns: List[Defn] = Nil
     var replaceAnnotWithInline: Bool = false
@@ -331,12 +331,12 @@ object HandlerLowering:
     val estate = summon[Elaborator.State]
     val cfg = summon[Config]
     val strategy = currentStrategy
-    def freshTmp(dbgNme: Str = "tmp") = new TempSymbol(N, dbgNme)
+    def freshTmp(erasedType: Opt[ErasedValueType], dbgNme: Str = "tmp") = new TempSymbol(N, erasedType, dbgNme)
     def freshLabel(nme: Str) = new LabelSymbol(N, nme)
     // First assign res to resumeValue, then jump to pc, possibly unwinding.
     object StateTransition:
-      private val transitionSymbol = freshTmp("transition")
-      private val resultSymbol = freshTmp("result")
+      private val transitionSymbol = freshTmp(N, "transition")
+      private val resultSymbol = freshTmp(N, "result")
       def apply(res: Opt[Result], uid: StateId) =
         val pre = res match
           case N => blockBuilder.assign(transitionSymbol, unit)
@@ -403,14 +403,11 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
   
   val debugEnabled = opt.exists(_.debug)
   val stackSafety = opt.flatMap(_.stackSafety)
-  
+
   val hctx = SharedState(opt)
   import hctx._
   
-  private def rtThrowMsg(msg: Str) = Throw(
-    Instantiate(mut = false, State.globalThisSymbol.asThis.selN(Tree.Ident("Error")),
-    (Value.Lit(Tree.StrLit(msg)).asArg :: Nil) :: Nil)(InstantiateMetadata.empty)
-  )
+  private def rtThrowMsg(msg: Str) = Throw.error(msg)
   
   object PureCall:
     def apply(fun: Path, args: List[Path]) = Call(fun, args.map(Arg(N, _)) ne_:: Nil)(CallMetadata.defaultMlsFun)
@@ -724,7 +721,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         .flatMap: (sym, idx) =>
           List(intLit(idx), Value.Lit(Tree.StrLit(sym.nme)))
         .map(_.asArg)
-      val debugInfoSym = freshTmp(s"$debugNme$$debugInfo")
+      val debugInfoSym = freshTmp(erasedType = S(ErasedType.Array), s"$debugNme$$debugInfo")
       // TODO: properly support spread argument by calculating the correct length.
       val rtArgLists = intLit(fun.params.length) :: fun.params.flatMap: pl =>
         intLit(pl.params.length) :: pl.params.map(p => p.sym.asSimpleRef)
@@ -816,8 +813,8 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
 
     ctx.instrumented = true
 
-    val pcVar = freshTmp("pc")
-    val curDepth = freshTmp("curDepth")
+    val pcVar = freshTmp(erasedType = S(ErasedType.Int), "pc")
+    val curDepth = freshTmp(erasedType = S(ErasedType.Int), "curDepth")
     val mainLoopLbl = freshLabel("main")
 
     def postTransform(transition: (Opt[Result], BigInt) => Block) = new BlockTransformerShallow(SymbolSubst.Id):
@@ -869,7 +866,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx)
         Label(mainLoopLbl, true, straightLineCg.generate(parts, ctx), End())
         
-    val getSavedTmp = freshTmp("saveOffset")
+    val getSavedTmp = freshTmp(erasedType = S(ErasedType.Int), "saveOffset")
     def getSaved(off: BigInt): (Block => Block, Path) =
       if off == 0 then
         return (id, DynSelect(paths.runtimePath.selSN("resumeArr"), paths.runtimePath.selSN("resumeIdx"), true))
@@ -896,7 +893,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         .rest(mainBody)
     
     if ExceptionToggle then
-      val err = freshTmp("err")
+      val err = freshTmp(N, "err")
       mainBody = TryCatch(mainBody, err,
         Assign.discard(Call(paths.runtimePath.selSN("effectRethrow"), (err.asPath.asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect), Throw(ctx.unwindCall(unit, pcVar.asPath, vars)(using paths))), End())
     
@@ -943,7 +940,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
       override def applyResult(r: Result)(k: Result => Block) = r match
         case r @ EffectfulResult() =>
           // Fallback case, this may lead to unnecessary assignments if it is assign-like
-          val l = freshTmp()
+          val l = freshTmp(erasedType = N)
           Scoped(Set(l), currentStrategy.effectCheck(l, r, k(l.asSimpleRef), onEffect, needsStackSafety))
         case _ => super.applyResult(r)(k)
     topLevelPostTransform.applyBlock(b)

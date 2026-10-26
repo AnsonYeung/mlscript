@@ -35,7 +35,7 @@ enum Annot extends AutoLocated:
   case HandlerInstrumented
   case RaiseEffects
   // Whether the function is guaranteed to not raise effects.
-  case MayNotRaiseEffects
+  case Pure
   case Config(modify: hkmc2.Config => hkmc2.Config)
   // Marks if a function or lambda is one-shot, i.e. called at most once.
   // Functions with multiple parameter lists are considered here as a chain of
@@ -56,13 +56,13 @@ enum Annot extends AutoLocated:
   def subTerms: Vector[Term] = this match
     case Trm(trm) => Vector.single(trm)
     case _: Modifier | Untyped | TailRec | TailCall | Inline | Native | NoInline
-      | Generator | Async | NativeAsync | HandlerInstrumented | RaiseEffects | MayNotRaiseEffects | _: Config | _: Affine => Vector.empty
+      | Generator | Async | NativeAsync | HandlerInstrumented | RaiseEffects | Pure | _: Config | _: Affine => Vector.empty
   
   def children: Vector[Located] = this match
     case Trm(trm) => Vector.single(trm)
     // case Modifier(kw) => Vector.single(kw) // TODO: make `kw` a `Keywrd`
     case _: Modifier | Untyped | TailRec | TailCall | Inline | NoInline | Native
-      | Generator | Async | NativeAsync | HandlerInstrumented | RaiseEffects | MayNotRaiseEffects | _: Config | _: Affine => Vector.empty
+      | Generator | Async | NativeAsync | HandlerInstrumented | RaiseEffects | Pure | _: Config | _: Affine => Vector.empty
   
   def show(using Scope, ShowCfg, Raise): Document = this match
     case Untyped => doc"@untyped"
@@ -78,7 +78,7 @@ enum Annot extends AutoLocated:
     case Affine(n) => doc"@affine($n)"
     case Native => doc"@native"
     case Modifier(mod) => doc"@${mod.name}"
-    case MayNotRaiseEffects => doc"@mayNotRaiseEffects"
+    case Pure => doc"@pure"
     case Trm(trm) => doc"@${trm.show}"
     case Config(_) => doc"@config(...)"
   
@@ -96,13 +96,17 @@ enum Annot extends AutoLocated:
     case NativeAsync => NativeAsync
     case HandlerInstrumented => HandlerInstrumented
     case RaiseEffects => RaiseEffects
-    case MayNotRaiseEffects => MayNotRaiseEffects
+    case Pure => Pure
     case c: Config => c
     case a: Affine => a
 
 object Annot:
   
   val Private = Modifier(Keyword.`private`)
+  
+  /** The `declare` modifier in `annotations`, if present. */
+  def declareModifierOf(annotations: Ls[Annot]): Opt[Annot.Modifier] = annotations.collectFirst:
+    case mod @ Annot.Modifier(Keyword.`declare`) => mod
   
 end Annot
 
@@ -149,7 +153,7 @@ sealed trait ResolvableImpl:
   def duplicate(using State): this.type =
     this.match
       case t: Term.Resolved => t.copy()(t.typ)
-      case t: Term.Ref => t.copy()(t.tree, t.refNum, t.typ)
+      case t: Term.Ref => t.copy()(t.tree, t.typ)
       case t: Term.App => t.copy()(t.tree, t.typ, t.resSym)
       case t: Term.TyApp => t.copy()(t.typ)
       case t: Term.Sel => t.copy()(t.sym, t.resSym, t.typ, t.originalCtx)
@@ -172,7 +176,7 @@ sealed trait ResolvableImpl:
   def withTyp(typ: Type)(using DebugPrinter): this.type = 
     this.match
       case t: Term.Resolved => t.copy()(S(typ))
-      case t: Term.Ref => t.copy()(t.tree, t.refNum, S(typ))
+      case t: Term.Ref => t.copy()(t.tree, S(typ))
       case t: Term.App => t.copy()(t.tree, S(typ), t.resSym)
       case t: Term.TyApp => t.copy()(S(typ))
       case t: Term.Sel => t.copy()(t.sym, t.resSym, S(typ), t.originalCtx)
@@ -222,14 +226,14 @@ sealed trait ResolvableImpl:
   /**
    * A helper function to create a resolved term for this term.
    */
-  def resolved(sym: DefinitionSymbol[?]): Term.Resolved =
+  def resolved(sym: AnyDefinitionSymbol): Term.Resolved =
     Term.Resolved(this, sym)(typ = resolvedTyp)
   
   def hasExpansion = expansion.isDefined
   
   def defn: Opt[Definition] = resolvedSym match
     case S(sym: BlockMemberSymbol) => N
-    case S(sym: DefinitionSymbol[?]) => sym.defn
+    case S(sym: AnyDefinitionSymbol) => sym.defn
     case _ => N
   
   def typDefn = resolvedTyp match
@@ -340,7 +344,7 @@ enum Term extends Statement:
   case Resolved(t: Term, sym: DefinitionSymbol[?])
     (val typ: Opt[Type]) extends Term, ResolvableImpl
   case Ref(sym: Symbol)
-    (val tree: Tree.Ident, val refNum: Int, val typ: Opt[Type]) extends Term, ResolvableImpl
+    (val tree: Tree.Ident, val typ: Opt[Type]) extends Term, ResolvableImpl
   case App(lhs: Term, rhs: Term)
     (val tree: Tree.App, val typ: Opt[Type], val resSym: FlowSymbol) extends Term, ResolvableImpl
   case TyApp(lhs: Term, targs: Ls[Term])
@@ -403,6 +407,14 @@ enum Term extends Statement:
   case LeadingDotSel(nme: Tree.Ident)(
       val originalCtx: Opt[SrcScope]
     ) (using State) extends Term, ResolvableImpl, LeadingDotSelImpl
+  
+  // TODO: once the UCS/UPS stop using terms as keys
+  /* 
+  override def equals(that: Any): Bool = that match
+    case that: Term => this eq that
+    case _ => false
+  override def hashCode: Int = System.identityHashCode(this)
+  */
   
   def expanded: Term = this match
     case t: Resolvable => t.expansion match
@@ -513,7 +525,7 @@ enum Term extends Statement:
       case Lit(Tree.BoolLit(value)) => Lit(Tree.BoolLit(value))
       case Lit(Tree.UnitLit(value)) => Lit(Tree.UnitLit(value))
       case term @ Resolved(t, sym) => Resolved(t.mkClone, sym)(term.typ)
-      case term @ Ref(sym) => Ref(sym)(Tree.Ident(term.tree.name), term.refNum, term.typ)
+      case term @ Ref(sym) => Ref(sym)(Tree.Ident(term.tree.name), term.typ)
       case term @ App(lhs, rhs) => App(lhs.mkClone, rhs.mkClone)(term.tree, term.typ, term.resSym)
       case term @ TyApp(lhs, targs) => TyApp(lhs.mkClone, targs.map(_.mkClone))(term.typ)
       case term @ Sel(prefix, nme) => Sel(prefix.mkClone, Tree.Ident(nme.name))(term.sym, term.resSym, term.typ, term.originalCtx)
@@ -623,6 +635,7 @@ extension (self: Blk)
 
 
 case class ShowCfg(
+  showErasedTypes: Bool,
   showExpansionMappings: Bool,
   showFlowSymbols: Bool,
   debug: Bool,
@@ -634,6 +647,7 @@ end ShowCfg
 object ShowCfg:
   // * For use when displaying things for internal use (not for end users)
   val internal = ShowCfg(
+    showErasedTypes = true,
     showFlowSymbols = true,
     showExpansionMappings = false,
     debug = false,
@@ -836,12 +850,12 @@ sealed trait Statement extends AutoLocated, ProductWithExtraInfo:
             case res => res :: Nil
           ).map(_.show).mkDocument(doc", # ")
       case ld: LetDecl =>
-        (ld.annotations.map(_.show) ::: doc"let ${ld.sym.showName}" :: Nil).mkDocument()
+        (ld.annotations.map(_.show :: " ") ::: doc"let ${ld.sym.showName}" :: Nil).mkDocument()
       case df: DefineVar =>
         doc"${df.sym.showName} = ${df.rhs.show}"
       case td: TermDefinition =>
-          td.annotations.map(_.show).mkDocument()
-          :: doc"${td.k.str} ${td.sym.showName}"
+          td.annotations.map(_.show :: " ").mkDocument()
+          :: doc"${td.k.str} ${td.bsym.showName}::${td.tsym.showName}"
           :: (if td.tparams.isEmpty then doc""
             else doc"[${td.tparams.get.map(_.sym.showName).mkDocument(", ")}]")
           :: td.params.map(_.show).mkDocument()
@@ -849,12 +863,13 @@ sealed trait Statement extends AutoLocated, ProductWithExtraInfo:
           :: (if summon[ShowCfg].showFlowSymbols then doc" ‹${td.bsym.flow.showName}›" else doc"")
           :: td.body.fold(doc"")(b => doc" = ${b.show}")
       case cld: ClassLikeDef =>
-          cld.annotations.map(_.show).mkDocument()
-          :: doc"${cld.kind.str} ${cld.sym.nme}"
+          cld.annotations.map(_.show :: " ").mkDocument()
+          :: doc"${cld.ctorSym.fold(doc"")("fun "::_.showName::doc" # ")}${cld.kind.str} ${cld.bsym.showName}::${cld.sym.showName}"
           :: (if cld.tparams.isEmpty then doc""
             else doc"[${cld.tparams.map(_.sym.showName).mkDocument(", ")}]")
           :: cld.paramsOpt.map(_.show).toList.mkDocument()
           :: cld.auxParams.map(_.show).mkDocument()
+          :: cld.ext.fold(doc"")(e => doc" extends ${e.show}")
           :: doc" ${cld.body.blk.show}"
       case imp: Import =>
         doc"import ${"\""}.../${imp.file.last}${"\""} as ${imp.sym.showName}"
@@ -901,7 +916,7 @@ sealed trait Statement extends AutoLocated, ProductWithExtraInfo:
     case Term.UnitVal() => "()"
     case Lit(lit) => lit.idStr
     case Resolved(t, sym) => t.showPlain
-    case r @ Ref(symbol) => symbol.toString + symbol.getState.dbgRefNum(r.refNum)
+    case r @ Ref(symbol) => symbol.toString
     case App(lhs, rhs) => s"${lhs.showDbg}${rhs.showDbgAsParams}"
     case RcdField(lhs, rhs) => s"${lhs.showDbg}: ${rhs.showDbg}"
     case RcdSpread(bod) => s"...${bod.showDbg}"
@@ -987,7 +1002,8 @@ final case class DefineVar(sym: LocalSymbol | TermSymbol, rhs: Term) extends Sta
 
 /** A global configuration change directive (`#config(...)`).
   * Records a function that modifies the current compiler configuration. */
-final case class SetConfig(modify: hkmc2.Config => hkmc2.Config) extends Statement
+final case class SetConfig(modify: hkmc2.Config => hkmc2.Config) extends Statement:
+  override def toString: String = "#config(...)"
 
 enum Visibility:
   case Public, Private
@@ -1062,7 +1078,7 @@ final case class TermDefinition(
     .getOrElse(Visibility.Public)
   lazy val mayRaiseEffects: Bool =
     annotations.forall:
-      case Annot.MayNotRaiseEffects => false
+      case Annot.Pure => false
       case _ => true
   def extraAnnotations: Ls[Annot] = annotations.filter:
     case Annot.Modifier(Keyword.`declare` | Keyword.`abstract`) => false
@@ -1153,8 +1169,7 @@ sealed abstract class Declaration:
 sealed abstract class Definition extends Declaration, Statement:
   val annotations: Ls[Annot]
   def bsym: BlockMemberSymbol
-  def hasDeclareModifier: Opt[Annot.Modifier] = annotations.collectFirst:
-    case mod @ Annot.Modifier(Keyword.`declare`) => mod
+  def hasDeclareModifier: Opt[Annot.Modifier] = Annot.declareModifierOf(annotations)
   def hasStagedModifier: Opt[Annot.Modifier] = annotations.collectFirst:
     case mod @ Annot.Modifier(Keyword.`staged`) => mod
 
@@ -1166,6 +1181,7 @@ type ModuleCompanionSymbol = TypeAliasSymbol | ClassSymbol
 
 
 sealed abstract class TypeLikeDef extends Definition:
+  val kind: ObjDefKind
   val bsym: BlockMemberSymbol
   val tparams: Ls[TyParam]
   val annotations: Ls[Annot]
@@ -1332,19 +1348,20 @@ case class TypeDef(
   rhs: Opt[Term],
   companion: Opt[CompanionValue],
   annotations: Ls[Annot],
-) extends TypeLikeDef
+) extends TypeLikeDef:
+  val kind: ObjDefKind = Als
 
 
 // TODO Store optional source locations for the flags instead of booleans
 final case class FldFlags(mut: Bool, spec: Bool, pat: Bool, isVal: Bool):
-  def show: Str =
+  def show(addSpace: Bool = false): Str =
     val flags = Buffer.empty[String]
     if mut then flags += "mut"
     if spec then flags += "spec"
     if pat then flags += "pattern"
     if isVal then flags += "val"
-    flags.mkString(" ")
-  override def toString: String = "‹" + show + "›"
+    flags.mkString(" ") + (if addSpace && flags.nonEmpty then " " else "")
+  override def toString: String = "‹" + show(false) + "›"
 
 object FldFlags:
   val empty: FldFlags = FldFlags(false, false, false, false)
@@ -1361,7 +1378,7 @@ enum IfLikeForm:
     case ImperativeIf | While => true
 
 
-sealed abstract class Elem:
+sealed abstract class Elem extends AutoLocated:
   def subTerms: Ls[Term] = this match
     case Fld(_, term, asc) => term :: asc.toList
     case Spd(_, term) => term :: Nil
@@ -1376,6 +1393,7 @@ object PlainFld:
 final case class Spd(k: SpreadKind, term: Term) extends Elem:
   def show(using Scope, ShowCfg, Raise): Document = k.str :: term.show
   def showDbg(using DebugPrinter): Str = k.str + term.showDbg
+  def children: Vector[Located] = Vector.single(term)
 
 final case class TyParam(flags: FldFlags, vce: Opt[Bool], sym: VarSymbol) extends Declaration:
   
@@ -1414,9 +1432,9 @@ extends Declaration, AutoLocated:
   override protected def children: Vector[Located] = sym +: sign.toVector
   
   def show(using Scope, ShowCfg, Raise): Document =
-    doc"${flags.show}${sym.showName}${sign.fold(doc"")(": " :: _.show)}"
+    doc"${flags.show(true)}${sym.showName}${sign.fold(doc"")(": " :: _.show)}"
   
-  def showDbg(using DebugPrinter): Str = flags.show + sym + sign.fold("")(": " + _.showDbg)
+  def showDbg(using DebugPrinter): Str = flags.show(true) + sym.showDbg + sign.fold("")(": " + _.showDbg)
 
 final case class ParamList(flags: ParamListFlags, params: Ls[Param], restParam: Opt[Param])
 extends AutoLocated:
@@ -1468,11 +1486,12 @@ object ParamListFlags:
   val empty = ParamListFlags(false)
 
 
-trait FldImpl extends AutoLocated:
+// trait FldImpl extends AutoLocated:
+trait FldImpl:
   self: Fld =>
   def children: Vector[Located] = self.term +: self.asc.toVector
-  def show(using Scope, ShowCfg, Raise): Document = flags.show :: self.term.show
-  def showDbg(using DebugPrinter): Str = flags.show + self.term.showDbg
+  def show(using Scope, ShowCfg, Raise): Document = flags.show(true) :: self.term.show
+  def showDbg(using DebugPrinter): Str = flags.show(true) + self.term.showDbg
   def describe: Str =
     (if self.flags.spec then "specialized " else "") +
     (if self.flags.mut then "mutable " else "") +

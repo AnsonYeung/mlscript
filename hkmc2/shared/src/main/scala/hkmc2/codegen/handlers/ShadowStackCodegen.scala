@@ -21,9 +21,9 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
   def generate(b: Block, parts: PartitionedBlock, ctx: FunctionCtx): Block =
     val baseName = ctx.debugInfo.debugNme
     val workerSym = new BlockMemberSymbol(s"$baseName$$worker", Nil, true)
-    val workerDSym = new TermSymbol(syntax.Fun, N, Tree.Ident(s"$baseName$$worker"))
-    val workerVarsParam = new VarSymbol(Tree.Ident(s"$baseName$$vars"))
-    val dummyThisVar = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this")))
+    val workerDSym = new TermSymbol(syntax.Fun, N, Tree.Ident(s"$baseName$$worker"), N)
+    val workerVarsParam = new VarSymbol(Tree.Ident(s"$baseName$$vars"), N)
+    val dummyThisVar = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this"), N))
     val savedVars = Iterator.single(flattenCtx.pcVar) ++ dummyThisVar.iterator ++ ctx.resumeInfo.allArgs.iterator ++ flattenCtx.vars.iterator
     val varIndexes = savedVars.zipWithIndex.toMap
     def readFromIndex(idx: Int): Path =
@@ -82,7 +82,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
           .rest(mainBody)
       transformer.applyMainBlock(Scoped(flattenCtx.scopedVars ++ extraVars, withStackSafe))
 
-    val tmp = freshTmp("vars")
+    val tmp = freshTmp(S(ErasedType.Array), "vars")
     val initialVars = (Iterator.single(intLit(parts.entry)) ++ ctx.thisPath.iterator ++ ctx.resumeInfo.allArgs.iterator.map[Path](_.asSimpleRef) ++ flattenCtx.vars.iterator.map[Path](_ => unit)).map(Arg(N, _)).toList
     blockBuilder
       .assignScoped(tmp, Tuple(true, initialVars))

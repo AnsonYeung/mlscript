@@ -25,6 +25,15 @@ abstract class MLsDiffMaker extends DiffMaker:
   
   val wd = file.up
   
+  val importDot = NullaryCommand(".", () =>
+    given Config = mkConfig
+    importFile(wd / io.RelPath(".mls"), verbose = false, includeDirectives = true)
+  )
+  val importUpDot = NullaryCommand("..", () => doImportUp(wd))
+  def doImportUp(wd: io.Path) =
+    given Config = mkConfig
+    importFile(wd.up / io.RelPath(".mls"), verbose = false, includeDirectives = true)
+  
   val silent = NullaryCommand("silent")
   val dbgElab = NullaryCommand("de")
   val dbgParsing = NullaryCommand("dp")
@@ -48,6 +57,10 @@ abstract class MLsDiffMaker extends DiffMaker:
   val showOptimizedTree = NullaryCommand("olot")
   val debugOptimizations = NullaryCommand("dopt")
   val noOptimizations = NullaryCommand("noOpt")
+  val showIRErasedTypes = NullaryCommand("siret", () =>
+    if showIR.isUnset && showOptimizedIR.isUnset then
+      output("Option ':siret' only has an effect if ':sir' or ':soir' is also set")
+  )
   val showContext = NullaryCommand("ctx")
   val parseOnly = NullaryCommand("parseOnly")
   val funcToCls = NullaryCommand("ftc")
@@ -69,6 +82,7 @@ abstract class MLsDiffMaker extends DiffMaker:
   // * Compiler configuration
   
   val noSanityCheck = NullaryCommand("noSanityCheck")
+  val noCheckCasts = NullaryCommand("noCheckCasts")
   val noFreeze = NullaryCommand("noFreeze")
   val noModuleCheck = NullaryCommand("noModuleCheck")
   val effectHandlers = Command("effectHandlers")(_.trim)
@@ -152,6 +166,7 @@ abstract class MLsDiffMaker extends DiffMaker:
       language = Config.Language.default,
       baseDir = wd,
       sanityChecks = Opt.when(noSanityCheck.isUnset)(SanityChecks(light = true, checkUnreachable = true)),
+      checkCasts = !noCheckCasts.isSet,
       effectHandlers = if nofib.isSet then HandlerLowering.nofibEffectHandlers else effectHandlersConfig,
       liftDefns = Opt.when(liftDefns.isSet)(LiftDefns()),
       patMatConsequentSharingThreshold = patMatConsequentSharingThreshold.get
@@ -221,7 +236,7 @@ abstract class MLsDiffMaker extends DiffMaker:
   
   val importCmd = Command("import"): ln =>
     given Config = mkConfig
-    importFile(file.up / io.RelPath(ln.trim), verbose = silent.isUnset)
+    importFile(file.up / io.RelPath(ln.trim), verbose = silent.isUnset, includeDirectives = false)
   
   // eg: `:ucs desugared normalized lowered`
   val showUCS = Command("ucs"): ln =>
@@ -332,7 +347,7 @@ abstract class MLsDiffMaker extends DiffMaker:
     super.init()
   
   
-  def importFile(file: io.Path, verbose: Bool)(using Config): Unit =
+  def importFile(file: io.Path, verbose: Bool, includeDirectives: Bool)(using Config): Unit =
     
     // val raise: Raise = throw _
     given raise: Raise = d =>
@@ -347,7 +362,21 @@ abstract class MLsDiffMaker extends DiffMaker:
     
     // Stupid hack to ignore diff-test directives like `:ignore`
     def dropCrap(ts: Ls[syntax.Stroken -> Loc]): Ls[syntax.Stroken -> Loc] = ts match
+      case (syntax.IDENT(":..", true), _) :: rest =>
+        doImportUp(file.up)
+        dropCrap(rest.dropWhile(_._1 isnt syntax.NEWLINE).drop(1))
       case (syntax.IDENT(":", true), _) :: (syntax.IDENT(nme, false), _) :: rest =>
+        if includeDirectives then
+          val ln = rest.takeWhile(_._1 isnt syntax.NEWLINE)
+          def render(ts: Ls[syntax.Stroken -> Loc]): Str = ts match
+            case (st, _) :: rest =>
+              val str = st match
+                case syntax.IDENT(nme, _) => nme
+                case syntax.SPACE => " "
+                case _ => TODO(st)
+              str + render(rest)
+            case Nil => ""
+          processLines(s":$nme ${render(ln)}" :: Nil, reprintCommands = false)
         dropCrap(rest.dropWhile(_._1 isnt syntax.NEWLINE).drop(1))
       case _ => ts
     
@@ -373,6 +402,7 @@ abstract class MLsDiffMaker extends DiffMaker:
       if verbose then
         output(s"Imported ${resBlk.definedSymbols.size} member(s)")
       curCtx = ctxWithImports
+      if includeDirectives then extractConfig(e.stats)
       processTerm(e, inImport = true)
     catch
       case err: Throwable =>
@@ -422,6 +452,14 @@ abstract class MLsDiffMaker extends DiffMaker:
   
   private var blockNum = 0
   
+  def extractConfig(stats: Ls[semantics.Statement]): Unit =
+    // Extract SetConfig statements and update persistent config
+    stats.foreach:
+      case sc: semantics.SetConfig =>
+        val prev = configModify
+        configModify = cfg => sc.modify(prev(cfg))
+      case _ => ()
+  
   def processTrees(trees: Ls[syntax.Tree])(using Config, Raise): Unit =
     val elab = Elaborator(etl, file.up, prelude)
     // val blockSymbol =
@@ -433,12 +471,7 @@ abstract class MLsDiffMaker extends DiffMaker:
     val (e, newCtx) = elab.topLevel(blk)
     curCtx = newCtx
     
-    // Extract SetConfig statements and update persistent config
-    e.stats.foreach:
-      case sc: semantics.SetConfig =>
-        val prev = configModify
-        configModify = cfg => sc.modify(prev(cfg))
-      case _ => ()
+    extractConfig(e.stats)
     
     // If elaborated tree is displayed, don't show the string serialization.
     if (showElab.isSet || debug.isSet) && !showElaboratedTree.isSet then
@@ -474,6 +507,7 @@ abstract class MLsDiffMaker extends DiffMaker:
       if showFlows.isSet then
         import semantics.ShowCfg
         given ShowCfg = ShowCfg(
+          showErasedTypes = showIRErasedTypes.isSet,
           showExpansionMappings = true,
           showFlowSymbols = true,
           debug = debug.isSet,

@@ -4,7 +4,7 @@ open Predef
 open annotations
 
 module NofibPrelude with ...
-type Char = String
+type Char = Str
 
 abstract class Option[out T]: Some[T] | None
 data class Some[out T](x: T) extends Option[T]

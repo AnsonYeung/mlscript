@@ -63,12 +63,12 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
 
   var scopeStates: List[ScopeState] = Nil
 
-  private def freshTmp(nme: Str = "tmp") = TempSymbol(N, nme)
+  private def freshTmp(erasedType: Opt[ErasedType], nme: Str = "tmp") = TempSymbol(N, erasedType, nme)
   private def getCurScopedTmp = scopeStates.head.tmp
   private def unwrapGenerators = scopeStates.head.inNativeCtx
 
   private inline def nestScope[T](nativeCtx: Bool)(inline thunk: LocalVarSymbol => T): T =
-    val t = freshTmp()
+    val t = freshTmp(N)
     scopeStates = ScopeState(
       t,
       nativeCtx,

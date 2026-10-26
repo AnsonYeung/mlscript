@@ -70,7 +70,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
   
   extension (builder: Block => Block)
     def stackSafePre(cont: Path, retVal: Path) =
-      val tmp = TempSymbol(N)
+      val tmp = TempSymbol(N, N)
       builder
         .assignScoped(tmp, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
         .ifthen(tmp.asPath, Case.Lit(Tree.BoolLit(true)), Return(Call(raiseStackPath, (cont.asArg :: retVal.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun)))
@@ -244,7 +244,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
     
     override def applyFunDefn(fun: FunDefn): FunDefn =
       
-      val contSym = VarSymbol(Tree.Ident("k"))
+      val contSym = VarSymbol(Tree.Ident("k"), N)
       val (ogParams, remainingParams) = fun.params match
         case head :: next => (head, next)
         case Nil => (PlainParamList(Nil), Nil)
@@ -252,7 +252,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
       val cpsBod = applyCpsOnFun(fun.body, contSym.asPath, native)
       
       val mainBod = if !isStackSafetyPass then cpsBod else
-        val paramSym = VarSymbol(Tree.Ident("retVal")) // will always receive unit
+        val paramSym = VarSymbol(Tree.Ident("retVal"), N) // will always receive unit
         val pList = PlainParamList.simple(paramSym :: Nil)
         val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
         cpsId += 1
@@ -265,7 +265,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         // make a non-cps forwarder
         val nestedFun = FunDefn(
           N, BlockMemberSymbol("main_cps", Nil, true),
-          TermSymbol(syntax.Fun, N, Tree.Ident("main_cps")),
+          TermSymbol(syntax.Fun, N, Tree.Ident("main_cps"), N),
           PlainParamList(Param.simple(contSym) :: Nil) :: Nil,
           mainBod
         )(N, Nil)
@@ -316,7 +316,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         (cpsCont, rest)
       else
         val bms = BlockMemberSymbol(nme, Nil, true)
-        val tSym = TermSymbol(syntax.Fun, N, Tree.Ident(nme))
+        val tSym = TermSymbol(syntax.Fun, N, Tree.Ident(nme), N)
         val bodd = blockBuilder
           .stackSafePre(Value.MemberRef(bms, tSym), param.asPath)
           .rest(bod)
@@ -326,12 +326,12 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
     
     override def applyResult(r: Result)(k: Result => Block): Block = r match
       case l @ Lambda(params, body) =>
-        val contSym = VarSymbol(Tree.Ident("k"))
+        val contSym = VarSymbol(Tree.Ident("k"), N)
         
         val cpsBod = applyCpsOnFun(body, contSym.asPath, false)
         
         val mainBod = if !isStackSafetyPass then cpsBod else
-          val paramSym = VarSymbol(Tree.Ident("retVal")) // will always receive unit
+          val paramSym = VarSymbol(Tree.Ident("retVal"), N) // will always receive unit
           val pList = PlainParamList.simple(paramSym :: Nil)
           val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
           cpsId += 1
@@ -359,7 +359,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           case _ => super.applyResult(r)(k)
         else r match
         case c @ Call(Value.RefLike(Elaborator.ctx.builtins.runtime.suspend), (tag :: handlerFun :: Nil) :: Nil) =>
-          val paramSym = VarSymbol(Tree.Ident("retVal"))
+          val paramSym = VarSymbol(Tree.Ident("retVal"), N)
           val pList = PlainParamList.simple(paramSym :: Nil)
           val bod = k(paramSym.asPath)
           val (cpsCont, rest) = createCpsCont(pList, bod, paramSym)
@@ -374,7 +374,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           if !checkCall(c) then
             super.applyResult(r)(k)
           else
-            val paramSym = VarSymbol(Tree.Ident("retVal"))
+            val paramSym = VarSymbol(Tree.Ident("retVal"), N)
             val pList = PlainParamList.simple(paramSym :: Nil)
             val bod = k(paramSym.asPath)
             val (cpsCont, rest) = createCpsCont(pList, bod, paramSym)
@@ -390,7 +390,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         val (pth, rst) = newR match
           case p: Path => (p, id)
           case _ =>
-            val tmp = TempSymbol(N)
+            val tmp = TempSymbol(N, N)
             (tmp.asPath, blockBuilder.assignScoped(tmp, newR))
         rst.ret(Call(curContPath, (pth.asArg :: Nil) ne_:: Nil)(resMetadata))
     
@@ -404,7 +404,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           if !checkCall(c) then
             super.applyBlock(b)
           else
-            lazy val paramSym = VarSymbol(Tree.Ident(lhs.nme))
+            lazy val paramSym = VarSymbol(Tree.Ident(lhs.nme), N)
             lhs match
               case lhs: LocalVarSymbol =>
                 if thisFunSyms.contains(lhs) then substMap = substMap + (lhs -> paramSym)
@@ -489,7 +489,7 @@ object CallOrRefToFun:
 // Note: The CPS transformation requires that all calls to functions with multiple parameter lists happen within the compilation unit.
 class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Config):
   
-  private def dupParam(p: Param): Param = p.copy(sym = VarSymbol(Tree.Ident(p.sym.nme)))
+  private def dupParam(p: Param): Param = p.copy(sym = VarSymbol(Tree.Ident(p.sym.nme), N))
   private def dupParams(plist: List[Param]): List[Param] = plist.map(dupParam)
   private def dupParamList(plist: ParamList): ParamList =
     plist.copy(params = dupParams(plist.params), restParam = plist.restParam.map(dupParam))
@@ -537,7 +537,7 @@ class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Confi
         case CallOrRefToFun(fnSym, args) if fnMap.contains(fnSym) =>
           val fn = fnMap(fnSym)
           applyCallOrRef(fn, args, super.applyPath(p)(k)): r =>
-            val sym = TempSymbol(N)
+            val sym = TempSymbol(N, N)
             blockBuilder.assignScoped(sym, r).rest(k(sym.asPath))
         case _ => super.applyPath(p)(k)
     val res = rewriter.applyBlock(b)
