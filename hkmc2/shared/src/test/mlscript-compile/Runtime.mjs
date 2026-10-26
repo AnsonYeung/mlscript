@@ -358,13 +358,13 @@ lambda22 = (undefined, function (Runtime2, CpsImpl1, ss_k, k, tag, cur, _) {
 handlerFunCont$ = function handlerFunCont$(CpsImpl1, tag, resume) {
   return (k1, v) => {
     let tmp;
-    tmp = runtime.safeCall(resume(v));
+    tmp = runtime.safeCall(resume(undefined));
     return CpsImpl1.handlerTrampoline(k1, tag, tmp)
   }
 };
-handlerFunCont1 = function handlerFunCont(Runtime2, CpsImpl1, tag, resume, k1, v) {
+handlerFunCont1 = function handlerFunCont(CpsImpl1, tag, resume, k1) {
   let tmp;
-  tmp = runtime.safeCall(resume(v));
+  tmp = runtime.safeCall(resume(undefined));
   return CpsImpl1.handlerTrampoline(k1, tag, tmp)
 };
 (class Capture$scope2 {

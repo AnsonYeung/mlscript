@@ -665,6 +665,10 @@ sealed abstract class Defn:
   def isStaged: Bool = annotations.exists:
     case Annot.Modifier(Keyword.`staged`) => true
     case _ => false
+  lazy val visibility: Visibility = annotations.collectFirst:
+    case Annot.Modifier(Keyword.`private`) => Visibility.Private
+    case Annot.Modifier(Keyword.`public`) => Visibility.Public
+  .getOrElse(Visibility.Public)
   def isOwned: Bool = owner.isDefined
   def owner: Opt[InnerSymbol]
   
@@ -734,10 +738,6 @@ final case class FunDefn(
   lazy val async: Bool = annotations.contains(Annot.Async)
   lazy val nativeAsync: Bool = annotations.contains(Annot.NativeAsync)
   lazy val handlerInstrumented = annotations.contains(Annot.HandlerInstrumented)
-  lazy val visibility: Visibility = annotations.collectFirst:
-    case Annot.Modifier(Keyword.`private`) => Visibility.Private
-    case Annot.Modifier(Keyword.`public`) => Visibility.Public
-  .getOrElse(Visibility.Public)
   lazy val affineInfo: Ls[Int] =
     annotations.collect:
       case Annot.Affine(whichParamList) => whichParamList
