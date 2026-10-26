@@ -27,12 +27,12 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
     val savedVars = Iterator.single(flattenCtx.pcVar) ++ dummyThisVar.iterator ++ ctx.resumeInfo.allArgs.iterator ++ flattenCtx.vars.iterator
     val varIndexes = savedVars.zipWithIndex.toMap
     def readFromIndex(idx: Int): Path =
-      DynSelect(workerVarsParam.asSimpleRef, intLit(idx), true)
+      DynSelect(workerVarsParam.asSimpleRef, intLit(idx), true)(N)
     def writeToIndex(idx: Int, res: Result)(rst: Block): Block =
       AssignDynField(workerVarsParam.asSimpleRef, intLit(idx), true, res, rst)
     def getVar(sym: LocalVarSymbol): Path =
       if sym is flattenCtx.pcVar then return sym.asSimpleRef
-      varIndexes.get(sym).fold(Value.SimpleRef(sym))(readFromIndex)
+      varIndexes.get(sym).fold(Value.SimpleRef(sym)(N))(readFromIndex)
     def setVar(sym: LocalVarSymbol, res: Result)(rst: Block): Block =
       if sym is flattenCtx.pcVar then
         return res match
@@ -44,9 +44,9 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
       N,
       workerSym,
       workerDSym,
-      PlainParamList(Param.simple(workerVarsParam) :: Nil) :: Nil,
+      PlainParamList(Param.simple(workerVarsParam) :: Nil)(N) :: Nil,
       genWorkerBody()
-    )(N, Annot.Private :: Annot.HandlerInstrumented :: ctx.orig.annotations)
+    )(N, Annot.Private :: Annot.HandlerInstrumented()(N) :: ctx.orig.annotations)
     ctx.replaceAnnotWithInline = true
 
     def genWorkerBody(): Block =
@@ -65,7 +65,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
             applyResult(rhs): rhs2 =>
               setVar(lhs, rhs2)(applyBlock(rest))
           case Return(res) =>
-            Assign.discard(Call(paths.popFramePath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun), super.applyBlock(b))
+            Assign.discard(Call(paths.popFramePath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N), super.applyBlock(b))
           case _ => super.applyBlock(b)
         override def applyPath(p: Path)(k: Path => Block): Block =
           p match
@@ -77,15 +77,15 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
       val extraVars = if flattenCtx.needsStackSafety then Set(flattenCtx.pcVar, flattenCtx.curDepth) else Set.single(flattenCtx.pcVar)
       val withStackSafe = if !flattenCtx.needsStackSafety then mainBody else
         blockBuilder
-          .assign(NoSymbol, Call(paths.checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
-          .assign(flattenCtx.curDepth, Call(estate.builtinOpsMap("+").asSimpleRef, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun))
+          .assign(NoSymbol, Call(paths.checkDepthPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect, N))
+          .assign(flattenCtx.curDepth, Call(estate.builtinOpsMap("+").asSimpleRef, (paths.stackDepthPath.asArg :: intLit(1).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun, N))
           .rest(mainBody)
       transformer.applyMainBlock(Scoped(flattenCtx.scopedVars ++ extraVars, withStackSafe))
 
     val tmp = freshTmp(S(ErasedType.Array), "vars")
     val initialVars = (Iterator.single(intLit(parts.entry)) ++ ctx.thisPath.iterator ++ ctx.resumeInfo.allArgs.iterator.map[Path](_.asSimpleRef) ++ flattenCtx.vars.iterator.map[Path](_ => unit)).map(Arg(N, _)).toList
     blockBuilder
-      .assignScoped(tmp, Tuple(true, initialVars))
-      .assign(NoSymbol, Call(paths.pushFramePath, (Value.MemberRef(workerSym, workerDSym).asArg :: Value.SimpleRef(tmp).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun))
-      .ret(Call(Value.MemberRef(workerSym, workerDSym), (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+      .assignScoped(tmp, Tuple(true, initialVars)(N))
+      .assign(NoSymbol, Call(paths.pushFramePath, (Value.MemberRef(workerSym, workerDSym)(N).asArg :: Value.SimpleRef(tmp)(N).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N))
+      .ret(Call(Value.MemberRef(workerSym, workerDSym)(N), (tmp.asSimpleRef.asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect, N))
   

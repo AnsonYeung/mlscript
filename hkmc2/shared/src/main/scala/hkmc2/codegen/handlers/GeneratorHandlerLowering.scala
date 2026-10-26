@@ -41,8 +41,8 @@ class AsyncTopLevelAwait(using Elaborator.State) extends BlockTransformer(Symbol
     case Define(c @ ClsLikeDefn(companion = S(mod)), rst) =>
       applyDefn(c): defn2 =>
         val r = mod.publicFields.foldRight(applyBlock(rst)): (fld, acc) =>
-          val field = Select(Value.MemberRef(c.sym, mod.isym), Tree.Ident(fld._1.nme))(S(fld._2))(false)
-          AssignField(field, Call(Elaborator.State.builtinOpsMap("await").asSimpleRef, (field.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun), acc)
+          val field = Select(Value.MemberRef(c.sym, mod.isym)(N), Tree.Ident(fld._1.nme))(S(fld._2), N)(false)
+          AssignField(field, Call(Elaborator.State.builtinOpsMap("await").asSimpleRef, (field.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun, N), acc)
         Define(defn2, r)
     case _ => super.applyBlock(b)
 
@@ -81,16 +81,16 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
     Call(
       yieldOp.asSimpleRef,
       (p.asArg :: Nil) ne_:: Nil
-    )(CallMetadata.defaultFun)
+    )(CallMetadata.defaultFun, N)
     
   private def callRuntimeMethod(p: Path, argss: List[Arg]) =
-    Call(p, argss ne_:: Nil)(CallMetadata.defaultMlsFun)
+    Call(p, argss ne_:: Nil)(CallMetadata.defaultMlsFun, N)
   
   private def runtimeYieldStar(p: Path): Result =
     Call(
       yieldStar.asSimpleRef,
       (p.asArg :: Nil) ne_:: Nil
-    )(CallMetadata.defaultFun)
+    )(CallMetadata.defaultFun, N)
   
   override def applyMainBlock(main: Block): Block =
     nestScope(true): t =>
@@ -106,14 +106,14 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
         applyMainBlock(fun.body)
       )(fun.configOverride, fun.annotations)
     else
-      val baseAnnots = Annot.HandlerInstrumented :: Annot.Generator :: fun.annotations
+      val baseAnnots = Annot.HandlerInstrumented()(N) :: Annot.Generator()(N) :: fun.annotations
       FunDefn(
         fun.owner,
         fun.sym,
         fun.dSym,
         fun.params,
         applyFunBodyLikeBlock(fun.body)
-      )(fun.configOverride, if async then Annot.NativeAsync :: baseAnnots else baseAnnots)
+      )(fun.configOverride, if async then Annot.NativeAsync()(N) :: baseAnnots else baseAnnots)
   
   override def applyFunBodyLikeBlock(b: Block): Block =
     nestScope(false): t =>
@@ -121,7 +121,7 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
       blockBuilder
         .scopedVars(Set.single(t))
         .staticif(stackSafetyConfig.isDefined, _
-          .assign(NoSymbol, Call(Elaborator.State.builtinOpsMap("await").asSimpleRef, (intLit(0).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun)))
+          .assign(NoSymbol, Call(Elaborator.State.builtinOpsMap("await").asSimpleRef, (intLit(0).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun, N)))
         .rest(rest)
   
   override def applyResult(r: Result)(k: Result => Block): Block =
@@ -130,21 +130,21 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
     case Call(Value.MemberRef(Elaborator.ctx.builtins.runtime.suspend, _), args :: Nil) =>
       Assign(
         tmp,
-        Tuple(false, args),
+        Tuple(false, args)(N),
         k(runtimeYield(tmp.asSimpleRef))
       )
     case c @ Call(Value.MemberRef(Elaborator.ctx.builtins.runtime.handle_suspension, _), argss) =>
-      applyResult(Call(generatorPaths.enterHandleBlock, argss)(CallMetadata.mlsFunWithEffect))(k)
+      applyResult(Call(generatorPaths.enterHandleBlock, argss)(CallMetadata.mlsFunWithEffect, N))(k)
     case r @ EffectfulResult() =>
       if unwrapGenerators then
         val withStackSafety = stackSafetyConfig match
           case S(ss) =>
             val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
-            val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+            val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
             blockBuilder
               .scopedVars(Set.single(bodSym))
               .define(bodFun)
-              .assign(tmp, callRuntimeMethod(generatorPaths.runStackSafe, Value.Lit(Tree.IntLit(ss.stackLimit)).asArg :: Value.MemberRef(bodSym, bodFun.dSym).asArg :: Nil))
+              .assign(tmp, callRuntimeMethod(generatorPaths.runStackSafe, Value.Lit(Tree.IntLit(ss.stackLimit))(N).asArg :: Value.MemberRef(bodSym, bodFun.dSym)(N).asArg :: Nil))
           case N =>
             blockBuilder
               .assign(tmp, r)

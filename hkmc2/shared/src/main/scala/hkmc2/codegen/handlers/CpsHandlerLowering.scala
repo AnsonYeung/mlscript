@@ -72,8 +72,8 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
     def stackSafePre(cont: Path, retVal: Path) =
       val tmp = TempSymbol(N, N)
       builder
-        .assignScoped(tmp, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun))
-        .ifthen(tmp.asPath, Case.Lit(Tree.BoolLit(true)), Return(Call(raiseStackPath, (cont.asArg :: retVal.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun)))
+        .assignScoped(tmp, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
+        .ifthen(tmp.asPath, Case.Lit(Tree.BoolLit(true)), Return(Call(raiseStackPath, (cont.asArg :: retVal.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N)))
   
   def mapTail(b: Block)(f: BlockTail => Block): Block = b match
     case b: BlockTail => f(b)
@@ -95,8 +95,8 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
     override def applyBlock(b: Block): Block = b match
       case m @ Match(scrut, arms, dflt, rest) if !rest.isEmpty =>
         var used = false
-        val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil), applyBlock(rest), true)
-        def mkCall = Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+        val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil)(N), applyBlock(rest), true)
+        def mkCall = Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect, N))
         def rewriteTail(arm: Block) = mapTail(arm):
           case End(_) =>
             used = true
@@ -122,20 +122,20 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         
         if good then applyBlock(mapped)
         else
-          val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil), applyBlock(rest), true)
+          val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil)(N), applyBlock(rest), true)
           def rewriteTail(arm: Block) = mapTail(arm):
-            case End(_) => Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+            case End(_) => Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect, N))
             case arm => arm
           Begin(blk(applyBlock(rewriteTail(sub))), End())
       
       case Label(label, loop, body, rest) if !rest.isEmpty =>
         if !loop then
           var used = false
-          val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil), applyBlock(rest), true)
+          val (dfn, blk) = createNestedFn("rest", PlainParamList(Nil)(N), applyBlock(rest), true)
           def rewriteTail(arm: Block) = mapTail(arm):
             case End(_) =>
               used = true
-              Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+              Return(Call(dfn.asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect, N))
             case arm => arm
           thunks.addOne(label, () =>
             used = true
@@ -147,7 +147,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         else
           ???
       case Break(label) =>
-        Return(Call(thunks(label)().asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect))
+        Return(Call(thunks(label)().asPath, Nil ne_:: Nil)(CallMetadata.mlsFunWithEffect, N))
       case Continue(label) => ???
       
       
@@ -247,18 +247,18 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
       val contSym = VarSymbol(Tree.Ident("k"), N)
       val (ogParams, remainingParams) = fun.params match
         case head :: next => (head, next)
-        case Nil => (PlainParamList(Nil), Nil)
+        case Nil => (PlainParamList(Nil)(N), Nil)
       val native = fun.annotations.contains(Annot.Native)
       val cpsBod = applyCpsOnFun(fun.body, contSym.asPath, native)
       
       val mainBod = if !isStackSafetyPass then cpsBod else
         val paramSym = VarSymbol(Tree.Ident("retVal"), N) // will always receive unit
-        val pList = PlainParamList.simple(paramSym :: Nil)
+        val pList = PlainParamList.simple(paramSym :: Nil)(N)
         val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
         cpsId += 1
         val bod = blockBuilder
-          .stackSafePre(cpsCont.asPath, Value.Lit(Tree.UnitLit(false)))
-          .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false)).asArg :: Nil) ne_:: Nil)(resMetadata))
+          .stackSafePre(cpsCont.asPath, Value.Lit(Tree.UnitLit(false))(N))
+          .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
         rest(bod)
       
       if native then
@@ -266,19 +266,19 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         val nestedFun = FunDefn(
           N, BlockMemberSymbol("main_cps", Nil, true),
           TermSymbol(syntax.Fun, N, Tree.Ident("main_cps"), N),
-          PlainParamList(Param.simple(contSym) :: Nil) :: Nil,
+          PlainParamList(Param.simple(contSym) :: Nil)(N) :: Nil,
           mainBod
         )(N, Nil)
         val newBod = blockBuilder
           .scopedVars(Set(nestedFun.sym))
           .define(nestedFun)
-          .ret(Call(nestedFun.asPath, (idPath.asArg :: Nil) ne_:: Nil)(resMetadata))
+          .ret(Call(nestedFun.asPath, (idPath.asArg :: Nil) ne_:: Nil)(resMetadata, N))
         FunDefn(
           fun.owner, fun.sym, fun.dSym, fun.params, newBod
         )(fun.configOverride, fun.annotations)
       else
         fun.copy(
-          params = ogParams.copy(params = Param.simple(contSym) :: ogParams.params) :: remainingParams,
+          params = ogParams.copy(params = Param.simple(contSym) :: ogParams.params)(ogParams.toLoc) :: remainingParams,
           body = mainBod
         )(fun.configOverride, fun.annotations)
     
@@ -318,7 +318,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         val bms = BlockMemberSymbol(nme, Nil, true)
         val tSym = TermSymbol(syntax.Fun, N, Tree.Ident(nme), N)
         val bodd = blockBuilder
-          .stackSafePre(Value.MemberRef(bms, tSym), param.asPath)
+          .stackSafePre(Value.MemberRef(bms, tSym)(N), param.asPath)
           .rest(bod)
         val fnDef = FunDefn(N, bms, tSym, pList :: Nil, bodd)(N, Nil)
         val blk = (rest: Block) => Scoped(Set(bms), Define(fnDef, rest))
@@ -332,42 +332,42 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         
         val mainBod = if !isStackSafetyPass then cpsBod else
           val paramSym = VarSymbol(Tree.Ident("retVal"), N) // will always receive unit
-          val pList = PlainParamList.simple(paramSym :: Nil)
+          val pList = PlainParamList.simple(paramSym :: Nil)(N)
           val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
           cpsId += 1
           val bod = blockBuilder
-            .stackSafePre(cpsCont.asPath, Value.Lit(Tree.UnitLit(false)))
-            .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false)).asArg :: Nil) ne_:: Nil)(resMetadata))
+            .stackSafePre(cpsCont.asPath, Value.Lit(Tree.UnitLit(false))(N))
+            .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
           rest(bod)
         
-        val lam = Lambda(params.copy(params = Param.simple(contSym) :: params.params), mainBod)(l.annot)
+        val lam = Lambda(params.copy(params = Param.simple(contSym) :: params.params)(params.toLoc), mainBod)(l.annot, N)
         k(lam)
       case _ =>
         if inNativeCtx then r match
           case c: Call if c.metadata.mayRaiseEffects && checkCall(c) => applyPath(c.fun): newFun =>
             applyArgss(c.argss): newArgss =>
-              val newCall = Call(newFun, (idPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata)
+              val newCall = Call(newFun, (idPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata, N)
               opt.flatMap(_.stackSafety) match
                 case S(ss) if inNativeCtx && isStackSafetyPass =>
-                  val (fn, rest) = createNestedFn("‹stack safe body›", PlainParamList(List.empty), Return(newCall), true)
+                  val (fn, rest) = createNestedFn("‹stack safe body›", PlainParamList(List.empty)(N), Return(newCall), true)
                   rest(k(Call(
                     runStackSafeCpsPath,
-                    (Value.Lit(Tree.IntLit(ss.stackLimit)).asArg :: fn.asPath.asArg :: Nil) ne_:: Nil
-                    )(CallMetadata.defaultMlsFun)
+                    (Value.Lit(Tree.IntLit(ss.stackLimit))(N).asArg :: fn.asPath.asArg :: Nil) ne_:: Nil
+                    )(CallMetadata.defaultMlsFun, N)
                   ))
                 case _ => k(newCall)
           case _ => super.applyResult(r)(k)
         else r match
         case c @ Call(Value.RefLike(Elaborator.ctx.builtins.runtime.suspend), (tag :: handlerFun :: Nil) :: Nil) =>
           val paramSym = VarSymbol(Tree.Ident("retVal"), N)
-          val pList = PlainParamList.simple(paramSym :: Nil)
+          val pList = PlainParamList.simple(paramSym :: Nil)(N)
           val bod = k(paramSym.asPath)
           val (cpsCont, rest) = createCpsCont(pList, bod, paramSym)
           cpsId += 1
           val call = Instantiate(
             true,
             State.runtimeSymbol.asPath.selN(Tree.Ident("CpsSuspend")),
-            (cpsCont.asPath.asArg :: tag :: handlerFun :: Nil) ne_:: Nil)(InstantiateMetadata.empty)
+            (cpsCont.asPath.asArg :: tag :: handlerFun :: Nil) ne_:: Nil)(InstantiateMetadata.empty, N)
           rest(Return(call))
         // case c @ Call(Value.RefLike(Elaborator.ctx.builtins.runtime.handle_suspension), (tag :: bodyFun :: Nil) :: Nil) =>
         case c @ Call(path, args) if c.metadata.mayRaiseEffects =>
@@ -375,13 +375,13 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
             super.applyResult(r)(k)
           else
             val paramSym = VarSymbol(Tree.Ident("retVal"), N)
-            val pList = PlainParamList.simple(paramSym :: Nil)
+            val pList = PlainParamList.simple(paramSym :: Nil)(N)
             val bod = k(paramSym.asPath)
             val (cpsCont, rest) = createCpsCont(pList, bod, paramSym)
             cpsId += 1
             applyPath(path): path =>
               applyArgss(args): newArgss =>
-                val call = Call(path, (cpsCont.asPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata)
+                val call = Call(path, (cpsCont.asPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata, N)
                 rest(Return(call))
         case _ => super.applyResult(r)(k)
     
@@ -392,7 +392,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           case _ =>
             val tmp = TempSymbol(N, N)
             (tmp.asPath, blockBuilder.assignScoped(tmp, newR))
-        rst.ret(Call(curContPath, (pth.asArg :: Nil) ne_:: Nil)(resMetadata))
+        rst.ret(Call(curContPath, (pth.asArg :: Nil) ne_:: Nil)(resMetadata, N))
     
     override def applyBlock(b: Block): Block =
       if inNativeCtx then super.applyBlock(b)
@@ -410,13 +410,13 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
                 if thisFunSyms.contains(lhs) then substMap = substMap + (lhs -> paramSym)
                 else return super.applyBlock(b)
               case NoSymbol => ()
-            val pList = PlainParamList.simple(paramSym :: Nil)
+            val pList = PlainParamList.simple(paramSym :: Nil)(N)
             val bod = applyBlock(rest_)
             val (cpsCont, rest) = createCpsCont(pList, bod, paramSym)
             cpsId += 1
             applyPath(path): path =>
               applyArgss(args): newArgss =>
-                val call = Call(path, (cpsCont.asPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata)
+                val call = Call(path, (cpsCont.asPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata, N)
                 rest(Return(call))
         preserve(rewriteAssign)
       case Return(Call(Value.RefLike(Elaborator.ctx.builtins.runtime.suspend), args :: Nil)) =>
@@ -424,14 +424,14 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           Return(Instantiate(
             true,
             State.runtimeSymbol.asPath.selN(Tree.Ident("CpsSuspend")),
-            (curContPath.asArg :: newArgs) ne_:: Nil)(InstantiateMetadata.empty))
+            (curContPath.asArg :: newArgs) ne_:: Nil)(InstantiateMetadata.empty, N))
       case Return(c: Call) if c.metadata.mayRaiseEffects =>
         if !checkCall(c) then
           retResult(c)
         else
           applyPath(c.fun): newPath =>
             applyArgss(c.argss): newArgss =>
-              Return(Call(newPath, (curContPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata))
+              Return(Call(newPath, (curContPath.asArg :: newArgss.head) ne_:: newArgss.tail)(resMetadata, N))
       case Return(r: Result) => retResult(r)
       case _: Label => lastWords("undesugared label")
       case b: Begin =>
@@ -489,10 +489,10 @@ object CallOrRefToFun:
 // Note: The CPS transformation requires that all calls to functions with multiple parameter lists happen within the compilation unit.
 class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Config):
   
-  private def dupParam(p: Param): Param = p.copy(sym = VarSymbol(Tree.Ident(p.sym.nme), N))
+  private def dupParam(p: Param): Param = p.copy(sym = VarSymbol(Tree.Ident(p.sym.nme), N))(p.toLoc)
   private def dupParams(plist: List[Param]): List[Param] = plist.map(dupParam)
   private def dupParamList(plist: ParamList): ParamList =
-    plist.copy(params = dupParams(plist.params), restParam = plist.restParam.map(dupParam))
+    plist.copy(params = dupParams(plist.params), restParam = plist.restParam.map(dupParam))(plist.toLoc)
   
   def gatherDefns(b: Block) =
     val defns = mutable.Map[TermSymbol, FunDefn]()
@@ -522,8 +522,8 @@ class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Confi
                 pA.params.foldRight(lastArg :: Nil)(_.sym.asPath.asArg :: _)
               case (N, N) => pA.params.map(_.sym.asPath.asArg)
               case _ => die
-          val finalCall = Call(fn.asPath, (args ::: remainingArgs).ne_!)(CallMetadata.mlsFunWithEffect)
-          k(duped.foldRight(finalCall)((paramList, acc) => Lambda(paramList, Return(acc))(Nil)))
+          val finalCall = Call(fn.asPath, (args ::: remainingArgs).ne_!)(CallMetadata.mlsFunWithEffect, N)
+          k(duped.foldRight(finalCall)((paramList, acc) => Lambda(paramList, Return(acc))(Nil, N)))
           
       override def applyResult(r: Result)(k: Result => Block): Block = r match
         case CallOrRefToFun(fnSym, args) if fnMap.contains(fnSym) =>
