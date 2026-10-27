@@ -1,3 +1,4 @@
+:.
 :js
 
 class Foo(val bar: Int)
@@ -19,7 +20,7 @@ pattern Baz(pattern A) = A()
 //│ ║        	            ^^^^^^^^^
 //│ ╟── It cannot be applied.
 //│ ║  l.+1: 	pattern Baz(pattern A) = A()
-//│ ╙──      	                         ^
+//│ ╙──      	                         ^^^
 
 :e
 pattern Baz(pattern A) = A(1, 2, 3)
@@ -28,4 +29,4 @@ pattern Baz(pattern A) = A(1, 2, 3)
 //│ ║        	            ^^^^^^^^^
 //│ ╟── It cannot be applied to any arguments.
 //│ ║  l.+1: 	pattern Baz(pattern A) = A(1, 2, 3)
-//│ ╙──      	                         ^^^^^^^^^
+//│ ╙──      	                         ^^^^^^^^^^

@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -62,24 +63,12 @@ fun foo(x: return "whoops") = 1
 //│ ╔══[COMPILATION ERROR] Return statements are not allowed in this context.
 //│ ║  l.+1: 	fun foo(x: return "whoops") = 1
 //│ ╙──      	           ^^^^^^^^^^^^^^^
-//│ ╔══[COMPILATION ERROR] Expected a type, got a non-type ‹error›
-//│ ║  l.+1: 	fun foo(x: return "whoops") = 1
-//│ ╙──      	           ^^^^^^^^^^^^^^^
-//│ ╔══[COMPILATION ERROR] Expected a type, got ‹error›
-//│ ║  l.+1: 	fun foo(x: return "whoops") = 1
-//│ ╙──      	           ^^^^^^^^^^^^^^^
 
 :e
 fun foo() =
   fun bar(x: return "whoops") = 1
   bar(123)
 //│ ╔══[COMPILATION ERROR] Return statements are not allowed in this context.
-//│ ║  l.+2: 	  fun bar(x: return "whoops") = 1
-//│ ╙──      	             ^^^^^^^^^^^^^^^
-//│ ╔══[COMPILATION ERROR] Expected a type, got a non-type ‹error›
-//│ ║  l.+2: 	  fun bar(x: return "whoops") = 1
-//│ ╙──      	             ^^^^^^^^^^^^^^^
-//│ ╔══[COMPILATION ERROR] Expected a type, got ‹error›
 //│ ║  l.+2: 	  fun bar(x: return "whoops") = 1
 //│ ╙──      	             ^^^^^^^^^^^^^^^
 

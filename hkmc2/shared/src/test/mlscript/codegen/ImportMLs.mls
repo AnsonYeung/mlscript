@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -20,11 +21,11 @@ open Option
 :sjs
 None isDefined()
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let x1;
-//│ x1 = Option.None;
-//│ if (x1 instanceof Option.Some.class) {
+//│ let x2;
+//│ x2 = Option.None;
+//│ if (x2 instanceof Option.Some.class) {
 //│   return true
-//│ } else if (x1 instanceof Option.None.class) {
+//│ } else if (x2 instanceof Option.None.class) {
 //│   return false
 //│ }
 //│ throw globalThis.Object.freeze(new globalThis.Error("match error"));
@@ -81,25 +82,47 @@ None == Option.None
 :e
 :re
 Option.oops
-//│ ╔══[COMPILATION ERROR] Module 'Option' does not contain member 'oops'
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	Option.oops
-//│ ╙──      	      ^^^^^
-//│ ═══[RUNTIME ERROR] Error: Access to required field 'oops' yielded 'undefined'
+//│ ║        	^^^^^^^^^^^
+//│ ╟── Module 'Option' does not contain member 'oops'
+//│ ║  in ../../mlscript-compile/Option.mls
+//│ ║  l.XX: 	module Option with ...
+//│ ╙──      	^^^^^^^^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :e
 open Option { oops }
-//│ ╔══[COMPILATION ERROR] Module 'Option' does not contain member 'oops'
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	open Option { oops }
-//│ ╙──      	              ^^^^
+//│ ║        	              ^^^^
+//│ ╟── Module 'Option' does not contain member 'oops'
+//│ ║  in ../../mlscript-compile/Option.mls
+//│ ║  l.XX: 	module Option with ...
+//│ ╙──      	^^^^^^^^^^^^^
 
+:e
+:re
 oops
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
+//│ ║  l.+1: 	oops
+//│ ║        	^^^^
+//│ ╟── Module 'Option' does not contain member 'oops'
+//│ ║  in ../../mlscript-compile/Option.mls
+//│ ║  l.XX: 	module Option with ...
+//│ ╙──      	^^^^^^^^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :e
 :re
 Option.None.oops
-//│ ╔══[COMPILATION ERROR] Object 'None' does not contain member 'oops'
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	Option.None.oops
-//│ ╙──      	           ^^^^^
-//│ ═══[RUNTIME ERROR] Error: Access to required field 'oops' yielded 'undefined'
+//│ ║        	^^^^^^^^^^^^^^^^
+//│ ╟── Object 'None' does not contain member 'oops'
+//│ ║  in ../../mlscript-compile/Option.mls
+//│ ║  l.XX: 	object None
+//│ ╙──      	^^^^^^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 

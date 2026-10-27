@@ -1,4 +1,6 @@
+#lang(0.3.x)
 #nofib
+
 import "./NofibPrelude.mls"
 open NofibPrelude
 
@@ -51,7 +53,7 @@ fun lcss(xs, ys) = algc(listLen(xs), listLen(ys), xs, ys)(Nil)
 
 fun lcssMain(a, b ,c, d, e, f) = lcss(enumFromThenTo(a,b,c), enumFromThenTo(d,e,f))
 
-fun testLCSS_nofib(d) = lcssMain(1,2,60,30,31,90)
+fun testLCSS_nofib(d): List[Int] = lcssMain(1,2,60,30,31,90)
 
 
 

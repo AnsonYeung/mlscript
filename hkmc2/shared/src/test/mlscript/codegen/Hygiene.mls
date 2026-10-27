@@ -1,3 +1,4 @@
+:.
 :js
 :noModuleCheck
 
@@ -54,9 +55,16 @@ val Test = "oops"
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ Test = "oops"
 
+:e
 :re
 Test.foo()
-//│ ═══[RUNTIME ERROR] TypeError: Test2.foo is not a function
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
+//│ ║  l.+1: 	Test.foo()
+//│ ║        	^^^^^^^^
+//│ ╟── String literal does not contain member 'foo'
+//│ ║  l.XX: 	val Test = "oops"
+//│ ╙──      	           ^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 
 :sjs

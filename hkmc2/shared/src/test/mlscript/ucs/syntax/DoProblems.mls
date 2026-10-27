@@ -1,3 +1,4 @@
+:.
 :js
 
 // * It looks like trying to support both infix `do` and prefix `do` is a problem;

@@ -1,8 +1,7 @@
+:.
 // This file covers the three unboxed numeric types other than `Int32`: `Int64`, `Float32` and `Float64`.
 // See `BuiltinOperators.mls` for the `Int32` intrinsics, whose shape these mirror.
 
-:global
-:wasm
 
 
 // `Int64` lowers to `i64`, and an `i64` result is handed back to JS as a `BigInt`.

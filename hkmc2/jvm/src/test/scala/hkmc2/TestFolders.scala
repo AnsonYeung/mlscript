@@ -8,6 +8,10 @@ import hkmc2.utils.*, shorthands.*
   * `mlscript-compile/` subdirectories (for compile tests) that it owns. */
 object TestFolders:
   
+  /** Directory configuration files named `.mls` are not standalone test sources. */
+  def isTestSource(file: os.BasePath): Bool =
+    file.ext === "mls" && file.baseName.nonEmpty
+  
   /** Helper to check whether `file` is inside (i.e. a descendant of) `dir`. */
   def isInDir(file: os.Path, dir: os.Path): Bool =
     file.startsWith(dir)
@@ -54,6 +58,10 @@ object TestFolders:
   def wasmDiffDir(wd: os.Path): os.Path =
     diffTestDir(wd)/"wasm"
   
+  /** Diff test subdirectories that belong to the hkmc2SlopTests project. */
+  def slopDiffDir(wd: os.Path): os.Path =
+    diffTestDir(wd)/"slop"
+
   /** Diff test directories that are always excluded (staging, mlscript-compile). */
   def alwaysExcludedDiffDirs(wd: os.Path): Ls[os.Path] =
     (diffTestDir(wd)/"ucs"/"staging") :: compileTestDir(wd) :: Nil
@@ -63,6 +71,7 @@ object TestFolders:
     nofibDiffDir(wd) ::
     appsDiffDir(wd) ::
     wasmDiffDir(wd) ::
+    slopDiffDir(wd) ::
     alwaysExcludedDiffDirs(wd)
   
   /** Check whether a file should be excluded from the given list of excluded

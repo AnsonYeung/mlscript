@@ -1,3 +1,4 @@
+:.
 :js
 
 import "../../../mlscript-compile/Option.mls"
@@ -106,9 +107,12 @@ fun test(x) = if x is Test(p, q, r, s, t, u) then "ok"
 
 :e
 fun test(x) = if x is Test(_, _, _) then "ok"
-//│ ╔══[COMPILATION ERROR] Expected six arguments, but found only three arguments.
+//│ ╔══[COMPILATION ERROR] Resolution error in constructor
 //│ ║  l.+1: 	fun test(x) = if x is Test(_, _, _) then "ok"
-//│ ╙──      	                           ^^^^^^^
+//│ ║        	                      ^^^^^^^^^^^^^
+//│ ╟── Class definition 'Test' expected 6 pattern arguments, but got 3
+//│ ║  l.XX: 	class Test(a, b, c, d, e, f)
+//│ ╙──      	^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 fun test(x) = if x is Test(_, _, _, _, _, _) then "ok"
 
@@ -145,16 +149,16 @@ fun foo(x) = if x is A() then 0
 //│ ║        	       ^
 //│ ╟── Its pattern cannot have an argument list.
 //│ ║  l.+1: 	fun foo(x) = if x is A() then 0
-//│ ╙──      	                     ^
+//│ ╙──      	                     ^^^
 
 :e
 fun foo(x) = if x is A(y) then y
-//│ ╔══[COMPILATION ERROR] `A` is an object.
-//│ ║  l.XX: 	object A
-//│ ║        	       ^
-//│ ╟── Its pattern cannot have arguments.
+//│ ╔══[COMPILATION ERROR] Resolution error in constructor
 //│ ║  l.+1: 	fun foo(x) = if x is A(y) then y
-//│ ╙──      	                     ^^^
+//│ ║        	                     ^^^^
+//│ ╟── Module/object definition 'A' does not take pattern arguments.
+//│ ║  l.XX: 	object A
+//│ ╙──      	^^^^^^^^
 
 0 is Foo
 //│ = false

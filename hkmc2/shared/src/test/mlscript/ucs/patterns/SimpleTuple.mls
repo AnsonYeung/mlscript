@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -23,9 +24,12 @@ sum([1, 2])
 //│ ╔══[COMPILATION ERROR] Name not found: y
 //│ ║  l.+1: 	fun sum([x, y]) = x + y
 //│ ╙──      	                      ^
-//│ ╔══[COMPILATION ERROR] Expected 0 arguments, got 1
+//│ ╔══[COMPILATION ERROR] Resolution error in application
 //│ ║  l.+2: 	sum([1, 2])
-//│ ╙──      	   ^^^^^^^^
+//│ ║        	^^^^^^^^^^^
+//│ ╟── Function 'sum' expected 0 arguments, but got 1
+//│ ║  l.+1: 	fun sum([x, y]) = x + y
+//│ ╙──      	^^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 fun sum(pair) =

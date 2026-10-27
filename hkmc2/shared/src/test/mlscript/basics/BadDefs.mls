@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -29,10 +30,9 @@ val ++ = 0
 
 :e
 val ++ y = 1
-//│ ╔══[COMPILATION ERROR] Invalid value definition head: unexpected identifier in this position
+//│ ╔══[COMPILATION ERROR] Expected a valid value definition head; found prefix operator application instead
 //│ ║  l.+1: 	val ++ y = 1
-//│ ╙──      	       ^
-//│ ++ = 1
+//│ ╙──      	    ^^^^
 
 :e
 y
@@ -42,19 +42,19 @@ y
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 ++
-//│ = 1
+//│ = 0
 
 
 :e
 fun ++ z = 0
-//│ ╔══[COMPILATION ERROR] Invalid function definition head: unexpected identifier in this position
+//│ ╔══[COMPILATION ERROR] Expected a valid function definition head; found prefix operator application instead
 //│ ║  l.+1: 	fun ++ z = 0
-//│ ╙──      	       ^
+//│ ╙──      	    ^^^^
 
 :sjs
 ++
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ return 0
+//│ return $_$_
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 0
 
@@ -82,5 +82,39 @@ trait F
 //│ ╟── The compilation result may be incorrect.
 //│ ╙── This is a known compiler limitation; if it is a blocker for you, please report it to the maintainers.
 //│ /!!!\ Uncaught error: scala.NotImplementedError: an implementation is missing
+
+
+// Value definitions do not take parameter lists.
+:e
+val badValue(arg) = arg
+//│ ╔══[COMPILATION ERROR] Value definitions cannot have parameter lists
+//│ ║  l.+1: 	val badValue(arg) = arg
+//│ ╙──      	            ^^^^^
+//│ ╔══[COMPILATION ERROR] Name not found: arg
+//│ ║  l.+1: 	val badValue(arg) = arg
+//│ ╙──      	                    ^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
+//│ badValue = undefined
+
+:e
+fun localBadValue() =
+  val badLocal(arg) = arg
+  badLocal
+//│ ╔══[COMPILATION ERROR] Value definitions cannot have parameter lists
+//│ ║  l.+2: 	  val badLocal(arg) = arg
+//│ ╙──      	              ^^^^^
+//│ ╔══[COMPILATION ERROR] Name not found: arg
+//│ ║  l.+2: 	  val badLocal(arg) = arg
+//│ ╙──      	                      ^^^
+
+:e
+class BadValueMember with
+  mut val badMember(arg)(arg2) = arg
+//│ ╔══[COMPILATION ERROR] Mutable value definitions cannot have parameter lists
+//│ ║  l.+2: 	  mut val badMember(arg)(arg2) = arg
+//│ ╙──      	                   ^^^^^^^^^^^
+//│ ╔══[COMPILATION ERROR] Name not found: arg
+//│ ║  l.+2: 	  mut val badMember(arg)(arg2) = arg
+//│ ╙──      	                                 ^^^
 
 

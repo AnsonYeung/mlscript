@@ -1,6 +1,9 @@
 :js
 :ftc
 
+// FIXME: new resolution with `:ftc`
+#lang(0.2.x)
+
 
 :sir
 fun aux(f) = f(1) + f(10)

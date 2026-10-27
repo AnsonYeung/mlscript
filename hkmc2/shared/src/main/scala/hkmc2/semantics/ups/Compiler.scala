@@ -6,7 +6,7 @@ package ups
 import hkmc2.utils.*, shorthands.*
 
 import syntax.{Keyword, LetBind, Tree}, Tree.{BoolLit, DecLit, Ident, IntLit, StrLit, UnitLit}
-import Term.{Blk, Rcd, Ref, SynthIf, SynthSel}
+import Term.{Blk, Rcd, SynthIf}
 import Pattern.{Instantiation, Head}
 import Elaborator.{Ctx, State, ctx}, utils.TL
 import ucs.{TermSynthesizer, FlatPattern, safeRef}
@@ -18,7 +18,7 @@ import collection.mutable.{Queue, Map as MutMap}, collection.immutable.{Set, Map
   * a few matcher functions. Each matcher function matches a set of patterns
   * and returns a record that contains the results of each pattern.
   */
-class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends TermSynthesizer:
+class Compiler(using Context)(using codegen.Erasure)(using tl: TL)(using Ctx, State, Raise) extends TermSynthesizer:
   import Compiler.*, tl.*
   import Pattern.*
 
@@ -79,7 +79,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
       case index: Int => s"p_$index"
     /** Convert the field name to an `Ident`. */
     def asIdent: Ident = field match
-      case id: Ident => new Ident(id.name)
+      case id: Ident => id
       case index: Int => Ident(index.toString)
   
   extension (head: Head)
@@ -95,13 +95,13 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
   extension (patterns: Ls[(Label, ExPat)])
     /** Specialize a set of patterns. Also display them in the debug log. */
     def specializePatterns(head: Opt[Head]): Ls[(Label, SpPat)] =
-      log(s"Specialized patterns of ${head.fold("the case without tags")(_.showDbg)}:")
+      log(dbg"Specialized patterns of ${head.fold("the case without tags")(_.showDbg)}:")
       patterns.map: (label, pattern) =>
         val spec = pattern.specialize(head)
         val simp = spec.simplify
-        log(s"• Label $label")
-        log(s"  ‣ Expanded: ${spec.showDbg}")
-        log(s"  ‣ Simplified: ${simp.showDbg}")
+        log(dbg"• Label $label")
+        log(dbg"  ‣ Expanded: ${spec.showDbg}")
+        log(dbg"  ‣ Simplified: ${simp.showDbg}")
         (label, simp)
   
   private val labelMap: MutMap[Pat, Label] = MutMap()
@@ -179,7 +179,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
     // Make a split that tries all branches in order.
     val topmostSplit = branches.foldLeft(default: Split)((tail, branch) => branch ~: tail)
     val bodyTerm = SynthIf(topmostSplit)
-    log(s"Multi-matcher body:\n${topmostSplit.prettyPrint}")
+    log(dbg"Multi-matcher body:\n${topmostSplit.prettyPrint}")
     (paramList(param(scrutinee)), bodyTerm)
   
   def multiMatcherBranch(
@@ -193,7 +193,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
       .mkString("{", ", ", "}")}"
   ):
     val fields = patterns.iterator.flatMap((_, p) => p.fields).distinct.toList
-    log(s"fields: ${fields.iterator.map(_.showDbg).mkString("{", ", ", "}")}")
+    log(dbg"fields: ${fields.iterator.map(_.showDbg).mkString("{", ", ", "}")}")
     val subPatternsByField = fields.map: field =>
       field -> patterns.iterator.flatMap((_, p) => p.collectSubPatterns(field)).toList
     val subScrutinees = Map.from(subPatternsByField.iterator.map: (field, subPatterns) =>
@@ -202,7 +202,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
     val bindings = subPatternsByField.foldLeft(Ls.empty[Statement]): (statements, entry) =>
       val (field, subPatterns) = entry
       val subScrutinee = subScrutinees(field)
-      log(s"subPattern for field ${field.showDbg}: ${
+      log(dbg"subPattern for field ${field.showDbg}: ${
         subPatterns.iterator.map(_.showDbg).mkString("{", ", ", "}")}")
       val subMatcherSymbol = buildMultiMatcher(subPatterns.iterator)
       /** Shorthands for the result of the matcher branch. */
@@ -311,7 +311,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
       val makeMakeSplit = fields.iterator.foldRight(
         (fields: Ls[(Ident, Term)], bindingsSymbols: Ls[TempSymbol]) =>
           ((makeConsequent, alternative) =>
-            log(s"current bindings: " + aliases.map(_.name).mkString("{", ", ", "}"))
+            log(dbg"current bindings: " + aliases.map(_.name).mkString("{", ", ", "}"))
             val currentBindings = aliases.map:
               alias => RcdField(str(alias.name), scrutinee.safeRef)
             val bindings = bindingsSymbols match
@@ -387,7 +387,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
       val makeMakeSplit = fields.iterator.foldRight(
         (fields: Ls[RcdField], bindingsSymbols: Ls[TempSymbol]) =>
           ((makeConsequent, alternative) =>
-            log(s"current bindings: " + aliases.map(_.name).mkString("{", ", ", "}"))
+            log(dbg"current bindings: " + aliases.map(_.name).mkString("{", ", ", "}"))
             // The current pattern's bindings.
             val currentBindings = aliases.map:
               alias => RcdField(str(alias.name), scrutinee.safeRef)
@@ -534,7 +534,7 @@ class Compiler(using Context)(using tl: TL)(using Ctx, State, Raise) extends Ter
         val makeSplit = completePattern(pattern, scrutinee, subScrutinees, Nil)
         (makeConsequent, alternative) => Split.Let(
           sym = transformSymbol,
-          term = Term.Lam(params, Blk(letBindings, term.mkClone)),
+          term = Term.Lam(params, Blk(letBindings, term)).mkClone,
           tail = makeSplit(
             // The `outputSymbol` is the output of `pattern`.
             //                vvvvvvvvvvvv
@@ -574,16 +574,8 @@ object Compiler:
   /** Clone a source-level constructor reference for insertion into synthesized
     * matcher code, preserving the path chosen by source resolution.
     */
-  def preservedReference(term: Term)(using State): Term =
-    /** To make `Lowering` happy about the terms. */
-    def fillImplicitArgs(term: Term): Term = term match
-      case ref: Ref =>
-        if ref.expansion.isDefined then ref else ref.resolve
-      case sel: SynthSel =>
-        fillImplicitArgs(sel.prefix)
-        if sel.expansion.isDefined then sel else sel.resolve
-      case _: Term => term
-    fillImplicitArgs(term.mkClone)
+  def preservedReference(term: Term)(using State, codegen.Erasure): Term =
+    term.mkClone
   
   import Pattern.*
   

@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -42,14 +43,21 @@ object
 
 // * Would be cool if something like this was supported:
 :pe
+:e
 object \$ extends Foo
   A
   B
 //│ ╔══[LEXICAL ERROR] unexpected character '$'
 //│ ║  l.+1: 	object \$ extends Foo
 //│ ╙──      	        ^
-//│ ╔══[PARSE ERROR] Expected end of input; found error instead
+//│ ╔══[PARSE ERROR] Expected expression after type declaration keyword; found '\' keyword instead
 //│ ║  l.+1: 	object \$ extends Foo
-//│ ╙──      	        ^
+//│ ╙──      	       ^
+//│ ╔══[COMPILATION ERROR] Unexpected infix use of keyword 'extends' here
+//│ ║  l.+1: 	object \$ extends Foo
+//│ ║        	         ^^^^^^^^^^^^
+//│ ║  l.+2: 	  A
+//│ ╙──      	^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 

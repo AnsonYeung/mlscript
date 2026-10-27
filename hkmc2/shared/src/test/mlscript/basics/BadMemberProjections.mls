@@ -1,21 +1,20 @@
+:.
 :js
 
 
 :sjs
 :e
 1::x
-//│ ╔══[COMPILATION ERROR] Integer literal is not a known class.
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	1::x
-//│ ║        	^
-//│ ╟── Note: any expression of the form `‹expression›::‹identifier›` is a member projection;
-//│ ╙──   add a space before ‹identifier› to make it an operator application.
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found integer literal.
+//│ ║        	 ^^^
+//│ ╟── Integer literal cannot be used as a projection class.
 //│ ║  l.+1: 	1::x
 //│ ╙──      	^
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let lambda;
 //│ lambda = (undefined, function (self, ...args) {
-//│   return runtime.safeCall(self.x(...args))
+//│   throw "This code cannot be run as its compilation yielded an error."
 //│ });
 //│ return lambda
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
@@ -25,19 +24,23 @@
 :e
 :re
 1::x()
-//│ ╔══[COMPILATION ERROR] Integer literal is not a known class.
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	1::x()
-//│ ║        	^
-//│ ╟── Note: any expression of the form `‹expression›::‹identifier›` is a member projection;
-//│ ╙──   add a space before ‹identifier› to make it an operator application.
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found integer literal.
+//│ ║        	 ^^^
+//│ ╟── Integer literal cannot be used as a projection class.
 //│ ║  l.+1: 	1::x()
 //│ ╙──      	^
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	1::x()
+//│ ║        	 ^^^^^
+//│ ╟── Function literal expected at least 1 argument, but got 0
+//│ ║  l.+1: 	1::x()
+//│ ╙──      	   ^
 //│ —————————————| JS (sanitized) |—————————————————————————————————————————————————————————————————————
 //│ let lambda1;
 //│ lambda1 = (undefined, function (self, ...args) {
-//│   runtime.checkArgs("", 1, false, arguments.length);
-//│   return runtime.safeCall(self.x(...args))
+//│   runtime.checkArgs("", 1, arguments.length);
+//│   throw "This code cannot be run as its compilation yielded an error."
 //│ });
 //│ block$res2 = runtime.safeCall(lambda1());
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
@@ -57,24 +60,20 @@ let x = 1
 
 :e
 "A"::x
-//│ ╔══[COMPILATION ERROR] String literal is not a known class.
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	"A"::x
-//│ ║        	^^^
-//│ ╟── Note: any expression of the form `‹expression›::‹identifier›` is a member projection;
-//│ ╙──   add a space before ‹identifier› to make it an operator application.
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found string literal.
+//│ ║        	   ^^^
+//│ ╟── String literal cannot be used as a projection class.
 //│ ║  l.+1: 	"A"::x
 //│ ╙──      	^^^
 //│ = fun
 
 :e
 "A" ::x
-//│ ╔══[COMPILATION ERROR] String literal is not a known class.
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	"A" ::x
-//│ ║        	^^^
-//│ ╟── Note: any expression of the form `‹expression›::‹identifier›` is a member projection;
-//│ ╙──   add a space before ‹identifier› to make it an operator application.
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found string literal.
+//│ ║        	    ^^^
+//│ ╟── String literal cannot be used as a projection class.
 //│ ║  l.+1: 	"A" ::x
 //│ ╙──      	^^^
 //│ = fun

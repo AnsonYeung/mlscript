@@ -10,14 +10,14 @@ type TypMod = Int
 module TypMod with
   val whoami = "module"
 
-:fixme
+:e
 fun TrmMod = 42
 module TrmMod with
   val whoami = "module"
-//│ ╔══[COMPILATION ERROR] Not yet supported: overloading of function 'TrmMod'
+//│ ╔══[COMPILATION ERROR] A module companion must be a function with a parameter list
 //│ ║  l.+1: 	fun TrmMod = 42
 //│ ║        	^^^^^^^^^^^^^^^
-//│ ╟── with module of the same name
+//│ ╟── Arbitrary values cannot be overloaded with module 'TrmMod'
 //│ ║  l.+2: 	module TrmMod with
 //│ ║        	^^^^^^^^^^^^^^^^^^
 //│ ║  l.+3: 	  val whoami = "module"
@@ -106,10 +106,9 @@ assertModule(ClsMod).whoami
 assertModule(TypMod).whoami
 //│ = "module"
 
-:fixme
 :noInline
 print(assertModule(TrmMod).whoami)
-//│ ═══[RUNTIME ERROR] TypeError: Class constructor TrmMod cannot be invoked without 'new'
+//│ > undefined
 
 // TODO: handle
 print(assertModule(TrmMod).whoami)

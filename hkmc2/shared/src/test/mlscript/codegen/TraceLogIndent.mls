@@ -1,3 +1,4 @@
+:.
 :js
 
 fun plus(x, y) = x + y
@@ -10,9 +11,12 @@ fun g(z) =
     z == -1 then 42
     z == 0 then plus(0)
     z > 0 then g(z - 1)
-//│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
+//│ ╔══[COMPILATION ERROR] Resolution error in application
 //│ ║  l.+5: 	    z == 0 then plus(0)
-//│ ╙──      	                    ^^^
+//│ ║        	                ^^^^^^^
+//│ ╟── Function 'plus' expected 2 arguments, but got 1
+//│ ║  l.XX: 	fun plus(x, y) = x + y
+//│ ╙──      	^^^^^^^^^^^^^^
 
 fun f(x, y)(z) =
   x + y + g(z)
@@ -29,7 +33,7 @@ h(3)
 //│ > | | CALL g(2)
 //│ > | | | CALL g(1)
 //│ > | | | | CALL g(0)
-//│ ═══[RUNTIME ERROR] Error: Function 'plus' expected 2 arguments but got 1
+//│ ═══[RUNTIME ERROR] Error: Function 'plus' expected at least 2 arguments but got 1
 
 :traceJS
 h(-2)
@@ -56,7 +60,7 @@ f(1,2)(3)
 //│ > | CALL g(2)
 //│ > | | CALL g(1)
 //│ > | | | CALL g(0)
-//│ ═══[RUNTIME ERROR] Error: Function 'plus' expected 2 arguments but got 1
+//│ ═══[RUNTIME ERROR] Error: Function 'plus' expected at least 2 arguments but got 1
 
 :showRepl
 :traceJS

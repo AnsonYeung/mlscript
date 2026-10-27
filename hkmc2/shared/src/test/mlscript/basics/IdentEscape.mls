@@ -1,3 +1,4 @@
+:.
 let id"of" = 42
 fun id"fun"(x: Int) = x + 1
 

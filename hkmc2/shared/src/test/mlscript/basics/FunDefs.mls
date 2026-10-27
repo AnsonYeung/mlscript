@@ -1,3 +1,4 @@
+:.
 
 
 fun foo = 1
@@ -8,7 +9,15 @@ fun (+) plus: Int
 
 fun (+) : Int
 
+// This operator denotes an integer, so applying it is invalid.
+:e
 1 + 2
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	1 + 2
+//│ ║        	^^^^^
+//│ ╟── Value of type 'Int' cannot be called like a function.
+//│ ║  l.XX: 	fun (+) : Int
+//│ ╙──      	          ^^^
 
 
 fun f = g
@@ -22,10 +31,25 @@ fun (++)(x, y) = 1
 
 fun (**) pow = 1
 
+:e
 1 ** 2
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	1 ** 2
+//│ ║        	^^^^^^
+//│ ╟── Integer literal cannot be called like a function.
+//│ ║  l.XX: 	fun (**) pow = 1
+//│ ╙──      	               ^
 
 
+// The local '+' still denotes an integer inside this generic operator body.
+:e
 fun (:::) appendAll[A](a, b): A = a + b
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	fun (:::) appendAll[A](a, b): A = a + b
+//│ ║        	                                  ^^^^^
+//│ ╟── Value of type 'Int' cannot be called like a function.
+//│ ║  l.XX: 	fun (+) : Int
+//│ ╙──      	          ^^^
 
 
 fun (>>) foo(a, b) = a * b
@@ -35,15 +59,9 @@ fun (>>) foo(a, b) = a * b
 
 :e
 fun ~ concat(a, b) = a + b
-//│ ╔══[COMPILATION ERROR] Expected a valid parameter, found application
+//│ ╔══[COMPILATION ERROR] Expected a valid function definition head; found prefix operator application instead
 //│ ║  l.+1: 	fun ~ concat(a, b) = a + b
-//│ ╙──      	      ^^^^^^^^^^^^
-//│ ╔══[COMPILATION ERROR] Name not found: a
-//│ ║  l.+1: 	fun ~ concat(a, b) = a + b
-//│ ╙──      	                     ^
-//│ ╔══[COMPILATION ERROR] Name not found: b
-//│ ║  l.+1: 	fun ~ concat(a, b) = a + b
-//│ ╙──      	                         ^
+//│ ╙──      	    ^^^^^^^^^^^^^^
 
 // * Note the strange parsing
 :pt
@@ -63,6 +81,7 @@ fun not(b) = !b
 //│         inner = Ident of "b"
 //│     rhs = S of Error
 //│   fld = Ident of "b"
+//│   dynamic = true
 //│ ╔══[COMPILATION ERROR] Illegal definition in term position.
 //│ ║  l.+1: 	fun not(b) = !b
 //│ ╙──      	^^^^^^^^^^^^^^^

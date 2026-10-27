@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -31,6 +32,19 @@ fun foo(x) = if x is @annotations.compile (A(0) as y) then y
 //│ ╔══[COMPILATION ERROR] Name not found: y
 //│ ║  l.+1: 	fun foo(x) = if x is @annotations.compile (A(0) as y) then y
 //│ ╙──      	                                                           ^
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	fun foo(x) = if x is @annotations.compile (A(0) as y) then y
+//│ ║        	                                           ^^^^
+//│ ╟── Pattern 'A' cannot be called like a function.
+//│ ║  l.XX: 	pattern A(pattern B) = B
+//│ ╙──      	^^^^^^^^^^^^^^^^^^^^
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	fun foo(x) = if x is @annotations.compile (A(0) as y) then y
+//│ ║        	                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── Object 'compile' cannot be called like a function.
+//│ ║  in ../../decls/Prelude.mls
+//│ ║  l.XX: 	  object compile
+//│ ╙──      	  ^^^^^^^^^^^^^^
 //│ ╔══[WARNING] This annotation is not supported here.
 //│ ║  l.+1: 	fun foo(x) = if x is @annotations.compile (A(0) as y) then y
 //│ ║        	                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -40,7 +54,10 @@ fun foo(x) = if x is @annotations.compile (A(0) as y) then y
 fun foo(x) = if x is @annotations.compile {A(0) as y} then y
 //│ ╔══[COMPILATION ERROR] No definition found in scope for member 'y'
 //│ ║  l.+1: 	fun foo(x) = if x is @annotations.compile {A(0) as y} then y
-//│ ╙──      	                                                           ^
+//│ ║        	                                                           ^
+//│ ╟── which references the symbol introduced here
+//│ ║  l.+1: 	fun foo(x) = if x is @annotations.compile {A(0) as y} then y
+//│ ╙──      	                                                   ^
 
 :pe // parses as `@annotations.compile(A(0) as y) ‹missing annot body›`
 :e
@@ -78,21 +95,32 @@ fun foo(x) = if x is (@annotations.compile(A(0) as y)) then y
 fun foo(x) = if x is (@annotations.compile {A(0) as y}) then y
 //│ ╔══[COMPILATION ERROR] No definition found in scope for member 'y'
 //│ ║  l.+1: 	fun foo(x) = if x is (@annotations.compile {A(0) as y}) then y
-//│ ╙──      	                                                             ^
+//│ ║        	                                                             ^
+//│ ╟── which references the symbol introduced here
+//│ ║  l.+1: 	fun foo(x) = if x is (@annotations.compile {A(0) as y}) then y
+//│ ╙──      	                                                    ^
 
 :fixme
 fun foo(x) = if x is (@annotations.compile A(0) as y) then y
 //│ ╔══[COMPILATION ERROR] No definition found in scope for member 'y'
 //│ ║  l.+1: 	fun foo(x) = if x is (@annotations.compile A(0) as y) then y
-//│ ╙──      	                                                           ^
+//│ ║        	                                                           ^
+//│ ╟── which references the symbol introduced here
+//│ ║  l.+1: 	fun foo(x) = if x is (@annotations.compile A(0) as y) then y
+//│ ╙──      	                                                   ^
 
 
 // Using a dummy annotation to test that annotations gobble
 
 type Test
 
+:e
 :w
 @Test 1
+//│ ╔══[COMPILATION ERROR] Resolution error in member reference
+//│ ║  l.+1: 	@Test 1
+//│ ║        	^^^^^
+//│ ╙── Expected a term; got type alias 'Test'
 //│ ╔══[WARNING] This annotation has no effect.
 //│ ║  l.+1: 	@Test 1
 //│ ║        	^^^^^
@@ -101,8 +129,13 @@ type Test
 //│ ╙──      	      ^
 //│ = 1
 
+:e
 :w
 @Test 2 + 1
+//│ ╔══[COMPILATION ERROR] Resolution error in member reference
+//│ ║  l.+1: 	@Test 2 + 1
+//│ ║        	^^^^^
+//│ ╙── Expected a term; got type alias 'Test'
 //│ ╔══[WARNING] This annotation has no effect.
 //│ ║  l.+1: 	@Test 2 + 1
 //│ ║        	^^^^^
@@ -111,8 +144,13 @@ type Test
 //│ ╙──      	      ^^^^^
 //│ = 3
 
+:e
 :w
 @Test 2 as Int
+//│ ╔══[COMPILATION ERROR] Resolution error in member reference
+//│ ║  l.+1: 	@Test 2 as Int
+//│ ║        	^^^^^
+//│ ╙── Expected a term; got type alias 'Test'
 //│ ╔══[WARNING] This annotation has no effect.
 //│ ║  l.+1: 	@Test 2 as Int
 //│ ║        	^^^^^
@@ -121,8 +159,13 @@ type Test
 //│ ╙──      	      ^^^^^^^^
 //│ = 2
 
+:e
 :w
 @Test id(2) as Int
+//│ ╔══[COMPILATION ERROR] Resolution error in member reference
+//│ ║  l.+1: 	@Test id(2) as Int
+//│ ║        	^^^^^
+//│ ╙── Expected a term; got type alias 'Test'
 //│ ╔══[WARNING] This annotation has no effect.
 //│ ║  l.+1: 	@Test id(2) as Int
 //│ ║        	^^^^^

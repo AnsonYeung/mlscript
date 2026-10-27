@@ -1,3 +1,4 @@
+:.
 :js
 open annotations
 
@@ -177,8 +178,8 @@ fun g(n) =
 //│         set tmp1 = [3, 4];
 //│         set tmp2 = [5, param0];
 //│         set argList = [param0, ...tmp, 3, ...tmp1, ...tmp2, 7, param0];
-//│         set tmp3 = -¹(argList.length﹖, 0);
-//│         set inlinedVal = argList.slice﹖(5, tmp3);
+//│         set tmp3 = -¹(argList.length⁰, 0);
+//│         set inlinedVal = argList.slice⁰(5, tmp3);
 //│         set param0 = argList.0;
 //│         do argList.1;
 //│         do argList.2;
@@ -412,14 +413,20 @@ A.f(10000)
 //│ ╙──      	              ^^^^^^^^
 //│ = 0
 
-// These calls are represented as field selections and don't yet have the explicitTailCall parameter.
-:breakme
-:e
+// Getter selections do not yet carry an explicit tail-call flag. Require the
+// unused-annotation warning until the non-tail getter call can be diagnosed.
+:w
 module A with
   fun f = g
   fun g =
     @tailcall f
     f
+//│ ╔══[WARNING] This annotation has no effect.
+//│ ║  l.+4: 	    @tailcall f
+//│ ║        	    ^^^^^^^^^
+//│ ╟── This annotation is not supported on selection terms.
+//│ ║  l.+4: 	    @tailcall f
+//│ ╙──      	              ^
 
 :expect 0
 module A with
@@ -433,7 +440,7 @@ A.f(10)
 class A with
   @tailrec fun f(x) = if x == 0 then 0 else @tailcall g(x - 1)
   fun g(x) = if x == 0 then 1 else @tailcall f(x - 1)
-(new A).f(10)
+new A().f(10)
 //│ ╔══[COMPILATION ERROR] Calls from class methods cannot yet be marked @tailcall.
 //│ ║  l.+2: 	  @tailrec fun f(x) = if x == 0 then 0 else @tailcall g(x - 1)
 //│ ╙──      	                                                      ^^^^^^^^

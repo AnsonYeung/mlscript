@@ -1,6 +1,8 @@
 :js
 :noSanityCheck // * For some reason, these cause problems
 
+#lang(0.2.x)
+
 :global
 :invalml
 
@@ -69,7 +71,7 @@ test2()
 test2()(5)
 //│ —————————————| JS (sanitized) |—————————————————————————————————————————————————————————————————————
 //│ let baseCall;
-//│ baseCall = test21(); block$res8 = runtime.safeCall(baseCall(5));
+//│ baseCall = test21(); block$res9 = runtime.safeCall(baseCall(5));
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ = 5
 //│ Type: Int

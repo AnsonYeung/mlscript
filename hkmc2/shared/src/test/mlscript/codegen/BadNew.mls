@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -12,37 +13,43 @@ new
 :e
 :re
 new 2
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found integer literal.
+//│ ╔══[COMPILATION ERROR] Resolution error in object instantiation
 //│ ║  l.+1: 	new 2
-//│ ║        	    ^
-//│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
-//│ ═══[RUNTIME ERROR] TypeError: 2 is not a constructor
+//│ ║        	^^^^^
+//│ ╟── Invalid class expression: integer literal
+//│ ║  l.+1: 	new 2
+//│ ╙──      	    ^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :e
 :re
 new 2 + 2
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found integer literal.
+//│ ╔══[COMPILATION ERROR] Resolution error in object instantiation
 //│ ║  l.+1: 	new 2 + 2
-//│ ║        	    ^
-//│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
-//│ ═══[RUNTIME ERROR] TypeError: 2 is not a constructor
+//│ ║        	^^^^^
+//│ ╟── Invalid class expression: integer literal
+//│ ║  l.+1: 	new 2 + 2
+//│ ╙──      	    ^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :sjs
 :re
 new! 2 + 2
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let tmp1; tmp1 = globalThis.Object.freeze(new 2()); return tmp1 + 2
+//│ let tmp; tmp = globalThis.Object.freeze(new 2()); return tmp + 2
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ ═══[RUNTIME ERROR] TypeError: 2 is not a constructor
 
 :e
 :re
 new()
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found unit value.
+//│ ╔══[COMPILATION ERROR] Resolution error in object instantiation
 //│ ║  l.+1: 	new()
-//│ ║        	   ^^
-//│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
-//│ ═══[RUNTIME ERROR] TypeError: runtime.Unit is not a constructor
+//│ ║        	^^^^^
+//│ ╟── Invalid class expression: unit value
+//│ ║  l.+1: 	new()
+//│ ╙──      	   ^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :re
 new!()
@@ -51,9 +58,11 @@ new!()
 :e
 :re
 new {}
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found unit value.
-//│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
-//│ ═══[RUNTIME ERROR] TypeError: runtime.Unit is not a constructor
+//│ ╔══[COMPILATION ERROR] Resolution error in object instantiation
+//│ ║  l.+1: 	new {}
+//│ ║        	^^^
+//│ ╙── Invalid class expression: unit value
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :pe
 new! {}
@@ -77,8 +86,10 @@ new { x = 1 }
 //│ ╔══[COMPILATION ERROR] Name not found: x
 //│ ║  l.+1: 	new { x = 1 }
 //│ ╙──      	      ^
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found block.
-//│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
+//│ ╔══[COMPILATION ERROR] Resolution error in object instantiation
+//│ ║  l.+1: 	new { x = 1 }
+//│ ║        	^^^^^^^^^^^
+//│ ╙── Invalid class expression: block
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
@@ -95,10 +106,6 @@ let xs = new Oopsie
 //│ ╔══[COMPILATION ERROR] Name not found: Oopsie
 //│ ║  l.+1: 	let xs = new Oopsie
 //│ ╙──      	             ^^^^^^
-//│ ╔══[COMPILATION ERROR] Expected a statically known class; found ‹error›.
-//│ ║  l.+1: 	let xs = new Oopsie
-//│ ║        	             ^^^^^^
-//│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 //│ xs = undefined
 

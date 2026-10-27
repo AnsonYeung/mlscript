@@ -115,6 +115,9 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
         applyFunBodyLikeBlock(fun.body)
       )(fun.configOverride, if async then Annot.NativeAsync()(N) :: baseAnnots else baseAnnots)
   
+  // JavaScript constructors cannot yield or await, unlike instrumented function bodies.
+  override def applyCtorBlock(b: Block, isModCtor: Bool): Block = applyScopedBlock(b)
+  
   override def applyFunBodyLikeBlock(b: Block): Block =
     nestScope(false): t =>
       val rest = super.applyFunBodyLikeBlock(b)
@@ -140,7 +143,7 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
         val withStackSafety = stackSafetyConfig match
           case S(ss) =>
             val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
-            val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+            val bodFun = FunDefn.withFreshSymbol(N, bodSym, LoweredParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
             blockBuilder
               .scopedVars(Set.single(bodSym))
               .define(bodFun)

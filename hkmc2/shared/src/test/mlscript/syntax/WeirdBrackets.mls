@@ -1,31 +1,61 @@
+:.
 :js
 
 
 {( 123 )}
 //│ = 123
 
-{({( a: 1, b: 2 )})}
-//│ = {a: 1, b: 2}
-
-
 :e
-\{ Int }
-//│ ╔══[COMPILATION ERROR] Unsupported refinement in this position.
-//│ ║  l.+1: 	\{ Int }
-//│ ╙──      	^^^^^^^^
+:re
+{({( a: 1, b: 2 )})}
+//│ ╔══[COMPILATION ERROR] Parentheses must contain a single expression; use '{ ... }' for a block or record
+//│ ║  l.+1: 	{({( a: 1, b: 2 )})}
+//│ ╙──      	   ^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
-:e
+
+// * `\` is an infix keyword (see `BackslashApps.mls`), so it cannot be used in prefix position
+// * nor be defined as an operator
+
+:pe
+:re
+\{ Int }
+//│ ╔══[PARSE ERROR] Expected start of expression in this position; found '\' keyword instead
+//│ ║  l.+1: 	\{ Int }
+//│ ╙──      	^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
+
+:pe
+:re
 \(0)
-//│ ╔══[COMPILATION ERROR] Expected 2 arguments, got 1
+//│ ╔══[PARSE ERROR] Expected start of expression in this position; found '\' keyword instead
+//│ ║  l.+1: 	\(0)
+//│ ╙──      	^
+//│ ╔══[PARSE ERROR] Expected end of input; found parenthesis section instead
 //│ ║  l.+1: 	\(0)
 //│ ╙──      	 ^^^
-//│ = fun
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
+:pe
+:e
 fun (\) huh(x) = x
+//│ ╔══[PARSE ERROR] Expected start of expression in this position; found '\' keyword instead
+//│ ║  l.+1: 	fun (\) huh(x) = x
+//│ ╙──      	     ^
+//│ ╔══[COMPILATION ERROR] This ‹erroneous syntax› is not a valid symbolic name
+//│ ║  l.+1: 	fun (\) huh(x) = x
+//│ ╙──      	      ^
 
+:pe
+:re
 \(0)
-//│ = 0
+//│ ╔══[PARSE ERROR] Expected start of expression in this position; found '\' keyword instead
+//│ ║  l.+1: 	\(0)
+//│ ╙──      	^
+//│ ╔══[PARSE ERROR] Expected end of input; found parenthesis section instead
+//│ ║  l.+1: 	\(0)
+//│ ╙──      	 ^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :e
 // Writing record patterns in this way is strange. In the previous `Desugarer`,
@@ -45,20 +75,25 @@ fun f(x) = if x is ( Int then 1, Bool then 2 )
 //│ ║  l.+1: 	fun f(x) = if x is ( Int then 1, Bool then 2 )
 //│ ╙──      	                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+:pe
 :e
 fun f(x) = if x is \{ Int then 1, Bool then 2 }
-//│ ╔══[COMPILATION ERROR] Unrecognized pattern split (refinement).
+//│ ╔══[PARSE ERROR] Expected start of expression in this position; found '\' keyword instead
 //│ ║  l.+1: 	fun f(x) = if x is \{ Int then 1, Bool then 2 }
-//│ ╙──      	                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╙──      	                   ^
+//│ ╔══[COMPILATION ERROR] Unrecognized pattern split (‹erroneous syntax›).
+//│ ║  l.+1: 	fun f(x) = if x is \{ Int then 1, Bool then 2 }
+//│ ╙──      	                                               ^
 
+:pe
 :e
 fun f(x) = if x is \( Int then 1, Bool then 2 )
-//│ ╔══[COMPILATION ERROR] Cannot use this reference as a pattern.
+//│ ╔══[PARSE ERROR] Expected start of expression in this position; found '\' keyword instead
 //│ ║  l.+1: 	fun f(x) = if x is \( Int then 1, Bool then 2 )
 //│ ╙──      	                   ^
-//│ ╔══[COMPILATION ERROR] Cannot use this reference as a pattern.
+//│ ╔══[COMPILATION ERROR] Unrecognized pattern split (‹erroneous syntax›).
 //│ ║  l.+1: 	fun f(x) = if x is \( Int then 1, Bool then 2 )
-//│ ╙──      	                   ^
+//│ ╙──      	                                               ^
 
 class Box[T](val content: T)
 
@@ -67,12 +102,12 @@ fun interesting(x) =
   if x is Box( Int then 1, Bool then 2 )
 //│ Split with nested patterns:
 //│ >  if
-//│ >    x is Box(Int) then 1
-//│ >    x is Box(Bool) then 2
+//│ >    x is member:Box⁰^term:interesting⁰(member:Int⁰^term:interesting⁰) then 1
+//│ >    x is member:Box⁰^term:interesting⁰(member:Bool⁰^term:interesting⁰) then 2
 //│ Expanded split with flattened patterns:
 //│ >  ‹if|while›
-//│ >    x is Box(arg$Box$0$) and tmp:arg$Box$0$ is Int then 1
-//│ >    x is Box(arg$Box$0$) and tmp:arg$Box$0$ is Bool then 2
+//│ >    x is member:Box⁰^term:interesting⁰(arg$Box$0$) and tmp:arg$Box$0$ is member:Int⁰^term:interesting⁰ then 1
+//│ >    x is member:Box⁰^term:interesting⁰(arg$Box$0$) and tmp:arg$Box$0$ is member:Bool⁰^term:interesting⁰ then 2
 
 interesting of Box(42)
 //│ = 1

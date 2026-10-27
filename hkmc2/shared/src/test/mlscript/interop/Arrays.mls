@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -5,10 +6,10 @@ let arr = [true, false]
 //│ arr = [true, false]
 
 
-// * Array methods annoyingly supply extra arguments, such as the index and the array itself
-:re
-arr.map(_ === false)
-//│ ═══[RUNTIME ERROR] Error: Function expected 1 argument but got 3
+// * Array methods supply extra arguments, such as the index and the array itself,
+// * which callbacks may ignore
+arr.map(=> _ === false)
+//│ = [false, true]
 
 :sjs
 arr.map((e, ...) => e === false)
@@ -32,20 +33,16 @@ arr.map((_, ...) => 1)
 
 :e
 arr.map((..., ...) => 1)
-//│ ╔══[COMPILATION ERROR] Spread parameters must be the last in the parameter list.
+//│ ╔══[COMPILATION ERROR] A parameter list cannot have more than one variadic parameter.
 //│ ║  l.+1: 	arr.map((..., ...) => 1)
-//│ ╙──      	         ^^^
+//│ ╙──      	              ^^^
 //│ = [1, 1]
 
-:e
-:re
+:expect [[true, false], [true, false]]
 arr.map((..., e) => e)
-//│ ╔══[COMPILATION ERROR] Spread parameters must be the last in the parameter list.
-//│ ║  l.+1: 	arr.map((..., e) => e)
-//│ ╙──      	         ^^^
-//│ ═══[RUNTIME ERROR] Error: Function expected 2 arguments but got 3
+//│ = [[true, false], [true, false]]
 
-arr.map(pass1(_ === false))
+arr.map(pass1(=> _ === false))
 //│ = [false, true]
 
 
@@ -63,28 +60,33 @@ Array
 Array(1)
 //│ = [<1 empty items>]
 
-:breakme // TODO better report an error, here
 :e
 Array()
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	Array()
+//│ ║        	^^^^^^^
+//│ ╟── Constructor of class 'Array' expected 1 argument, but got 0
+//│ ║  in ../decls/Prelude.mls
+//│ ║  l.XX: 	declare class Array[T](val length: Int) {
+//│ ╙──      	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //│ = []
 
-:breakme // TODO better report an error, here
 :e
 Array(1, 2, 3)
+//│ ╔══[COMPILATION ERROR] Resolution error in application
+//│ ║  l.+1: 	Array(1, 2, 3)
+//│ ║        	^^^^^^^^^^^^^^
+//│ ╟── Constructor of class 'Array' expected 1 argument, but got 3
+//│ ║  in ../decls/Prelude.mls
+//│ ║  l.XX: 	declare class Array[T](val length: Int) {
+//│ ╙──      	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //│ = [1, 2, 3]
 
 
 if arr is Array then "ok"
 //│ = "ok"
 
-:fixme // TODO handle?
+:expect 2
 if arr is Array(n) then n
-//│ ╔══[COMPILATION ERROR] Class Array does not have a parameter list
-//│ ║  l.+1: 	if arr is Array(n) then n
-//│ ║        	          ^^^^^
-//│ ╟── but the pattern has one sub-pattern
-//│ ║  l.+1: 	if arr is Array(n) then n
-//│ ╙──      	                ^
-//│ ═══[RUNTIME ERROR] Error: match error
-
+//│ = 2
 

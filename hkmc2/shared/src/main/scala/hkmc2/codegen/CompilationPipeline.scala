@@ -18,18 +18,17 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
   
   def passHook(passName: Str, before: Program, after: Program) = ()
   
-  /** Extra symbols the optimization passes must not eliminate, computed from the program as it
-    * enters those passes, ie once the mandatory lowering passes and the first tail-call
-    * optimization have run and the definitions that make up the compilation unit are settled.
+  /** Extra symbols the optimization passes must not eliminate, computed after lifting and
+    * before flow rewriting and simplification.
     * Static module compilation uses this to keep such definitions alive as a private ABI:
     * another compilation unit may inline a body of this one that still refers to them. */
-  def extraSymbolsToPreserveFrom(prog: Program): Set[BoundSymbol] = Set.empty
+  def extraSymbolsToPreserveFrom(prog: Program): Set[ScopedSymbol] = Set.empty
   
   private inline def blockPass(inline pass: Block => Block)(prog: Program): Program =
     val blk = pass(prog.main)
     if blk is prog.main then prog else Program(prog.imports, blk)
   
-  def run(prog: Program, printer: Program => Str, symbolsToPreserve: Set[BoundSymbol], otl: TL)(using TL): Program =
+  def run(prog: Program, printer: Program => Str, symbolsToPreserve: Set[ScopedSymbol], otl: TL)(using TL): Program =
     var result = prog
     inline def runPass(passName: Str)(inline transform: Program => Program) =
       val before = result
@@ -37,17 +36,25 @@ class CompilationPipeline(using Config, Raise, State, Ctx, SymbolPrinter):
       passHook(passName, before, result)
     
     runPass("LambdaRewriter")(LambdaRewriter.desugar)
+    // deforestation only supports lifted programs
+    runPass("Lifter"): prog =>
+      if config.liftDefns.isDefined || config.deforest.isDefined then
+        if config.deforest.isDefined && config.liftDefns.isEmpty then
+          import hkmc2.Message.MessageContext
+          raise:
+            WarningReport:
+              msg"The deforestation optimization requires definition lifting to be enabled." ->
+              N :: Nil
+        blockPass(Lifter(_).transform)(prog)
+      else prog
     runPass("Deforest"): prog =>
-      val outterTl = tl
+      val outerTl = tl
       config.deforest match
         case None => prog
         case Some(dCfg) =>
-          flowAnalysis.FlowAnalysis.mkTraceLogger(dCfg.config, "deforest > ", outterTl).givenIn:
-            deforest.Deforest(prog)
-    runPass("Lifter"): prog =>
-      if config.liftDefns.isDefined then
-        blockPass(Lifter(_).transform)(prog)
-      else prog
+          flowAnalysis.FlowAnalysis.mkTraceLogger(dCfg.config, "deforest > ", outerTl.sink)(using outerTl.debugPrinter).givenIn:
+            deforest.Deforest(prog, additionalTopLevelSymbols =
+              symbolsToPreserve.collect{case s: semantics.LocalVarSymbol => s})
     runPass("Flattening")(blockPass(_.flattened))
     runPass("BufferableTransform")(BufferableTransform().transform)
     runPass("MergeMatchArmTransformer")(MergeMatchArmTransformer.applyProgram)

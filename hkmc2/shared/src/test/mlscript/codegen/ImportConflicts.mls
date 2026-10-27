@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -45,8 +46,9 @@ module Option5 with { fun Some5 = 5 }
 fun Some5 = "555"
 fun bar =
   open Option5
+  // Note that the wildcard import does not shadow names that are already bound in scope
   Some5
 bar
-//│ = 5
+//│ = "555"
 
 

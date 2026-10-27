@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -25,13 +26,10 @@
 +
 //│ = fun
 
-// * A bit confusing... but at least there's a warning!
-:w
+// * Explicit argument lists are uniform across symbolic operators.
+:expect 5
 +(2, 3)
-//│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.+1: 	+(2, 3)
-//│ ╙──      	  ^
-//│ = 3
+//│ = 5
 
 *(2, 3)
 //│ = 6
@@ -83,7 +81,7 @@ id(+)(1)
 //│ });
 //│ return runtime.safeCall(lambda3(1))
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
-//│ ═══[RUNTIME ERROR] Error: Function expected 2 arguments but got 1
+//│ ═══[RUNTIME ERROR] Error: Function expected at least 2 arguments but got 1
 
 
 fun (+) lol(a, b) = [a, b]

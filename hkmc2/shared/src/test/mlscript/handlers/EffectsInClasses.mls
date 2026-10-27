@@ -100,7 +100,7 @@ let oops =
 oops.h
 //│ ═══[RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading 'h')
 
-let obj = mut {s: undefined}
+let obj = mut {s: unsafe.undefined}
 //│ obj = {s: undefined}
 
 handle h = Effect with
@@ -116,7 +116,7 @@ module A with
   f()
   () // defeats tail call optimization
 
-let obj = new Object with
+let obj = new with
   fun foo() = print("Hello")
   foo()
 //│ > Hello

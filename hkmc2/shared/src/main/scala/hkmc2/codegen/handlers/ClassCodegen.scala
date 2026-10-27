@@ -108,7 +108,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
     val resumeBody = genResumeBody(parts, ctx, selfField.map(f => fieldFromTS(f._2)), allocatedVars, allocatedFields, fieldFromTS, clsDSym)
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
-    val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, PlainParamList(Param.simple(ctx.rVar) :: Nil)(N) :: Nil, resumeBody)(N, Annot.HandlerInstrumented()(N) :: Nil)
+    val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, LoweredParamList.plain(Param.simple(ctx.rVar) :: Nil)(N) :: Nil, resumeBody)(N, Annot.HandlerInstrumented()(N) :: Nil)
     ctx.newDefns ::= ClsLikeDefn(
       N,
       clsDSym,
@@ -116,7 +116,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       N,
       syntax.Cls,
       N,
-      PlainParamList(params.map(Param.simple(_)))(N) :: Nil,
+      LoweredParamList.plain(params.map(Param.simple(_)))(N) :: Nil,
       N,
       resumeMtd :: Nil,
       Nil,
@@ -125,6 +125,8 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
       initFields,
       N,
       N,
+      N,
+      Map.empty,
     )(N, Nil)
     var scoped: Iterator[ScopedSymbol] = flattenCtx.scopedVars.iterator ++ Iterator.single(callTmpVar)
     var mainBody = transformedBody

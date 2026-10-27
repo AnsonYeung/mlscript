@@ -49,7 +49,7 @@ while
 //│ xs = []
 
 // * Notes:
-(@native (mut []).pop()) === undefined
+(@native (mut []).pop()) === unsafe.undefined
 //│ = false
 (@native (mut []).pop()) === null
 //│ = false

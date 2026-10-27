@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -62,6 +63,7 @@ foo.["x"]
 
 
 class DynCtor() with
+  declare val dynField: Int
   set this.("dynField") = 42
 
 DynCtor().dynField
@@ -70,4 +72,12 @@ DynCtor().dynField
 new DynCtor().dynField
 //│ = 42
 
+
+// * A literal receiver is parenthesized: `-1["toFixed"]` would parse as `-(1["toFixed"])`.
+:sjs
+(-1).("toFixed")(1)
+//│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
+//│ return runtime.safeCall((-1)["toFixed"](1))
+//│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
+//│ = "-1.0"
 

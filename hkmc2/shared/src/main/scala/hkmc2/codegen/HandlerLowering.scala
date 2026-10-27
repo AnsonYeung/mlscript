@@ -20,6 +20,7 @@ import hkmc2.codegen.handlers.StraightLineCodegen
 import hkmc2.codegen.handlers.ClassCodegen
 import hkmc2.codegen.handlers.ShadowStackCodegen
 
+
 object HandlerLowering:
   
   val defaultStrategy: Strategy = IfCheck()
@@ -45,7 +46,7 @@ object HandlerLowering:
       val withStackSafe = needsStackSafety match
         case S(stackLimit) =>
           val bodSym = BlockMemberSymbol("‹stack safe body›", Nil, false)
-          val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+          val bodFun = FunDefn.withFreshSymbol(N, bodSym, LoweredParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
           blockBuilder
             .scopedVars(Set.single(bodSym))
             .define(bodFun)
@@ -156,7 +157,7 @@ object HandlerLowering:
 
     override def effectCheck(l: Assignable, r: Result, rst: Block, onEffect: Call, needsStackSafety: Opt[Int])(using paths: HandlerPaths)(using State): Block =
       val bodSym = BlockMemberSymbol("‹top level body›", Nil, false)
-      val bodFun = FunDefn.withFreshSymbol(N, bodSym, ParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
+      val bodFun = FunDefn.withFreshSymbol(N, bodSym, LoweredParamList(ParamListFlags.empty, Nil, N)(N) :: Nil, Ret(r))(configOverride = N, annotations = Nil)
       blockBuilder
         .scopedVars(Set.single(bodSym))
         .define(bodFun)
@@ -167,7 +168,7 @@ object HandlerLowering:
     override def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block =
       if stackSafe then
         val sym = BlockMemberSymbol("stackSafeBody", Nil, false)
-        val fd = FunDefn.withFreshSymbol(N, sym, PlainParamList(Nil)(N) :: Nil,
+        val fd = FunDefn.withFreshSymbol(N, sym, LoweredParamList.plain(Nil)(N) :: Nil,
           Return(Call(p, (State.runtimeSymbol.asSimpleRef.selSN("cpsId").asArg :: State.runtimeSymbol.asSimpleRef.selSN("cpsId2").asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N))
         )(N, Annot.Inline()(N) :: Nil)
         Scoped(Set.single(sym), Define(fd,
@@ -242,19 +243,24 @@ object HandlerLowering:
     var instrumented = false
     var newDefns: List[Defn] = Nil
     var replaceAnnotWithInline: Bool = false
-    def unwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
-      Call(paths.unwindPath, (
-        currentFun ::
-        state ::
-        loc ::
-        debugInfo.debugInfoPath ::
-        thisPath.getOrElse(unit) ::
-        resumeInfo.argLists ++:
-        (intLit(restoreList.length) ::
-        restoreList.map(_.asPath))
-      ).map(_.asArg) ne_:: Nil)(CallMetadata.mlsFunWithEffect, N)
-    def doUnwind(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths) =
-      Return(unwindCall(loc, state, restoreList)(using paths))
+    // Both returning and exception-based handlers must compute rest-argument lengths before unwinding.
+    def withUnwindCall(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(k: Result => Block)(using paths: HandlerPaths): Block =
+      val unwind = k(Call(paths.unwindPath,
+        Iterator(
+          currentFun, state, loc, debugInfo.debugInfoPath,
+          thisPath.getOrElse(unit), intLit(resumeInfo.argLists.length),
+        ).map(_.asArg)
+        .++(resumeInfo.argLists.iterator.flatMap(_.encoded))
+        .++(
+          Iterator.single(intLit(restoreList.length))
+          .++(restoreList.iterator.map(_.asPath))
+          .map(_.asArg))
+        .toList ne_:: Nil
+      )(CallMetadata.mlsFunWithEffect, N))
+      resumeInfo.argLists.foldRight[Block](unwind): (argList, rest) =>
+        argList.lengthDefn.fold(rest)((sym, length) => Assign(sym, length, rest))
+    def doUnwind(loc: Value, state: Path, restoreList: List[LocalVarSymbol])(using paths: HandlerPaths): Block =
+      withUnwindCall(loc, state, restoreList)(Return(_))
     def addExtraCompanionDefns(b: Block): Block =
       newDefns.foldRight(b): (defn, b) =>
         Scoped(Set.single(defn.sym), Define(defn, b))
@@ -268,12 +274,21 @@ object HandlerLowering:
     def inNative = orig.annotations.exists(_.isInstanceOf[Annot.Native])
     def inAsync = orig.annotations.exists(_.isInstanceOf[Annot.Async])
   
-  // argLists: length-encoded argument list used for resumption.
+  /** The arguments of a parameter list, saved when unwinding so that `FunctionContFrame.resume` can pass them
+    * back to the function. They are encoded as their number (`length`) followed by the arguments themselves.
+    * A rest parameter is spread into the saved arguments, so that the resumed function collects them again.
+    * Omitting it would lose its arguments, including those of trailing parameters, which lowering gathers
+    * into a rest parameter (see `Lowering.lowerTrailingParams`). The number of arguments then depends on
+    * the length of the rest parameter, so `lengthDefn` computes it into a temporary before unwinding. */
+  case class SavedArgList(length: Path, args: Ls[Arg], lengthDefn: Opt[(TempSymbol, Result)]):
+    def encoded: Ls[Arg] = length.asArg :: args
+  
+  // argLists: the argument lists saved for resumption (see `SavedArgList`).
   // currentLocals: All locals to be saved and reloaded, this cannot include any variables in outer scopes
   // allArgs: All arguments, as an alternative to argLists. Used only in double compilation
   // currentStackSafetySym: The symbol to be used for stack safety
   case class ResumeInfo(
-    argLists: List[Path],
+    argLists: List[SavedArgList],
     currentLocals: List[LocalVarSymbol],
     allArgs: List[LocalVarSymbol],
     currentStackSafetySym: FnOrCls,
@@ -545,7 +560,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
       case Define(defn, rest) => Define(defn, go(rest))
       case Assign(lhs, rhs, rest) => Assign(lhs, rhs, go(rest))
       case blk @ AssignField(lhs, nme, rhs, rest) => AssignField(lhs, nme, rhs, go(rest))(blk.symbol)
-      case AssignDynField(lhs, fld, arrayIdx, rhs, rest) => AssignDynField(lhs, fld, arrayIdx, rhs, go(rest))
+      case AssignDynField(lhs, fld, kind, rhs, rest) => AssignDynField(lhs, fld, kind, rhs, go(rest))
       case _: Return => blk
 
       // ignored cases
@@ -722,9 +737,16 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
           List(intLit(idx), Value.Lit(Tree.StrLit(sym.nme))(N))
         .map(_.asArg)
       val debugInfoSym = freshTmp(erasedType = S(ErasedType.Array), s"$debugNme$$debugInfo")
-      // TODO: properly support spread argument by calculating the correct length.
-      val rtArgLists = intLit(fun.params.length) :: fun.params.flatMap: pl =>
-        intLit(pl.params.length) :: pl.params.map(p => p.sym.asSimpleRef)
+      val rtArgLists = fun.params.map: pl =>
+        val args = pl.params.map(_.sym.asSimpleRef.asArg)
+        pl.restParam match
+        case N => SavedArgList(intLit(pl.params.length), args, N)
+        case S(rest) =>
+          val length = freshTmp(erasedType = S(ErasedType.Int), "argCount")
+          val restLength = rest.sym.asSimpleRef.selSN("length")
+          SavedArgList(length.asSimpleRef, args :+ Arg(S(syntax.SpreadKind.Eager), rest.sym.asSimpleRef),
+            S(length -> Call(State.builtinOpsMap("+").asSimpleRef,
+              (intLit(pl.params.length).asArg :: restLength.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun, N)))
       val allArgs = fun.params.flatMap(pl => pl.paramSyms)
       val newCtx: HandlerCtx.FunctionLike = HandlerCtx.FunctionLike(FunctionCtx(funcPath, thisPath, ResumeInfo(rtArgLists, sortedVars, allArgs, L(fun.sym)),
         DebugInfo(debugNme, if debugEnabled then debugInfoSym.asSimpleRef else unit), thisPath.isDefined && fun.params.isEmpty, fun))
@@ -747,7 +769,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
             raise(lifterReport(msg"Unexpected nested function: lambdas may not function correctly." -> fun.sym.toLoc :: Nil))
           val (debugInfoSym, debugInfo, fun2, ctx) = translateFunLike(fun, fun.sym.asMemberRef(fun.dSym), N, fun.sym.nme)
           ctx.ctx.addExtraCompanionDefns(if debugEnabled then Scoped(Set.single(debugInfoSym), Assign(debugInfoSym, Tuple(false, debugInfo)(N), k(fun2))) else k(fun2))
-        case defn @ ClsLikeDefn(owner, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, methods, privateFields, publicFields, preCtor, ctor, companion, bufferable) =>
+        case defn @ ClsLikeDefn(owner, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, methods, privateFields, publicFields, preCtor, ctor, companion, bufferable, termCompanion, _) =>
           if h.currentBlockIsTrulyNested && opt.isDefined then
             raise(lifterReport(msg"Unexpected nested class: lambdas may not function correctly." -> isym.toLoc :: Nil))
           val debugInfos = mutable.ArrayBuffer.empty[(TempSymbol, List[Arg])]
@@ -772,11 +794,11 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
             // without many special handling.
             val newCtor = if opt.fold(true)(_.doNotInstrumentTopLevelModCtor) && !h.currentBlockIsTrulyNested then bod.ctor else
               translateCtorLike(bod.ctor, bod.isym.asThis, true)
-            tl.log(s"companion name: ${bod.isym.nme}")
+            tl.log(dbg"companion name: ${bod.isym.nme}")
             if (bod.methods is newMtds) && (bod.ctor is newCtor) then
               bod
             else
-              ClsLikeBody(bod.isym, newMtds, bod.privateFields, bod.publicFields, newCtor, bod.annotations)
+              ClsLikeBody(bod.isym, newMtds, bod.privateFields, bod.publicFields, newCtor, bod.annotations, bod.methodKeys)
           val newPreCtor = translateCtorLike(preCtor, isym.asThis, false)
           val newCtor = translateCtorLike(ctor, isym.asThis, false)
           val c2 =
@@ -869,11 +891,11 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     val getSavedTmp = freshTmp(erasedType = S(ErasedType.Int), "saveOffset")
     def getSaved(off: BigInt): (Block => Block, Path) =
       if off == 0 then
-        return (id, DynSelect(paths.runtimePath.selSN("resumeArr"), paths.runtimePath.selSN("resumeIdx"), true)(N))
+        return (id, DynSelect(paths.runtimePath.selSN("resumeArr"), paths.runtimePath.selSN("resumeIdx"), DynSelectKind.ArrayIdx)(N))
       val addOne = Assign(getSavedTmp, Call(State.builtinOpsMap("+").asSimpleRef, (paths.runtimePath.selSN("resumeIdx").asArg :: intLit(off).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultFun, N), _)
-      (addOne, DynSelect(paths.runtimePath.selSN("resumeArr"), getSavedTmp.asSimpleRef, true)(N))
+      (addOne, DynSelect(paths.runtimePath.selSN("resumeArr"), getSavedTmp.asSimpleRef, DynSelectKind.ArrayIdx)(N))
 
-    val resumeArrIndexed = DynSelect(paths.runtimePath.selSN("resumeArr"), getSavedTmp.asSimpleRef, true)(N)
+    val resumeArrIndexed = DynSelect(paths.runtimePath.selSN("resumeArr"), getSavedTmp.asSimpleRef, DynSelectKind.ArrayIdx)(N)
     val preRestore = blockBuilder
         .assign(pcVar, paths.resumePc)
         .scopedVars(Set(getSavedTmp))
@@ -895,7 +917,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     if ExceptionToggle then
       val err = freshTmp(N, "err")
       mainBody = TryCatch(mainBody, err,
-        Assign.discard(Call(paths.runtimePath.selSN("effectRethrow"), (err.asPath.asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect, N), Throw(ctx.unwindCall(unit, pcVar.asPath, vars)(using paths))), End())
+        Assign.discard(Call(paths.runtimePath.selSN("effectRethrow"), (err.asPath.asArg :: Nil) ne_:: Nil)(CallMetadata.mlsFunWithEffect, N), ctx.withUnwindCall(unit, pcVar.asPath, vars)(Throw(_))(using paths)), End())
     
     if !oneState then
       mainBody = Match(
@@ -908,7 +930,9 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
     else if ExceptionToggle then
       mainBody = Assign(pcVar, intLit(parts.entry), mainBody)
     
-    val extraVars = if needsStackSafety then Set(pcVar, curDepth) else Set.single(pcVar)
+    val argCountVars = ctx.resumeInfo.argLists.flatMap(_.lengthDefn.map(_._1))
+    val extraVars = (if needsStackSafety then Set(pcVar, curDepth) else Set.single(pcVar)) ++ argCountVars
+
     Scoped(
       scopedVars ++ extraVars,
       mainBody)

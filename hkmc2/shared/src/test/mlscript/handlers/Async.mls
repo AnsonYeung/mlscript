@@ -1,3 +1,4 @@
+:.
 :js
 :lift
 :exit
@@ -5,13 +6,20 @@
 
 import "fs"
 
+// Describe the foreign API at the import boundary; await preserves these payloads.
+:silent
+let fileSystem = fs as {promises: {
+  readFile: Str -> Promise[{toString: () -> Str}],
+  readdir: Str -> Promise[Array[Str]]
+}}
+
 open annotations
 open handlers
 
 @async
-fun f(print_result) =
+fun f(print_result: Bool) =
   print("Hello, world!")
-  let r = await(fs.promises.readFile("./README.md"))
+  let r = await(fileSystem.promises.readFile("./README.md"))
   let readme = r.toString()
   let first = readme.slice(0, readme.indexOf("\n"))
   if print_result do
@@ -43,7 +51,7 @@ f()
 fun f() =
   await(Promise.resolve(1))
 //│ ╔══[COMPILATION ERROR] Only await inside of async bodies are allowed if effect handlers are not enabled.
-//│ ║  l.42: 	  await(Promise.resolve(1))
+//│ ║  l.+2: 	  await(Promise.resolve(1))
 //│ ╙──      	  ^^^^^
 
 :re
@@ -77,11 +85,11 @@ f()
 
 fun f() =
   print(0)
-  let r = await(fs.promises.readFile("./README.md"))
+  let r = await(fileSystem.promises.readFile("./README.md"))
   let readme = r.toString()
   let first = readme.slice(0, readme.indexOf("\n"))
   print(first)
-  let r2 = await(fs.promises.readdir("."))
+  let r2 = await(fileSystem.promises.readdir("."))
   print(r2.indexOf("README.md") >= 0)
 
 @async
@@ -106,18 +114,18 @@ fun g() =
   @async
   fun f1() =
     print("f1 started")
-    let work1 = new Promise((resolve, reject) =>
+    let work1 = new Promise[unsafe.undefined]((resolve, reject) =>
       set work1resolve = resolve
     )
     await(work1)
     print("f1 done")
-    work2resolve()
+    work2resolve(unsafe.undefined)
   @async
   fun f2() =
     print("f2 started")
-    let work2 = new Promise((resolve, reject) =>
+    let work2 = new Promise[unsafe.undefined]((resolve, reject) =>
       set work2resolve = resolve
-      work1resolve()
+      work1resolve(unsafe.undefined)
     )
     await(work2)
     print("f2 done")

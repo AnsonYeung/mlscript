@@ -1,3 +1,4 @@
+:.
 :js
 :effectHandlers
 :lift
@@ -42,7 +43,7 @@ fun g() =
 //│           if (runtime.curEffect === null) {
 //│             break brk0
 //│           }
-//│           return runtime.unwind(g, 3, "SavedVars.mls:20:8", null, null, 1, 0, 0);
+//│           return runtime.unwind(g, 3, "SavedVars.mls:21:8", null, null, 1, 0, 0);
 //│         }
 //│         pc = 3;
 //│       case 3:
@@ -53,7 +54,7 @@ fun g() =
 //│             pc = 2;
 //│             continue main
 //│           }
-//│           return runtime.unwind(g, 2, "SavedVars.mls:21:7", null, null, 1, 0, 0);
+//│           return runtime.unwind(g, 2, "SavedVars.mls:22:7", null, null, 1, 0, 0);
 //│         }
 //│         tmp = 2;
 //│         pc = 1;

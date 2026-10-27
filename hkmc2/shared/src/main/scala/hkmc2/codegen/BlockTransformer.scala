@@ -103,18 +103,23 @@ class BlockTransformer(subst: SymbolSubst):
       applyDefn(defn): defn2 =>
         val rst2 = applySubBlock(rst)
         if (defn2 is defn) && (rst2 is rst) then b else Define(defn2, rst2)
-    case AssignDynField(lhs, fld, arrayIdx, rhs, rest) =>
+    case AssignDynField(lhs, fld, kind, rhs, rest) =>
       applyResult(rhs): rhs2 =>
         applyPath(lhs): lhs2 =>
           applyPath(fld): fld2 =>
+            val kind2 = applyDynSelectKind(kind)
             val rest2 = applySubBlock(rest)
-            if (lhs2 is lhs) && (fld2 is fld) && (rhs2 is rhs) && (rest2 is rest)
+            if (lhs2 is lhs) && (fld2 is fld) && (kind2 is kind) && (rhs2 is rhs) && (rest2 is rest)
             then b
-            else AssignDynField(lhs2, fld2, arrayIdx, rhs2, rest2)
+            else AssignDynField(lhs2, fld2, kind2, rhs2, rest2)
     case _: Scoped => applyScopedBlock(b)
   
-  // FunDefn body, Lambda body are considered "funBodyLike"
+  // FunDefn body, Lambda body, ctor and pCtor are considered "funBodyLike"
   def applyFunBodyLikeBlock(b: Block): Block = applyScopedBlock(b)
+  
+  // Keep function-body boundaries for optimizers (in particular, return and label rewriting).
+  // Handler strategies can override constructor instrumentation without duplicating class traversal.
+  def applyCtorBlock(b: Block, isModCtor: Bool): Block = applyFunBodyLikeBlock(b)
   
   // Apply to Blocks that are conceptually "scoped", which includes:
   // - "funBodyLike" blocks
@@ -188,10 +193,18 @@ class BlockTransformer(subst: SymbolSubst):
     case p: Path => applyPath(p)(k)
   
   def applyPath(p: Path)(k: Path => Block): Block = p match
-    case DynSelect(qual, fld, arrayIdx) =>
+    case p @ SuperSelect(qual, base, key) =>
+      applyPath(qual): qual2 =>
+        applyPath(base): base2 =>
+          applyPath(key): key2 =>
+            val sym2 = p.symbol.subst
+            k(if (qual2 is qual) && (base2 is base) && (key2 is key) && (sym2 is p.symbol) then p
+              else SuperSelect(qual2, base2, key2)(sym2, p.toLoc))
+    case DynSelect(qual, fld, kind) =>
       applyPath(qual): qual2 =>
         applyPath(fld): fld2 =>
-          k(if (qual2 is qual) && (fld2 is fld) then p else DynSelect(qual2, fld2, arrayIdx)(p.toLoc))
+          val kind2 = applyDynSelectKind(kind)
+          k(if (qual2 is qual) && (fld2 is fld) && (kind2 is kind) then p else DynSelect(qual2, fld2, kind2)(p.toLoc))
     case p @ Select(qual, name) =>
       applyPath(qual): qual2 =>
         val sym2 = p.symbol.mapConserve(_.subst)
@@ -213,6 +226,13 @@ class BlockTransformer(subst: SymbolSubst):
       val sym2 = sym.subst
       k(if (sym2 is sym) then v else sym2.asThis.withLocOf(v))
     case Value.Lit(lit) => k(v)
+  
+  /** Substitutes the resolved member of a keyed selection, as for the symbol of a [[Select]]. */
+  def applyDynSelectKind(kind: DynSelectKind): DynSelectKind = kind match
+    case DynSelectKind.Member(sym) =>
+      val sym2 = sym.subst
+      if sym2 is sym then kind else DynSelectKind.Member(sym2)
+    case DynSelectKind.ArrayIdx | DynSelectKind.Unknown => kind
   
   def applySimpleSymbol(sym: SimpleSymbol): SimpleSymbol = sym match
     case sym: LocalVarSymbol => sym.subst
@@ -255,29 +275,43 @@ class BlockTransformer(subst: SymbolSubst):
     val methods2 = defn.methods.mapConserve(applyFunDefn)
     val privateFields2 = defn.privateFields.mapConserve(_.subst)
     val publicFields2 = defn.publicFields.mapConserve(applyPublicField)
-    val ctor2 = applyScopedBlock(defn.ctor)
+    val ctor2 = applyCtorBlock(defn.ctor, isModCtor = true)
     if (methods2 is defn.methods) &&
         (privateFields2 is defn.privateFields) &&
         (publicFields2 is defn.publicFields) &&
         (ctor2 is defn.ctor)
-      then defn else ClsLikeBody(isym2, methods2, privateFields2, publicFields2, ctor2, defn.annotations)
+      then defn else ClsLikeBody(isym2, methods2, privateFields2, publicFields2, ctor2, defn.annotations, defn.methodKeys)
+  
+  private def applyMethodKeys(keys: Map[TermSymbol, Path])(k: Map[TermSymbol, Path] => Block): Block =
+    def loop(todo: Ls[(TermSymbol, Path)], acc: Map[TermSymbol, Path], changed: Bool): Block = todo match
+      case Nil => k(if changed then acc else keys)
+      case (sym, key) :: rest => applyPath(key): key2 =>
+        val sym2 = sym.subst
+        loop(rest, acc + (sym2 -> key2), changed || (sym2 isnt sym) || (key2 isnt key))
+    loop(keys.toList, Map.empty, false)
   
   def applyClsLikeDefn(defn: ClsLikeDefn)(k: Defn => Block): Block =
     val ClsLikeDefn(own, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, methods,
-      privateFields, publicFields, preCtor, ctor, mod, bufferable) = defn
+      privateFields, publicFields, preCtor, ctor, mod, bufferable, termCompanion, _) = defn
     val own2 = own.mapConserve(_.subst)
     val isym2 = isym.subst
     val sym2 = sym.subst
     val ctorSym2 = ctorSym.mapConserve(_.subst)
+    val termCompanion2 = termCompanion.mapConserve(_.subst)
     val paramsOpt2 = paramsOpt.mapConserve(applyParamList)
     val auxParams2 = auxParams.mapConserve(applyParamList)
-    def helper(parentPath2: Opt[Path]) =
+    def helper(parentPath2: Opt[Path]): Block = applyMethodKeys(defn.methodKeys): keys2 =>
+      applyMethodKeys(mod.fold(Map.empty[TermSymbol, Path])(_.methodKeys)): modKeys2 =>
+        finish(parentPath2, keys2, modKeys2)
+    def finish(parentPath2: Opt[Path], keys2: Map[TermSymbol, Path], modKeys2: Map[TermSymbol, Path]): Block =
       val methods2 = methods.mapConserve(applyFunDefn)
       val privateFields2 = privateFields.mapConserve(_.subst)
       val publicFields2 = publicFields.mapConserve(applyPublicField)
-      val preCtor2 = applyScopedBlock(preCtor)
-      val ctor2 = applyScopedBlock(ctor)
-      val mod2 = mod.mapConserve(applyObjBody)
+      val preCtor2 = applyCtorBlock(preCtor, isModCtor = false)
+      val ctor2 = applyCtorBlock(ctor, isModCtor = false)
+      val mod2 = mod.mapConserve: body =>
+        val body2 = applyObjBody(body)
+        if modKeys2 is body2.methodKeys then body2 else body2.copy(methodKeys = modKeys2)
       k:
         if (own2 is own) && (isym2 is isym) && (sym2 is sym) && (ctorSym2 is ctorSym) &&
             (paramsOpt2 is paramsOpt) &&
@@ -287,9 +321,9 @@ class BlockTransformer(subst: SymbolSubst):
             (privateFields2 is privateFields) &&
             (publicFields2 is publicFields) &&
             (preCtor2 is preCtor) && (ctor2 is ctor) &&
-            (mod2 is mod)
+            (mod2 is mod) && (termCompanion2 is termCompanion) && (keys2 is defn.methodKeys)
           then defn else ClsLikeDefn(own2, isym2, sym2, ctorSym2, kind, paramsOpt2, 
-            auxParams2, parentPath2, methods2, privateFields2, publicFields2, preCtor2, ctor2, mod2, bufferable)(defn.configOverride, defn.annotations)
+            auxParams2, parentPath2, methods2, privateFields2, publicFields2, preCtor2, ctor2, mod2, bufferable, termCompanion2, keys2)(defn.configOverride, defn.annotations)
     parentPath match
     case Some(pp) => applyPath(pp): pp2 =>
       helper:
@@ -305,14 +339,14 @@ class BlockTransformer(subst: SymbolSubst):
     applyPath(arg.value): val2 =>
       k(if val2 is arg.value then arg else Arg(arg.spread, val2))
   
-  def applyParamList(pl: ParamList): ParamList =
+  def applyParamList(pl: LoweredParamList): LoweredParamList =
     def applyParam(p: Param): Param =
       val sym2 = p.sym.subst
       if sym2 is p.sym then p else p.copy(sym = sym2)(p.toLoc)
     val params2 = pl.params.mapConserve(applyParam)
-    val rest2 = pl.restParam.mapConserve(applyParam)
-    if (params2 is pl.params) && (rest2 is pl.restParam)
-      then pl else ParamList(pl.flags, params2, rest2)(pl.toLoc)
+    val restParam2 = pl.restParam.mapConserve(applyParam)
+    if (params2 is pl.params) && (restParam2 is pl.restParam)
+      then pl else LoweredParamList(pl.flags, params2, restParam2)(pl.toLoc)
   
   def applyCase(cse: Case)(k: Case => Block): Block = cse match
     case Case.Lit(lit) => k(cse)

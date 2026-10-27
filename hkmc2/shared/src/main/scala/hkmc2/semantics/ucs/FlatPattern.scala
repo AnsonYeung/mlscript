@@ -37,12 +37,7 @@ enum FlatPattern extends AutoLocated:
   
   case Record(entries: List[(Ident -> LocalVarSymbol)])
   
-  def mkClone(using State): FlatPattern = this match
-    case Lit(literal) => Lit(literal)
-    case pattern @ ClassLike(constructor, symbol, arguments, refined) =>
-      ClassLike(constructor.mkClone, symbol, arguments, refined)(Tree.Dummy)
-    case Tuple(size, inf) => Tuple(size, inf)
-    case Record(entries) => Record(entries)
+  def mkClone(using State, codegen.Erasure): FlatPattern = Cloner(SymbolSubst.Id).flatPattern(this)
   
   def subTerms: Vector[Term] = this match
     case p: ClassLike => Vector(p.constructor)
@@ -57,15 +52,25 @@ enum FlatPattern extends AutoLocated:
         case (nme, als) => Vector(nme, als)
       .toVector
   
+  def show(using utils.Scope, ShowCfg, Raise): document.Document =
+    import document.*
+    this match
+      case Lit(literal) => doc"${literal.idStr}"
+      case ClassLike(ctor, _, args, refined) =>
+        (if refined then doc"refined " else doc"") :: ctor.show ::
+          args.fold(doc"")(as => doc"(${as.map(_._1.showName).mkDocument(", ")})")
+      case Tuple(size, inf) => doc"[]${if inf then ">=" else "="}$size"
+      case Record(entries) =>
+        doc"{${entries.map((id, sym) => doc"${id.name}: ${sym.showName}").mkDocument(", ")}}"
+
   def showDbg(using DebugPrinter): Str =
     (this match
     case Lit(literal) => literal.idStr
     case ClassLike(ctor, symbol, args, rfd) =>
       def showCtor(ctor: Term): Str = ctor match
         // This prints the symbol name without `refNum` and "member:" prefix.
-        case Term.Ref(sym: BlockMemberSymbol) => sym.nme
-        // This prints the symbol without `refNum`.
-        case Term.Ref(sym) => sym.toString
+        case ref: AnyRef_ => ref.sym.nme
+        case Term.NewSel(p, i, N) => s"${showCtor(p)}.${i.name}"
         case Term.Sel(p, i) => s"${showCtor(p)}.${i.name}"
         case Term.SynthSel(p, i) => s"${showCtor(p)}.${i.name}"
         case _ => ctor.showDbg

@@ -1,0 +1,26 @@
+:.
+:js
+
+
+// Use an alias so the worksheet does not provide an accidental global binding for Runtime.
+import "../../mlscript-compile/Runtime.mls" as RuntimeImpl
+
+// These compiled runtime helpers lift functions out of nested modules. Inlining a method
+// of the captured nested module must preserve its references to the enclosing Runtime.
+:expect 42
+RuntimeImpl.CpsImpl.ss_handlerTrampoline(x => x, (k: Function, x) => k(x), "test", 42)
+//│ = 42
+
+// Exercise the lifted continuation used when an effect resumes.
+:expect 42
+RuntimeImpl.CpsImpl.ss_handlerTrampoline(x => x, (k: Function, x) => k(x), "test",
+  RuntimeImpl.CpsSuspend((resume: Function, value) => resume(value + 1), "test",
+    (k, handlerK, perform: Function) => perform(k, handlerK, 41)))
+//│ = 42
+
+// The shadow-stack trampoline has the same enclosing-receiver dependency on its error path.
+:expect 42
+RuntimeImpl.try_catch(
+  () => RuntimeImpl.ShadowStackImpl.topLevelTrampoline(null, () => throw 42),
+  err => err)
+//│ = 42

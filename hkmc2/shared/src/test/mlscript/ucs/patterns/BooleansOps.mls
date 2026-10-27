@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -20,6 +21,10 @@ if 5 is a & b then a
 //│ ╔══[COMPILATION ERROR] Name not found: b
 //│ ║  l.+1: 	if 5 is a & b then a
 //│ ╙──      	            ^
+//│ ╔══[COMPILATION ERROR] Resolution error in composition
+//│ ║  l.+1: 	if 5 is a & b then a
+//│ ║        	   ^^^^^^^^^^
+//│ ╙── A type cannot be used as a runtime value.
 //│ ╔══[COMPILATION ERROR] Name not found: a
 //│ ║  l.+1: 	if 5 is a & b then a
 //│ ╙──      	                   ^
@@ -37,7 +42,7 @@ if 5 is ~a then a
 //│ ╔══[COMPILATION ERROR] Name not found: a
 //│ ║  l.+1: 	if 5 is ~a then a
 //│ ╙──      	                ^
-//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
+//│ ═══[RUNTIME ERROR] Error: match error
 
 if 5 is ~Bool as c then c
 //│ = 5

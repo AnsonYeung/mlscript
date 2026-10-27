@@ -1,3 +1,4 @@
+:.
 :js
 
 pattern Lower = "a"..="z"
@@ -45,19 +46,14 @@ pattern UnsignedShort = 0 ..< 65536
 [] is UnsignedShort
 //│ = true
 
-:pe
-:e
-// Don't forget to add a space between numbers and the range operator.
+// The space between a number and the range operator is optional.
 pattern UnsignedByte = 0..< 256
-//│ ╔══[LEXICAL ERROR] Expected at least one digit after the  decimal point
-//│ ║  l.+1: 	pattern UnsignedByte = 0..< 256
-//│ ╙──      	                         ^
-//│ ╔══[COMPILATION ERROR] Name not found: .<
-//│ ║  l.+1: 	pattern UnsignedByte = 0..< 256
-//│ ╙──      	                         ^^
-//│ ╔══[COMPILATION ERROR] Cannot use this ‹error› as a pattern.
-//│ ║  l.+1: 	pattern UnsignedByte = 0..< 256
-//│ ╙──      	                         ^^
+
+255 is UnsignedByte
+//│ = true
+
+256 is UnsignedByte
+//│ = false
 
 :e
 pattern BadRange = "s"..=0

@@ -1,3 +1,4 @@
+:.
 :js
 
 // A fixed-point pattern may have several recursive alternatives:
@@ -177,7 +178,7 @@ fun peelOrRewrapSlow(x) = if x is PeelOrRewrap(r) then r else "<no match>"
 fun peelOrRewrapFast(x) = if x is @compile PeelOrRewrap(r) then r else "<no match>"
 //│ ╔══[WARNING] This fixed-point pattern is not supported by pattern compilation.
 //│ ║  l.+1: 	fun peelOrRewrapFast(x) = if x is @compile PeelOrRewrap(r) then r else "<no match>"
-//│ ║        	                                           ^^^^^^^^^^^^^^
+//│ ║        	                                           ^^^^^^^^^^^^^^^
 //│ ╟── Some recursive alternatives can rewrite the same term in more than one way, including this one
 //│ ║  l.XX: 	  | UnBox as PeelOrRewrap
 //│ ║        	    ^^^^^
@@ -256,7 +257,7 @@ fun mixedSlow(x) = if x is MixedSteps(r) then r else "<no match>"
 fun mixedFast(x) = if x is @compile MixedSteps(r) then r else "<no match>"
 //│ ╔══[WARNING] This fixed-point pattern is not supported by pattern compilation.
 //│ ║  l.+1: 	fun mixedFast(x) = if x is @compile MixedSteps(r) then r else "<no match>"
-//│ ║        	                                    ^^^^^^^^^^^^
+//│ ║        	                                    ^^^^^^^^^^^^^
 //│ ╟── Some recursive alternatives can rewrite the same term in more than one way, including this one
 //│ ║  l.XX: 	  | (UnTag | UnBox) as MixedSteps
 //│ ║        	             ^^^^^
@@ -311,7 +312,7 @@ pattern WildStep = _ as WildStep | UnTag as WildStep | Tag(_)
 fun wildStep(x) = if x is @compile WildStep(r) then r else "<no match>"
 //│ ╔══[WARNING] This fixed-point pattern is not supported by pattern compilation.
 //│ ║  l.+1: 	fun wildStep(x) = if x is @compile WildStep(r) then r else "<no match>"
-//│ ║        	                                   ^^^^^^^^^^
+//│ ║        	                                   ^^^^^^^^^^^
 //│ ╟── Some recursive alternatives can rewrite the same term in more than one way, including this one
 //│ ║  l.XX: 	pattern WildStep = _ as WildStep | UnTag as WildStep | Tag(_)
 //│ ║        	                   ^

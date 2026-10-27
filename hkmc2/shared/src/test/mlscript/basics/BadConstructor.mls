@@ -1,12 +1,12 @@
+:.
 :js
 
 
 :e
 constructor()
-//│ ╔══[COMPILATION ERROR] Unsupported constructor in this position.
+//│ ╔══[COMPILATION ERROR] 'constructor(...)' declarations are only allowed in class bodies
 //│ ║  l.+1: 	constructor()
 //│ ╙──      	^^^^^^^^^^^^^
-//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 :e
 constructor(x, y)
@@ -34,5 +34,12 @@ module A with
 //│ ╔══[COMPILATION ERROR] 'constructor(...)' declarations are only allowed in class bodies
 //│ ║  l.+2: 	  constructor(x, y)
 //│ ╙──      	  ^^^^^^^^^^^^^^^^^
+
+// * Ok, but useless; could raise a warning
+class A {
+  constructor
+}
+new A
+//│ = A
 
 

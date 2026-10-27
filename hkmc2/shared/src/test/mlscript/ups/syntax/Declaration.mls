@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -6,7 +7,7 @@ pattern Foo(val T) = null | T
 //│ ╔══[COMPILATION ERROR] Unexpected pattern parameter T with modifiers: val
 //│ ║  l.+1: 	pattern Foo(val T) = null | T
 //│ ╙──      	                ^
-//│ ╔══[COMPILATION ERROR] Pattern name not found: T.
+//│ ╔══[COMPILATION ERROR] Name not found: T
 //│ ║  l.+1: 	pattern Foo(val T) = null | T
 //│ ╙──      	                            ^
 

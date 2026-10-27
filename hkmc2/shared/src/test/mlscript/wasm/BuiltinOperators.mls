@@ -1,6 +1,5 @@
+:.
 
-:global
-:wasm
 
 // An `Int32`-annotated `val` binds the unboxed result; `ref.i31` boxes it back into a reference.
 val k: Int32 = wasm.i32.const(1)
@@ -59,9 +58,15 @@ wasm.i32.add(1, 2)
 // Mismatching arity is reported by both the elaborator and the backend.
 :ge
 wasm.i32.const(1, 2)
-//│ ╔══[COMPILATION ERROR] Expected 1 arguments, got 2
+//│ ╔══[COMPILATION ERROR] Resolution error in application
 //│ ║  l.+1: 	wasm.i32.const(1, 2)
-//│ ╙──      	              ^^^^^^
+//│ ║        	^^^^^^^^^^^^^^^^^^^^
+//│ ╟── Function 'const' expected 1 argument, but got 2
+//│ ║  in ../decls/Prelude.mls
+//│ ║  l.XX: 	    fun
+//│ ║        	    ^^^
+//│ ║  l.XX: 	      const(c: Int): Int32
+//│ ╙──      	^^^^^^^^^^^^^^^^^^^^^^^^^^
 //│ ╔══[COMPILATION ERROR] Wasm intrinsic 'i32.const' called with incorrect arity (2)
 //│ ║  l.+1: 	wasm.i32.const(1, 2)
 //│ ╙──      	^^^^^^^^^^^^^^^^^^^^

@@ -1,6 +1,5 @@
+:.
 
-:global
-:wasm
 
 
 :wat
@@ -183,16 +182,16 @@ d.Counter#inc().Counter#double().Counter#get()
 //│ ╔══[COMPILATION ERROR] Cannot find variable `d` (VarSymbol) in local or global scope.
 //│ ║  l.XX: 	let d = Counter(c.Counter#get())
 //│ ╙──      	    ^
-//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: Missing type definition for symbol `member:Counter`
+//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: Missing field `term:Counter/inc` in struct `member:Counter` with type `(type $Counter (sub $Object (struct (field $$typeinfo (mut (ref $TypeInfoBase))) (field $x (mut (ref null any))))))`
 
 :todo
 c.Counter#get()
-//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: Missing type definition for symbol `member:Counter`
+//│ /!!!\ Uncaught error: java.lang.Exception: Internal Error: Missing field `term:Counter/get` in struct `member:Counter` with type `(type $Counter (sub $Object (struct (field $$typeinfo (mut (ref $TypeInfoBase))) (field $x (mut (ref null any))))))`
 
 
 class GetterOnly() with
   fun f = 1
-GetterOnly().f()
+GetterOnly().f
 //│ Wasm result:
 //│ = 1
 
@@ -281,6 +280,6 @@ Prim(0).take(n32)
 class Cx(val base: Int) with
   fun p(n: Int): Int = this.q(n)
   fun q(n: Int): Int = if n <= 0 then this.base else this.p(n - 1)
-(new Cx(9)).Cx#p(3)
+new Cx(9).Cx#p(3)
 //│ Wasm result:
 //│ = 9

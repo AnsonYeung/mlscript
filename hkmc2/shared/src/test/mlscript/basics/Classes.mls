@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -21,7 +22,7 @@ class Foo {
   fun f = 1
 }
 
-class Foo(pred) {
+class Foo(pred: {id: Function}) {
   val r = pred.id(42)
   fun callId(x) = pred.id(x)
 }
@@ -40,7 +41,7 @@ Foo(42)
 //│ = Foo(_)
 
 
-class Bar { val x: Int }
+abstract class Bar { val x: Int }
 
 class Foo() extends Bar {
   val x = 1
@@ -54,6 +55,12 @@ class Foo() extends Bar { x = 1 }
 //│ ╔══[COMPILATION ERROR] Name not found: x
 //│ ║  l.+1: 	class Foo() extends Bar { x = 1 }
 //│ ╙──      	                          ^
+//│ ╔══[COMPILATION ERROR] Class 'Foo' has unimplemented members
+//│ ║  l.+1: 	class Foo() extends Bar { x = 1 }
+//│ ║        	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── Member 'x' requires an implementation
+//│ ║  l.XX: 	abstract class Bar { val x: Int }
+//│ ╙──      	                         ^
 
 
 :e
@@ -72,4 +79,12 @@ class Foo() extends Bar { x = 1 } with
 //│ ╔══[COMPILATION ERROR] Name not found: x
 //│ ║  l.+1: 	class Foo() extends Bar { x = 1 } with
 //│ ╙──      	                          ^
+//│ ╔══[COMPILATION ERROR] Class 'Foo' has unimplemented members
+//│ ║  l.+1: 	class Foo() extends Bar { x = 1 } with
+//│ ║        	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ║  l.+2: 	  val y = this.x
+//│ ║        	^^^^^^^^^^^^^^^^
+//│ ╟── Member 'x' requires an implementation
+//│ ║  l.XX: 	abstract class Bar { val x: Int }
+//│ ╙──      	                         ^
 

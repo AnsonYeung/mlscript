@@ -1,3 +1,4 @@
+:.
 :js
 
 abstract class Option[A]: Some[A] | None
@@ -181,7 +182,7 @@ data class IntVal(value: Int) extends ValBase
 data class BoolVal(value: Bool) extends ValBase
 data class Lit(value: ValBase)
 
-fun p(e, context) =
+fun p(e, context: {get: Str -> Option[ValBase]}) =
   if e is
     Var(x) and context.get(x) is
       Some(IntVal(v)) then Left(v)

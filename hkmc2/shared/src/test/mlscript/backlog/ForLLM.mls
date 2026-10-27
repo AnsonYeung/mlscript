@@ -1,3 +1,4 @@
+:.
 :js
 
 // Instruction for agent: for each test case you solve, move it to its own test file outside of the `backlog` folder
@@ -13,24 +14,6 @@ in 42
 //│ ═══[RUNTIME ERROR] Expected: '42', got: 'undefined'
 //│ c = fun
 //│ emptyItemCount = 0
-
-// ——— ——— ———
-
-// Works
-let x = 1
-in x
-//│ = 1
-
-// Doesn't work
-:fixme
-let
-  x = 1
-in x
-//│ ╔══[COMPILATION ERROR] Illegal position for 'in' modifier.
-//│ ║  l.+3: 	in x
-//│ ╙──      	^^
-//│ = 1
-//│ x = 1
 
 // ——— ——— ———
 
@@ -102,16 +85,6 @@ if 2
 //│         rhs = Ident of "???"
 //│ —————————————————| Output |—————————————————————————————————————————————————————————————————————————
 //│ > hi
-
-// ——— ——— ———
-
-:w
-:fixme // * Should be a call of two arguments, not a sequenced expression
-+(1,2)
-//│ ╔══[WARNING] Pure expression in statement position
-//│ ║  l.+1: 	+(1,2)
-//│ ╙──      	  ^
-//│ = 2
 
 // ——— ——— ———
 

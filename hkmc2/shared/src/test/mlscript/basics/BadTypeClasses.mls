@@ -5,9 +5,17 @@ module M with
 //│ ╔══[COMPILATION ERROR] Keyword `using` must occur before all parameters.
 //│ ║  l.+2: 	  fun f(foo: Int, using bar: Int)
 //│ ╙──      	                  ^^^^^^^^^^^^^^
+//│ ╔══[COMPILATION ERROR] Module 'M' has unimplemented members
+//│ ║  l.+1: 	module M with
+//│ ║        	^^^^^^^^^^^^^
+//│ ║  l.+2: 	  fun f(foo: Int, using bar: Int)
+//│ ║        	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── Member 'f' requires an implementation
+//│ ║  l.+2: 	  fun f(foo: Int, using bar: Int)
+//│ ╙──      	      ^
 
 module M with
-  fun f(using Int)
+  fun f(using Int) = ()
 
 :e
 M.f
@@ -15,7 +23,7 @@ M.f
 //│ ║  l.+1: 	M.f
 //│ ║        	^^^
 //│ ╟── Required by contextual parameter declaration: 
-//│ ║  l.XX: 	  fun f(using Int)
+//│ ║  l.XX: 	  fun f(using Int) = ()
 //│ ║        	        ^^^^^^^^^
 //│ ╙── Missing instance: Expected: Int; Available: ‹none available›
 
@@ -63,7 +71,7 @@ M.bar[Int](1, 2)
 using Int = 42
 
 module M with
-  fun foo()(using a: Int)
+  fun foo()(using a: Int) = ()
 
 // This should fail because M.foo() returns a function that requires special handling
 :breakme

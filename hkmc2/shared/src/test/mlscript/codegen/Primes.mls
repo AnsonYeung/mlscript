@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -26,10 +27,13 @@ object Foo with
 :e
 :re
 Foo.x'
-//│ ╔══[COMPILATION ERROR] Object 'Foo' does not contain member 'x''
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	Foo.x'
-//│ ╙──      	^^^^^^
-//│ ═══[RUNTIME ERROR] Error: Access to required field 'x'' yielded 'undefined'
+//│ ║        	^^^^^^
+//│ ╟── Object 'Foo' does not contain member 'x''
+//│ ║  l.XX: 	object Foo with
+//│ ╙──      	^^^^^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 Foo.("x'")
 
@@ -44,13 +48,19 @@ object Foo with
 :e
 :re
 set Foo.x' += 1
-//│ ╔══[COMPILATION ERROR] Object 'Foo' does not contain member 'x''
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	set Foo.x' += 1
-//│ ╙──      	    ^^^^^^
-//│ ╔══[COMPILATION ERROR] Object 'Foo' does not contain member 'x''
+//│ ║        	    ^^^^^^
+//│ ╟── Object 'Foo' does not contain member 'x''
+//│ ║  l.XX: 	object Foo with
+//│ ╙──      	^^^^^^^^^^
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	set Foo.x' += 1
-//│ ╙──      	    ^^^^^^
-//│ ═══[RUNTIME ERROR] Error: Access to required field 'x'' yielded 'undefined'
+//│ ║        	    ^^^^^^
+//│ ╟── Object 'Foo' does not contain member 'x''
+//│ ║  l.XX: 	object Foo with
+//│ ╙──      	^^^^^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 Foo.("x'")
 

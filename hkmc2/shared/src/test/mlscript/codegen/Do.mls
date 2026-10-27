@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -39,18 +40,18 @@ val f = case
 //│ Split with nested patterns:
 //│ >  case
 //│ >    caseScrut is 0 then "null"
-//│ >    let tmp:unused = member:console⁰.log‹member:log›("non-null")
+//│ >    let tmp:unused = member:console⁰^term:f⁰.log‹term:console¹/log⁰›("non-null")
 //│ >    caseScrut is 1 then "unit"
 //│ >    let res = "other"
-//│ >    let tmp:unused = (member:Predef⁰.)print‹member:print›(res⁰)
+//│ >    let tmp:unused = member:Predef⁰.print‹term:Predef¹/print⁰›^term:f⁰(res⁰)
 //│ >    caseScrut is _ then res⁰
 //│ Expanded split with flattened patterns:
 //│ >  ‹if|while›
 //│ >    caseScrut is 0 then "null"
-//│ >    let tmp:unused = member:console⁰.log‹member:log›("non-null")
+//│ >    let tmp:unused = member:console⁰^term:f⁰.log‹term:console¹/log⁰›("non-null")
 //│ >    caseScrut is 1 then "unit"
 //│ >    let res = "other"
-//│ >    let tmp:unused = (member:Predef⁰.)print‹member:print›(res⁰)
+//│ >    let tmp:unused = member:Predef⁰.print‹term:Predef¹/print⁰›^term:f⁰(res⁰)
 //│ >    else res⁰
 //│ f = fun
 

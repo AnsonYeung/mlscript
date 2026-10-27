@@ -1,3 +1,4 @@
+:.
 :js
 
 open annotations { compile }
@@ -23,7 +24,7 @@ null is @compile Nullable(A, A)
 //│ ║        	                 ^^^^^^^^^
 //│ ╟── But two pattern arguments were provided.
 //│ ║  l.+1: 	null is @compile Nullable(A, A)
-//│ ╙──      	                 ^^^^^^^^^^^^^
+//│ ╙──      	                 ^^^^^^^^^^^^^^
 //│ = false
 
 pattern Nullable(pattern T) = null | T

@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -33,6 +34,9 @@ missing.break(1)
 //│ ╔══[COMPILATION ERROR] Name not found: missing
 //│ ║  l.+1: 	missing.break(1)
 //│ ╙──      	^^^^^^^
+//│ ╔══[COMPILATION ERROR] This selection of member 'break' has no resolved target
+//│ ║  l.+1: 	missing.break(1)
+//│ ╙──      	^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 
@@ -41,6 +45,9 @@ missing.continue
 //│ ╔══[COMPILATION ERROR] Name not found: missing
 //│ ║  l.+1: 	missing.continue
 //│ ╙──      	^^^^^^^
+//│ ╔══[COMPILATION ERROR] This selection of member 'continue' has no resolved target
+//│ ║  l.+1: 	missing.continue
+//│ ╙──      	^^^^^^^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 
@@ -67,6 +74,9 @@ lbl:
 //│ ╔══[COMPILATION ERROR] Name not found: lbl
 //│ ║  l.+2: 	  lbl.break(1)
 //│ ╙──      	  ^^^
+//│ ╔══[COMPILATION ERROR] This selection of member 'break' has no resolved target
+//│ ║  l.+2: 	  lbl.break(1)
+//│ ╙──      	  ^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 //│ lbl = undefined
 
@@ -110,11 +120,18 @@ do lbl:
 
 
 // * If a variable shadows a label, label control-flow selection should no longer resolve as a label op.
+:ge
 :re
 do lbl:
   let lbl = 5
   lbl.break
-//│ ═══[RUNTIME ERROR] Error: Access to required field 'break' yielded 'undefined'
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
+//│ ║  l.+3: 	  lbl.break
+//│ ║        	  ^^^^^^^^^
+//│ ╟── Integer literal does not contain member 'break'
+//│ ║  l.+2: 	  let lbl = 5
+//│ ╙──      	            ^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 
 // * Nested labels in a plain `do` block should be handled; later labels are nested in earlier ones.
@@ -146,4 +163,7 @@ do
 //│ ╔══[COMPILATION ERROR] Name not found: only
 //│ ║  l.+4: 	    only.break(x)
 //│ ╙──      	    ^^^^
+//│ ╔══[COMPILATION ERROR] This selection of member 'break' has no resolved target
+//│ ║  l.+4: 	    only.break(x)
+//│ ╙──      	    ^^^^^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.

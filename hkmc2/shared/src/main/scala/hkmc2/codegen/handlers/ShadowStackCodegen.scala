@@ -27,9 +27,9 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
     val savedVars = Iterator.single(flattenCtx.pcVar) ++ dummyThisVar.iterator ++ ctx.resumeInfo.allArgs.iterator ++ flattenCtx.vars.iterator
     val varIndexes = savedVars.zipWithIndex.toMap
     def readFromIndex(idx: Int): Path =
-      DynSelect(workerVarsParam.asSimpleRef, intLit(idx), true)(N)
+      DynSelect(workerVarsParam.asSimpleRef, intLit(idx), DynSelectKind.ArrayIdx)(N)
     def writeToIndex(idx: Int, res: Result)(rst: Block): Block =
-      AssignDynField(workerVarsParam.asSimpleRef, intLit(idx), true, res, rst)
+      AssignDynField(workerVarsParam.asSimpleRef, intLit(idx), DynSelectKind.ArrayIdx, res, rst)
     def getVar(sym: LocalVarSymbol): Path =
       if sym is flattenCtx.pcVar then return sym.asSimpleRef
       varIndexes.get(sym).fold(Value.SimpleRef(sym)(N))(readFromIndex)
@@ -44,7 +44,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
       N,
       workerSym,
       workerDSym,
-      PlainParamList(Param.simple(workerVarsParam) :: Nil)(N) :: Nil,
+      LoweredParamList.plain(Param.simple(workerVarsParam) :: Nil)(N) :: Nil,
       genWorkerBody()
     )(N, Annot.Private :: Annot.HandlerInstrumented()(N) :: ctx.orig.annotations)
     ctx.replaceAnnotWithInline = true

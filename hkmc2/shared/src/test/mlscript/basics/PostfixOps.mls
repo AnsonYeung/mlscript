@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -36,6 +37,10 @@ fun inc(x) = x + 1
 
 :todo // ?
 inc of 1 | + 1
+//│ ╔══[COMPILATION ERROR] Resolution error in alternation
+//│ ║  l.+1: 	inc of 1 | + 1
+//│ ║        	       ^^^^^^^
+//│ ╙── A type cannot be used as a runtime value.
 //│ ╔══[COMPILATION ERROR] Unexpected term form in expression position (alternation)
 //│ ║  l.+1: 	inc of 1 | + 1
 //│ ╙──      	       ^^^^^^^

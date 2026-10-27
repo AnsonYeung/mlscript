@@ -1,3 +1,4 @@
+:.
 :js
 
 // Diagnostics parity: warnings produced by the other compilation paths must
@@ -36,7 +37,7 @@ pattern FastSteps = @compile ((Box(CaptureBit(ZeroToOne)) => 0) as FastSteps | _
 //│ ╔══[COMPILATION ERROR] Pattern `CaptureBit` has zero pattern parameters.
 //│ ╟── But one pattern argument were provided.
 //│ ║  l.+1: 	pattern FastSteps = @compile ((Box(CaptureBit(ZeroToOne)) => 0) as FastSteps | _)
-//│ ╙──      	                                   ^^^^^^^^^^^^^^^^^^^^
+//│ ╙──      	                                   ^^^^^^^^^^^^^^^^^^^^^
 //│ ╔══[WARNING] This extraction argument's transformation result is discarded by pattern `CaptureBit`.
 //│ ║  l.+1: 	pattern FastSteps = @compile ((Box(CaptureBit(ZeroToOne)) => 0) as FastSteps | _)
 //│ ║        	                                              ^^^^^^^^^

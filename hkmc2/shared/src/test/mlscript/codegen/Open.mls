@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -26,9 +27,12 @@ z
 
 :e
 open Foo { a }
-//│ ╔══[COMPILATION ERROR] Module 'Foo' does not contain member 'a'
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	open Foo { a }
-//│ ╙──      	           ^
+//│ ║        	           ^
+//│ ╟── Module 'Foo' does not contain member 'a'
+//│ ║  l.XX: 	module Foo with
+//│ ╙──      	^^^^^^^^^^
 
 
 open Bar { y, Baz }
@@ -46,12 +50,27 @@ module Bar with
 val str = "oops"
 //│ str = "oops"
 
+:e
 open str { length, oops }
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
+//│ ║  l.+1: 	open str { length, oops }
+//│ ║        	                   ^^^^
+//│ ╟── String literal does not contain member 'oops'
+//│ ║  l.XX: 	val str = "oops"
+//│ ╙──      	          ^^^^^^
 
 length
 //│ = 4
 
+:e
+:re
 oops === ()
-//│ = false
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
+//│ ║  l.+1: 	oops === ()
+//│ ║        	^^^^
+//│ ╟── String literal does not contain member 'oops'
+//│ ║  l.XX: 	val str = "oops"
+//│ ╙──      	          ^^^^^^
+//│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 

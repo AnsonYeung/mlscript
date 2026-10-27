@@ -125,10 +125,10 @@ fun start(x, f) =
 :sjs
 fun f(x) =
   if x do
-    scope.locally of (
+    scope.locally of {
       let z = 3
       fun g() = z
-      g() )
+      g() }
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f4;
 //│ runtime.resetEffects();
@@ -139,9 +139,9 @@ fun f(x) =
 :sjs
 fun f(x) =
   if x do
-    scope.locally of (
+    scope.locally of {
       let z = 3
-      fun g() = z )
+      fun g() = z }
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
 //│ let f5;
 //│ runtime.resetEffects();
@@ -152,6 +152,6 @@ fun f(x) =
 
 class C(x) with
   if x do
-    scope.locally of (
+    scope.locally of {
       let z = 3
-      fun g() = z )
+      fun g() = z }

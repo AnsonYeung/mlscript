@@ -1,3 +1,4 @@
+:..
 :.
 // NOTE: due to conflict between flow analysis and lifter
 :flowBasedOpt off
@@ -30,7 +31,7 @@ fun foo(y) =
   class M with
     fun foo() =
       set y = 2
-  (new M).foo()
+  new M().foo()
 foo(10)
 //│ ———————————————| Lowered IR |———————————————————————————————————————————————————————————————————————
 //│ let M;
@@ -58,10 +59,11 @@ fun foo(y) =
       set y = 2
   [new C, new mut C]
 
+// Exercise writes to undeclared fields with checked dynamic access.
 let
   cc = foo(10)
-  c0 = cc.0
-  c1 = cc.1
+  c0 = cc.0 as dyn
+  c1 = cc.1 as dyn
 //│ c0 = C
 //│ c1 = C
 //│ cc = [C, C]
@@ -89,7 +91,7 @@ fun foo(y) =
 //│ ║  l.+2: 	  object O with
 //│ ╙──      	         ^
 
-let o = foo(10)
+let o = foo(10) as dyn
 //│ o = O
 
 :re

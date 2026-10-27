@@ -1,3 +1,4 @@
+:.
 // :flow
 
 
@@ -17,9 +18,12 @@ module Foo with val x = 1
 
 :e
 Foo.x
-//│ ╔══[COMPILATION ERROR] Module 'Foo' does not contain member 'x'
+//│ ╔══[COMPILATION ERROR] Resolution error in selection
 //│ ║  l.+1: 	Foo.x
-//│ ╙──      	   ^^
+//│ ║        	^^^^^
+//│ ╟── Module 'Foo' does not contain member 'x'
+//│ ║  l.XX: 	module Foo with val x = 1
+//│ ╙──      	^^^^^^^^^^
 
 module Foo with
   val x = 1

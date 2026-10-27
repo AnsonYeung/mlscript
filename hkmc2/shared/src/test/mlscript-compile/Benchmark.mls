@@ -1,4 +1,7 @@
+#lang(0.3.x)
+
 import "benchmark"
+
 
 module Benchmark with...
 
@@ -6,7 +9,7 @@ let prefixPath = "hkmc2Benchmarks/src/test/logs/"
 
 fun runStackSafe(fn) = internals.runStackSafe(fn)
 
-class SuiteWrapper(suite) with
+class SuiteWrapper(suite: { add: Function, run: Function, map: Function }) with
   fun add(nme, fn) =
     suite.add(nme, () => internals.runStackSafe(fn))
   fun run(settings) = suite.run(settings)
@@ -16,14 +19,15 @@ fun mkSuite() = SuiteWrapper(new! mut benchmark.Suite())
 
 fun setPrefixPath(path) = set prefixPath = path
 
-fun runSuite(suite) =
+fun runSuite(suite: { run: Function }) =
   let settings = { async: false }
   suite.run(settings)
 
-fun writeResults(suite, path) =
+fun writeResults(suite: { map: Function }, path) =
   let jsonStr = JSON.stringify(suite.map((res, _, _) => res), null, 2)
   fs.writeFileSync(prefixPath + path, jsonStr)
 
-fun writeResultsCsv(suite, path) =
-  let str = suite.map((res, _, _) => [res.name, res.stats.mean, res.stats.moe].join(",")).join("\n") + "\n"
+fun writeResultsCsv(suite: { map: Function }, path) =
+  let str = (suite.map((res: { name: Str, stats: { mean: Num, moe: Num } }, _, _) =>
+    [res.name, res.stats.mean, res.stats.moe].join(",")) as Array).join("\n") + "\n"
   fs.writeFileSync(prefixPath + path, str)

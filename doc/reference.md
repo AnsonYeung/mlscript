@@ -27,6 +27,7 @@ which is an evolving language that has not stabilized just yet.
 17. [Indentation and Block Syntax](#17-indentation-and-block-syntax)
 18. [Miscellaneous](#18-miscellaneous)
 19. [Built-in Types and Prelude](#19-built-in-types-and-prelude)
+20. [Compiler Debugging](#20-compiler-debugging)
 
 ---
 
@@ -247,25 +248,107 @@ fun foo(x: Int): Int = x + 1
 fun bar(x: Int, y: Str): Bool = x > 0
 ```
 
-### Multi-Body `fun`
+### Optional Parameters
 
-Multiple functions can be defined under a single `fun` keyword:
+A parameter followed by `?` is optional: callers may omit its argument, which is then `null`.
 
 ```mlscript
-fun
-  min(x, y) = if x < y then x else y
-  max(x, y) = if x > y then x else y
+fun greet(name: Str, greeting?: Str) =
+  (if greeting is null then "Hello, " else greeting + ", ") + name
+print \ greet("Ana")             // prints: Hello, Ana
+print \ greet("Ana", "Hi")       // prints: Hi, Ana
 ```
+
+The annotation of an optional parameter includes `null`: `greeting?: Str` has type `Str | null`.
+The `?` must directly follow the parameter: `y ?` and `y ?: Str` are not optional parameters.
+
+Optional parameters follow required ones.
+Function, lambda, and constructor parameters can be optional;
+context parameters (`using`) and variadic parameters cannot.
+
+Direct calls must supply every required argument, and no more arguments than the function accepts.
+A function that receives extra arguments might ignore them at runtime (unspecified behavior).
+
+### Variadic Parameters
+
+A parameter prefixed with `...` collects any number of arguments into an array.
+Parameters may follow it; they receive the last arguments.
+
+```mlscript
+fun f(...xs) = xs
+f(1, 2, 3)               // = [1, 2, 3]
+fun g(x, ...xs, y) = [x, xs, y]
+g(1, 2, 3, 4)            // = [1, [2, 3], 4]
+g(1, 2)                  // = [1, [], 2]
+```
+
+The required parameters take the first and last arguments, the optional parameters take the remaining
+ones from left to right, and the variadic parameter collects the rest:
+
+```mlscript
+fun h(x, y?, ...xs, z) = [x, y, xs, z]
+h(1, 2)                  // = [1, undefined, [], 2]
+h(1, 2, 3)               // = [1, 2, [], 3]
+h(1, 2, 3, 4, 5)         // = [1, 2, [3, 4], 5]
+```
+
+A parameter list has at most one variadic parameter, and the parameters following it must be required.
+Class parameters cannot be variadic.
+
+### Droppable Parameters
+
+`drop` marks a parameter that implementations may ignore and may even omit to specify.
+In a function type, it lets the functions passed for it leave out that parameter:
+
+```mlscript
+fun app(f: (Int, drop Int) -> Int) = f(1, 2)
+app(x => x)              // = 1
+app((x, i) => x + i)     // = 3
+```
+
+A variadic parameter can also be droppable, as in `(Int, drop ...Array[Int]) -> Int`.
+Callers of a definition such as `fun first(x, drop y) = x` must still pass the argument of `y`.
+Only function and lambda parameters can be droppable.
 
 ### Recursive Functions
 
-Functions are recursive by default:
+Functions can make recursive calls:
 ```mlscript
 fun fact(n) =
   if n <= 1 then 1 else n * fact(n - 1)
 ```
 
-Mutual recursion uses sequential `fun` definitions in the same block.
+Mutual recursion is permitted among `fun` definitions in the same block
+or through method calls.
+
+### Trailing arguments
+
+The `\` keyword, which binds very strongly on the left and very loosely on the right, can be used to provide extra arguments in a call. Representative examples:
+
+```fs
+tuple() \ 1 + 1
+== tuple(1 + 1)
+
+// Also allowed:
+tuple \ 1 + 1
+== tuple(1 + 1)
+
+tuple(1, 2) \ 3
+== tuple(1, 2, 3)
+
+tuple(1)
+  \ 2
+== tuple(1, 2)
+
+tuple
+  \ 1
+  \ 2
+ == tuple(1, 2)
+```
+
+Operator applications also extend this way: `+(1) \ 2` and `{ + 1 } \ 2` both mean `+(1, 2)`;
+`{ a + b } \ c` means `+(a, b, c)`. Parentheses keep the call result separate: `(+ 1) \ 2` calls that result.
+The left-precedence of `\` is very high: `a + f \ x` means `a + f(x)`.
 
 ### Lambdas
 
@@ -273,18 +356,94 @@ Mutual recursion uses sequential `fun` definitions in the same block.
 x => x + 1
 (x, y) => x + y
 () => 42
+=> 42                 // also a zero-argument lambda
 ```
 
-**Underscore lambda shorthand** — each `_` becomes a new anonymous parameter (left to right):
-```mlscript
-_ + 1            // x => x + 1
-_ + _            // (x, y) => x + y
-_.f(0, _, 2)     // (x, y) => x.f(0, y, 2)
+### Underscore lambda shorthand
+
+Each `_` becomes a new anonymous parameter (left to right).
+
+Only a few places can introduce underscore lambdas:
+* the RHS of the `\` keyword;
+* the RHS of any operator that ends with `>` (except the builtin `>`), in both prefix and infix applications;
+* symmetrically, the LHS of any operator that begins with `<` (except the builtins `<` and `<=`)
+
+For example, `%> _ + 1` means `%>(x => x + 1)`. In an explicit call, use `%>(=> _ + 1)` to introduce that lambda.
+
+This means we can write things like
+```fs
+42 |> _ + 1
+
+_.getKey <|
+  let r = result()
+  print(r)
+  r.field
+
+number
+  |> _ + 1
+  |> Math.pow(_, 2)
+  .toHexString
+
+xs.map \ _ + 1
+
+xs.reduce \ f(_) + _
+
+xs.foldLeft(0) \ getValue(_) + _
+==
+xs.foldLeft(0, (x, y) => getValue(x) + y)
+
+xs.foldLeft(0) \ getValue(_.key) + _
+==
+xs.foldLeft(0, (x, y) => getValue(x.key) + y)
+
+f >> g(_) + 1
 ```
 
-**Lambdas in block position:**
-```mlscript
-{_ + 1}          // x => x + 1
+Moreover, `=>` can be used in prefix position, which lets the parameter list be inferred implicitly:
+
+```fs
+xs.map(=> _ + 1)
+
+let f =
+  => _ + 1
+xs.map(f)
+
+// This is admittedly a bit strange-looking, but we quickly get used to it:
+let f = => _ + 1 in xs.map(f)
+```
+
+An explicit prefix `=>` always creates a lambda. If it contains no `_` placeholders,
+the lambda takes zero arguments: `=> new C()` constructs a fresh instance whenever
+called. Implicit delimiter positions such as `f \ expr` and `value |> expr` keep
+expressions without placeholders eager.
+
+A bare `new C` partially applies a constructor when `C` has a parameter list.
+If its only list accepts zero arguments (including an all-optional list), the
+compiler warns: write `new C()` to construct the instance, or `=> new C()` for
+an explicit zero-argument factory. A class declared without parameter lists
+still constructs immediately with `new C`.
+
+### More examples
+
+```fs
+xs
+  .map \ _ + 1
+  .map \ _ * 2
+
+xs
+  .map \ x =>
+    print(x)
+    doThings(x)
+  .filter \ _ < 100
+
+xs.groupMapReduce
+  \ _.key
+  \ _.value
+  \ _ + _
+
+getValue(...)
+  !> print(_.someField)  // `!>` is Scala's `tap`
+  |> _.someOtherField
 ```
 
 ### Function Declarations (without definition)
@@ -312,6 +471,29 @@ Use the symbolic name as an infix operator:
 Operators can also be used as ordinary identifiers:
 ```mlscript
 (++) of "a", "b"
+++("a", "b")
++(2, 3)             // = 5
+```
+
+Whitespace before the operands are allowed in prefix position, as in `let sum = + (2, 3)`;
+on a new line after an expression, it enables [infix continuation](#newline-operator-rules).
+
+Symbolic operator identifiers also support prefix application with one operand,
+using the same right precedence as in infix position.
+Curly and indented blocks provide a single operand; explicit calls and type arguments retain ordinary call syntax.
+
+A parenthesized infix RHS with multiple expressions supplies multiple arguments: `a op (b, c)` means `op(a, b, c)`.
+A single parenthesized expression keeps its grouping, and `a op ()` passes the unit value: `op(a, ())`.
+Precedence is unaffected: `1 + (2) * 3` means `1 + (2 * 3)`.
+Parentheses cannot sequence expressions, so `(2, 3)` alone and `1 + (2, 3) * 4` are rejected;
+use braces for a sequenced operand, as in `1 + ({2, 3})`.
+
+```mlscript
+fun (%>) wrap(x) = [x]
+let a = %> 1 + 2 * 3 // %>(1 + 2 * 3)
+let b = %> foo(1)    // %>(foo(1))
+let c = %>
+  e                  // %> { e }
 ```
 
 ### Function Application Syntaxes
@@ -328,13 +510,6 @@ x \f(args)       // receiver syntax: f(x, args)
 x f(args)        // "juxtaposition" syntax: f(x, args) – will probably be removed in the future
 f(1, 2, a: 3, 4, b: 5)  // named argument (becomes record, as in f(1, 2, 4, {a: 3, b: 5}))
 f(using x)       // pass context/implicit argument
-```
-
-**Block as function argument** (using `@`):
-```mlscript
-test @ {_ + 1}      // passes lambda {_ + 1} to test
-test @              // indented block as arg
-  _ + 1
 ```
 
 ### `case` — Anonymous Pattern-Matching Function
@@ -390,14 +565,6 @@ and  or  not        // boolean keywords
 
 Note: `==` is a deep structural equality (compares arrays and class fields recursively), while `===` is JavaScript strict equality.
 
-### Operator Precedence
-
-Operator sections with `_`:
-```mlscript
-(_ + 1)           // right section: x => x + 1
-(1 + _)           // left section:  y => 1 + y
-```
-
 ### Comma-Operators
 
 Prefix a comma before an operator to apply it to the entire LHS:
@@ -431,10 +598,21 @@ This can also be laid out on several lines, where as usual the comma is optional
 
 ### Newline Operator Rules
 
-An operator at the start of a new line continues the previous expression:
+At the same indentation, an operator at the start of a line continues the preceding expression when followed by a space,
+line break, or curly/indented block. In all other cases, it starts a new prefix expression.
+This rule applies uniformly to symbolic operators; indented continuations need no separating space:
 ```mlscript
 2
-  + 2       // = 4
++2          // separate prefix expression, yielding 2
+
+2
++ 2         // infix continuation, yielding 4
+
+2
+  +2        // indented continuation, yielding 4
+
+2
+  + 2        // same
 
 2
   + 2
@@ -516,6 +694,10 @@ abstract class Option[T]: Some[T] | None
 data class Some[T](value: T) extends Option[T]
 object None extends Option[Nothing]
 ```
+
+Under new resolution, classes, objects, and modules without an explicit parent
+inherit Object's declared member interface. Explicit parents and members declared
+on the receiver take precedence.
 
 ### Class with Multiple Parameter Lists
 
@@ -608,14 +790,6 @@ fun f(): module M = M
 
 Modules cannot extend classes. Objects can extend classes.
 
-### Multiple `object`/`module` Declarations Under One Keyword
-
-```mlscript
-object
-  A extends Foo
-  B extends Foo
-```
-
 ---
 
 ## 9. Records and Tuples
@@ -673,6 +847,11 @@ f(a: 0)              // calls f({a: 0})
 f of a: 0, b: 1      // calls f({a: 0, b: 1})
 ```
 
+With positional and named arguments mixed, positional values are followed by
+one record containing the named fields. Expressions still evaluate in source
+order, and later occurrences of a named field overwrite earlier ones.
+Here `a: expression` is a field value, not a type annotation.
+
 ---
 
 ## 10. Arrays
@@ -682,9 +861,14 @@ f of a: 0, b: 1      // calls f({a: 0, b: 1})
 mut [1, 2, 3]        // mutable array
 
 xs.[0]               // index access (uses .at() internally)
+xs![0]               // dynamic index access
 xs.(0)               // dynamic index access
 set xs.[0] = v       // index assignment
 ```
+
+Under new resolution, `xs.[i]` is checked like the array's methods: `xs` must be
+an array, and the result has its element type. A dynamic access such as `xs![i]`
+is only checked at runtime, and so are operations on its result.
 
 **Spread syntax:**
 ```mlscript
@@ -711,6 +895,32 @@ fun f(...xs) = xs        // xs is an array
 fun g(x, ...rest) = rest
 f(1, 2, 3)               // xs = [1, 2, 3]
 ```
+
+See [Variadic Parameters](#variadic-parameters).
+
+Under new resolution, an annotation on a rest parameter describes the whole rest
+array. Tuple values support precise zero-based projections such as `xs.0` and
+inherit the declared Array interface.
+
+Mutable array literals collect element shapes from their initializer and later
+writes. Statically resolved element reads are checked against all those shapes.
+For example,
+after `let xs = mut [First(1)]` followed by `xs.push(Second(2))`, resolution
+considers both `First` and `Second` when checking `xs.0`, even though the runtime
+value at index 0 is still a `First`. Overwriting or removing an element does not
+remove its shape from consideration. Resolution does not track individual
+positions or the array's length.
+
+An explicit annotation such as `Array[Base]` makes element reads use the members
+declared by `Base`. Storing a `Child` that extends `Base` does not permit access
+to `Child`-only members through that annotation.
+
+Array callbacks such as `map` receive the element, index, and array. The index and
+array parameters are [droppable](#droppable-parameters), so callbacks may take only
+the element: `xs.map(x => x + 1)`. `reduce` also passes the accumulator first, and must
+be given an initial value: `xs.reduce((acc, x) => acc + x, 0)`. Without one,
+JavaScript uses the first element as the initial accumulator, which the declared
+signature does not describe.
 
 ---
 
@@ -945,6 +1155,13 @@ if r is { 'x: x } then x
 ```
 
 ### `as` Pattern Alias
+
+With `newResolution` enabled, capitalization distinguishes binding from matching:
+`p as name` binds the result of `p` to the lowercase name, even if that name is
+already in scope. `p as Name` matches the result of `p` against the uppercase
+constructor name; it does not introduce a binding. Constructor names follow the
+usual lookup rules, including selective and wildcard opens. An unknown uppercase
+name is an error.
 
 ```mlscript
 fun map(f) = case
@@ -1265,6 +1482,107 @@ fun f(x: Int): Str = String(x)
 val v: Option[Int] = Some(1)
 ```
 
+
+### Spreads
+
+Argument and array spreads follow the JavaScript iteration protocol:
+`value[Symbol.iterator]().next().value`. Arrays, strings, native collections,
+and user iterables use the same resolution path. Precise tuple spreads
+retain their fixed positions.
+
+
+### Resolution
+
+The resolution pass of the compiler finds targets for names, members, and calls, and catches some obvious mistakes.
+It does so by taking into account the declared types of values and parameters
+and by tracking the flow of values through the current compilation unit,
+stopping at the unit's exposed public interface (to support separate and scalable compilation).
+This pass is mandatory and affects the program's runtime behavior,
+unlike type checking, which is optional.
+
+**Resolution is a best-effort process, not a replacement for type checking.**
+Successful resolution does not establish type safety, even in strict mode.
+Type checking is meant to run as a later pass, but is not yet implemented.
+
+Resolution is "loose" and "lenient" by default: while it rejects unresolved references,
+it allows references that are ambiguous (see: loose) and uncertain (see: lenient).
+Optionally, one can enable
+* **strict** resolution, under which all references must be resolved to exactly one source target.
+  For example, `(xs: (List | Str)) => xs.length` is rejected:
+  while `List` and `Str` both have a `length` member,
+  and while that member could be selected dynamically under, eg, JS compilation,
+  the two members are unrelated, so the access could not be compiled directly
+  with more static backends like WASM.
+  On the other hand, `(xs: (Cons | Nil)) => xs.length` works,
+  provided that `Cons` and `Nil` are both subtypes of a common abstract class `List` that declares `length`.
+* **eager** resolution: unlike lenient resolution, it does not discard receiver shapes that do not have the selected member.
+  This moves resolution a bit closer to type checking, but still does not guarantee type safety.
+  Resolution is lenient by default because it is quite approximate,
+  so it will often get spurious candidate receivers that are only present due to its approximate tracking of flow.
+
+Strict resolution is currently required by backends like WASM,
+although smarter compilation strategies could allow more lenient resolution in the future
+(an ambiguous selection can often be compiled into a match with unambiguous selections in its branches).
+
+`@annotations.jsSymbol(path)` gives a public method a source name for the JavaScript property
+key denoted by `path`. The path must consist of modules and immutable `val`s,
+and end in a `val` annotated with `@annotations.fresh`. This marker is a contract
+that the val owns a unique symbol; the resolver does not prove freshness.
+
+```mlscript
+module Keys {
+  @fresh val read = Symbol("read")
+}
+class Reader {
+  @jsSymbol(Keys.read) fun read() = 42
+}
+```
+
+The method is stored at `Keys.read`, and both `reader.read()` and
+`reader.(Keys.read)()` select that property. An override must retain both the
+inherited source name and the same key. Giving an inherited key a different
+source name is a collision, as is defining two methods with the same key in one
+class. Distinct receiver paths are significant for fresh instance fields.
+
+Currently, selecting a member on an escaped instance is unsupported when the
+caller cannot access its local key: the compiler needs a runtime witness for
+that particular key. Resolution diagnoses such accesses at the use site before
+constructing a reference to the unavailable key. Closures that capture the key
+remain valid, as do keys available through an imported file, including its
+private file-level vals. The key must not be hoisted and shared between factory
+invocations. `slop/JsSymbol.mls` records these cases.
+
+A key path that accesses a private member of a class or module in another file
+is rejected at the selection site. Such members use private accessor symbols
+local to their defining file; they do not use the file-level private export ABI.
+
+Compilation files check that their exposed functions and values do not make a closed-world assumption. A public `fun read(x) = x.a` needs an interface for
+`x` even if local callers all provide `{a: 1}`. A private helper can use local
+inference, but returning it or storing it in an exposed record or tuple makes its
+interface subject to the same check. Callable result annotations provide the
+declared parameter interface when checking returned functions.
+
+Generic parameters remain opaque regardless of strict mode, visibility, or local
+callers. For example, `private fun read[A](x: A) = x.a` is invalid because `A`
+does not supply member `a`, even when every call supplies a record with that field.
+Explicit and inferred type arguments still substitute into result interfaces:
+an identity function with parameter and result type `A` preserves its caller's type.
+
+### Dynamic Values
+
+JavaScript imports (including package imports), `globalThis`, and explicit dynamic
+selection or instantiation introduce dynamic values. Ordinary selections and
+calls on those values are checked at runtime and produce dynamic values.
+Use `value as dyn` for an explicit dynamic result or `fun useValue(x: dyn)`
+for a dynamic parameter. Type aliases can also denote `dyn`; dynamic construction
+uses `new!`.
+
+These rules apply in both strict and non-strict resolution. A value whose interface
+is unknown is not automatically dynamic. If inference includes both a dynamic
+candidate and a known candidate with an invalid operation, the known error is
+still reported. Dynamic values also do not remove the need for an unambiguous
+class or type identity in constructor patterns, class projections, or type references.
+
 ### Generic Type Parameters
 
 Covariant, contravariant, invariant:
@@ -1279,18 +1597,114 @@ Bounded type parameters:
 fun f[A <: Num](x: A): A = x
 ```
 
+Under new resolution, supplying a type argument affects both inputs and outputs.
+For an invariant `Array[A]`, supplying `Int` means that lower bounds of `A` are
+checked against `Int`, and upper bounds must accept `Int`. Passing an ordinary
+integer value to `x: A` instead contributes only a lower bound; it does not fix
+all uses of `A` to `Int`.
+
+Use-site type arguments have input and output parts:
+
+| Argument | Input | Output |
+| --- | --- | --- |
+| `S` | `S` | `S` |
+| `in T` | `T` | `Any` |
+| `out U` | `Nothing` | `U` |
+| `in T out U` | `T` | `U` |
+
+For an unqualified argument, the declaration's `in` or `out` annotation selects
+the corresponding form. An explicitly written use-site variance supplies its own
+parts. Substitution selects the output part in positive positions and the input
+part in negative positions. Function inputs and type-argument input parts reverse
+polarity; results and type-argument output parts preserve it. An invariant argument
+must be interpreted in both polarities before substitution selects its bounds.
+For example, a method input `Box[T]` on `Receiver[in Child out Base]` becomes
+`Box[in Base out Child]` when `Box` is invariant. Declaration-site `in` reverses
+polarity just like a written input part; declaration-site `out` preserves it.
+
+Each explicit generic parameter is instantiated once at the expression that
+specializes or invokes its definition: `f[T]`, a by-name reference/selection, or
+otherwise the first term application. Stored specializations and later curried
+argument lists share that instantiation. A by-name reference invokes its body even
+without parentheses, so later uses of its result share any state it created.
+An ordinary reference to a function with parameter lists can retain its generic
+scheme until specialization or invocation.
+
+Missing parameter/result annotations use inference. Omitted generic arguments
+likewise count as inference holes rather than anonymous generic parameters; written
+parts continue to restrict the interface. Currently an omitted argument inside a
+shared annotation or alias can mix inferred types from different callers. These
+annotations therefore do not always preserve the precision of a wholly unannotated
+parameter. Concrete type-mismatch diagnostics are also incomplete during the
+new-resolution migration.
+
+Type-argument inference approximates a union in an expected type by propagating
+constraints into every component. An intersection in an actual type contributes
+each component separately: `L1 & L2 <: R` installs both `L1 <: R` and `L2 <: R`.
+Resolution uses these approximations to collect member targets without searching
+alternative constraint sets. Ordinary member
+lookup still combines the fields of record intersections.
+
 ### Structural Record Types
 
 ```mlscript
 type Point = { x: Num, y: Num }
 ```
 
+Under new resolution, recursive type aliases must be guarded: every recursive
+cycle must pass through a record, tuple, function arrow, or nominal type.
+`type Loop = Loop` and `type Choice[A] = A | Choice[A]` are rejected, even when
+unused. Alias applications follow the guards in the alias body: a wrapper defined
+as `type Wrap[A] = {next: A}` permits `type Loop = Wrap[Loop]`.
+
+Recursive structural types must also have a finite graph representation of their
+unfolding. The current check conservatively rejects constructor-bearing cycles
+between used type parameters, after alias and union/intersection normalization.
+For example:
+
+```mlscript
+type Chain[A] = {value: A, next: Chain[A]}
+type Reset[A] = {value: A, next: Reset[Array[Int]]}
+type Saturating[A] = {value: A, next: Saturating[A | Int]}
+type Growing[A] = {value: A, next: Growing[Array[A]]}
+```
+
+The first three are supported. `Growing[Int]` would expose `Int`, `Array[Int]`,
+`Array[Array[Int]]`, and so on, and is rejected. The check also rejects some finite
+types whose regularity depends on variance or relationships between recursive
+arguments. Its diagnostic indicates a limitation of the current check.
+
 ### Function Types
 
 ```mlscript
 type Transformer[A, B] = A -> B
 type BinOp[A] = (A, A) -> A
+type Callback = (Int, Int?) -> Int              // optional parameter
+type Labeled = (x: Int, y?: Int) -> Int         // named parameters
+type Step = (Int, drop Int) -> Int              // droppable parameter
+type Join = (Str, ...Array[Str], Str) -> Str    // variadic parameter
 ```
+
+Function type parameters follow the rules of
+[optional](#optional-parameters), [variadic](#variadic-parameters), and [droppable](#droppable-parameters)
+function parameters. Parameter names in function types are labels only: they do not affect compatibility.
+
+A function passed where a function type is expected must accept the arguments that the type passes:
+- it may leave out trailing droppable parameters, including a droppable variadic parameter,
+  but no other parameters;
+- it may not require an argument that the type marks as optional;
+- its additional parameters must be optional, and are then `undefined`;
+- it may collect several arguments in a variadic parameter.
+
+```mlscript
+fun app(f: (Int, Int?) -> Int) = f(1)
+app((x, y?) => x)        // ok
+app((x, y) => x)         // error: `y` is required, but its argument may be omitted
+app(x => x)              // error: the optional parameter is not droppable
+```
+
+A separate signature, as in `fun f: (Int, Int?) -> Int` followed by `fun f(x, y?) = x`,
+must agree with the definition on which parameters are required, optional, and variadic.
 
 ### `forall` (Universal Quantification)
 
@@ -1335,6 +1749,32 @@ open Stack { Cons, Nil }           // selective open
 open Iter                          // open all members
 do open M; ...                     // locally open
 ```
+
+With `newResolution` enabled, wildcard opens are consulted only when a name has
+no explicit binding in the current scope or any enclosing scope. Explicit
+bindings include local variables, parameters, member definitions, imports, and
+selective opens such as `open Stack { Cons, Nil }`. An inner wildcard open does
+not shadow an explicit binding in an outer scope. Moving a wildcard open before
+or after an explicit binding does not give it priority over that binding.
+
+For example, inside the function below, `x` refers to the explicitly bound `x`,
+even though `M` also provides a member named `x`:
+
+```mlscript
+val x = 1
+module M { val x = 2; val y = 3 }
+fun example() =
+  open M
+  x + y                            // explicit x; y from M
+```
+
+When no explicit binding exists, lookup considers the wildcard opens visible at
+that occurrence. These rules apply to the name itself, before choosing its term,
+class, or pattern interpretation, so an explicit binding also takes precedence
+over an overloaded class or function supplied by a wildcard open.
+
+If wildcard lookup finds several distinct members with the requested name, the
+reference is ambiguous; the order of the opens does not choose a winner.
 
 ### `open M in` Scope
 
@@ -1450,7 +1890,9 @@ abstract
   class Bar(b)
 ```
 
-### Operator on New Line = Continuation
+### Operator Continuations
+
+See [Newline Operator Rules](#newline-operator-rules) for the spacing distinction between continuations and new prefix expressions.
 
 ```mlscript
 2
@@ -1461,16 +1903,21 @@ abstract
 
 ```mlscript
 [1, 2, 3]
-  .map(_ + 1)
-  .filter(_ > 1)
+  .map \ _ + 1
+  .filter \ _ > 1
 ```
 
-### Backslash `\` at Start of Line
+### `|. ` for piping the first argument
 
 ```mlscript
 42
-  \inc()          // inc(42)
-  \inc()          // inc(inc(42))
+  |. inc()          // inc(42)
+  |. inc()          // inc(inc(42))
+
+// parses as
+((42
+  |. inc)()
+  |. inc)()
 ```
 
 ### Parenthesis Matching
@@ -1791,6 +2238,128 @@ parenthesizedIf(x, cond)     // wrap in parens if cond
 
 ---
 
+## 20. Compiler Debugging
+
+The compiler can report what it does in each of its phases, and show the intermediate programs it produces.
+This is configured in the source code, either for a whole file with the `#dbg` directive,
+or for individual definitions with the `@dbg` annotation.
+The output is meant for compiler developers: its format is not stable and may change at any time.
+
+### Debugging Aspects
+
+Each argument of `#dbg` or `@dbg` enables or disables one *aspect*.
+The following aspects trace a phase of the compiler:
+
+| Aspect | Traces |
+|---|---|
+| `elaboration` | elaboration of syntax trees into terms |
+| `lowering` | lowering of terms into the intermediate representation (IR) |
+| `optimizations` | the optimization passes run on the IR |
+
+With the new name resolution (`#lang(0.3.x)`), names are resolved during elaboration,
+so `elaboration` traces name resolution as well.
+
+Parser tracing is available through the diff-test command `:dp`.
+Source directives are read after parsing and cannot enable parser tracing.
+
+The following aspects display a program representation, without tracing:
+
+| Aspect | Displays |
+|---|---|
+| `showParsedTree` | the syntax tree produced by the parser |
+| `showElaboratedTree` | the elaborated term, as a tree |
+| `showElaboratedTerm` | the elaborated term, in readable form |
+| `showLoweredTree` | the IR produced by lowering, as a tree |
+| `showIR` | the IR produced by lowering, in readable form |
+| `showOptimizedIR` | the IR after optimizations, in readable form |
+
+Finally, `showUids` (enabled by default) controls whether traces show the unique identifiers of symbols.
+Disabling it makes traces easier to compare across compiler runs.
+UIDs are local to a compilation unit, so imported symbols use disambiguated names without numeric UIDs.
+
+### Syntax
+
+An aspect is enabled by writing its name as a quoted identifier,
+or enabled or disabled by giving it a Boolean value:
+
+```mlscript
+#dbg('lowering)                         // enable an aspect
+#dbg(elaboration: true, showIR: true)   // enable aspects explicitly
+#dbg(showUids: false)                   // disable an aspect
+```
+
+Unknown aspects and non-Boolean values are reported as errors.
+
+### Output Destination
+
+Debugging output is written to the standard output by default, which `out: StdIO` selects explicitly.
+The `out: File(...)` argument writes it to a file instead:
+
+```mlscript
+#dbg('lowering, out: File("lowering.log"))
+```
+
+As for imports, a relative `File` path is resolved against the directory of the file
+in which the `#dbg` directive or `@dbg` annotation is written, and an absolute path is used as is.
+The first time the compiler writes to a file during a compilation session, it replaces the file's previous contents;
+it then appends all later output, including the output of other files compiled in the same session,
+such as imported files.
+Output from concurrent compilations to the same file may be interleaved.
+
+Any other destination is reported as an error.
+
+### The `#dbg` Directive
+
+The `#dbg` directive configures debugging for the file in which it appears, and must appear at its top level:
+
+```mlscript
+#dbg('elaboration, 'showOptimizedIR, out: File("debug.log"))
+
+fun f(x) = x + 1
+```
+
+Several `#dbg` directives may set different aspects.
+Currently, debugging settings apply to the whole file regardless of where the directive appears,
+so if several directives set the same aspect, the last one takes effect.
+
+### The `@dbg` Annotation
+
+The `@dbg` annotation takes the same arguments as `#dbg`,
+but only applies them to the definition it annotates.
+It can annotate functions, methods, values, classes, modules, and objects:
+
+```mlscript
+@dbg('elaboration, 'showIR, showUids: false)
+fun selected(x) = x + 1
+
+fun unrelated(x) = x   // not traced, not displayed
+```
+
+Annotations combine with the file's settings:
+for example, `@dbg(lowering: false)` stops a lowering trace enabled by `#dbg` for the annotated definition.
+They also apply to the definitions nested in the annotated definition,
+which can override them with their own `@dbg` annotations:
+
+```mlscript
+@dbg('lowering, out: File("lowering.log"))
+fun traced() =
+  fun helper() = 1                        // traced to lowering.log
+  @dbg(lowering: false) fun muted() = 2   // not traced
+  helper() + muted()
+```
+
+The statements that follow an annotated definition are not affected by its annotation.
+The lowering trace of an annotated class also covers the evaluation of its superclass, if any,
+and its companion module, if any, which is compiled together with the class.
+
+The `optimizations` aspect cannot be selected per definition, as optimization passes process whole files.
+Setting it in `@dbg` produces a warning and has no effect; use `#dbg` instead.
+
+Currently, the destination selected by an enclosing `@dbg` annotation only applies to traces:
+the displays requested by the annotation of a nested definition use the file's destination.
+
+---
+
 ## Appendix: Grammar Summary
 
 ```
@@ -1809,7 +2378,7 @@ decl      ::= 'declare' def
 expr      ::= literal | name | app | lambda | if | case | while
             | let | set | 'return' | 'throw' | 'drop' | 'do'
             | 'new' [mut] class args | 'handle' | 'using'
-            | annotation expr | infix | block
+            | annotation expr | prefix | infix | block
 
 if        ::= 'if' scrutinee? branches
 branches  ::= branch+

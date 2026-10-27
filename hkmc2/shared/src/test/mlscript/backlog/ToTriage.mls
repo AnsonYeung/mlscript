@@ -82,7 +82,7 @@ fun main() =
 :ssjs
 object Cls(val x) with
   fun huh = x
-//│ ╔══[INTERNAL ERROR] Compiler reached an unsupported state: Some(ParamList(‹›,List(Param(‹val›,x,None,Modulefulness(None))),None)).isDefined =/= false
+//│ ╔══[INTERNAL ERROR] Compiler reached an unsupported state: Missing constructor function for parameterized class Cls
 //│ ╟── The compilation result may be incorrect.
 //│ ╙── This is a known compiler limitation; if it is a blocker for you, please report it to the maintainers.
 //│ —————————————| JS (sanitized) |—————————————————————————————————————————————————————————————————————
@@ -132,17 +132,6 @@ c.x
 
 // ——— ——— ———
 
-:breakme // TODO: warn against using `undefined`
-:w
-fun oops = undefined
-
-// * This used to throw, but we now emit `Unit` upon compiling MIR's `return undefined`
-:noInline
-print(oops)
-//│ > ()
-
-// ——— ——— ———
-
 class C
 
 :sjs
@@ -151,10 +140,13 @@ class D extends id(C)
 //│ ║  l.+1: 	class D extends id(C)
 //│ ║        	                ^^
 //│ ╙── The 'new' keyword requires a statically known class; use the 'new!' operator for dynamic instantiation.
-//│ ═══[COMPILATION ERROR] Too many parameter lists for parent class
+//│ ╔══[COMPILATION ERROR] Too many parameter lists for parent class
+//│ ║  l.+1: 	class D extends id(C)
+//│ ╙──      	                ^^^^^
 //│ ————————————| JS (unsanitized) |————————————————————————————————————————————————————————————————————
-//│ let D1;
-//│ (class D extends Predef.id {
+//│ let D1, superBase;
+//│ superBase = Predef.id;
+//│ (class D extends superBase {
 //│   static {
 //│     D1 = this
 //│   }
@@ -359,17 +351,6 @@ data class Foo(mut x)
 //│ ╔══[COMPILATION ERROR] Expected a valid parameter, found 'mut'-modified identifier
 //│ ║  l.+1: 	data class Foo(mut x)
 //│ ╙──      	                   ^
-
-// ——— ——— ———
-
-:breakme // FIXME should report a compilation error
-:e
-fun Foo
-class Foo
-//│ ╔══[INTERNAL ERROR] Compiler reached an unsupported state: None.isDefined =/= true
-//│ ╟── The compilation result may be incorrect.
-//│ ╙── This is a known compiler limitation; if it is a blocker for you, please report it to the maintainers.
-//│ ═══[RUNTIME ERROR] TypeError: Cannot set properties of undefined (setting 'class')
 
 // ——— ——— ———
 

@@ -1,3 +1,4 @@
+:.
 :js
 
 
@@ -19,7 +20,7 @@ print("A") & print("B")
 ~false
 //│ ╔══[COMPILATION ERROR] Unexpected term form in expression position (negation type)
 //│ ║  l.+1: 	~false
-//│ ╙──      	 ^^^^^
+//│ ╙──      	^^^^^^
 //│ ═══[RUNTIME ERROR] This code cannot be run as its compilation yielded an error.
 
 
