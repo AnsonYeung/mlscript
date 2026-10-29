@@ -672,7 +672,11 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
           case Some(_) => die 
           case None => N
         
-        k(newCls.copy(companion = newComp)(newCls.configOverride, newCls.annotations))
+        val sameComp = c.companion match
+          case S(comp) => newComp.exists(_ is comp)
+          case N => newComp.isEmpty
+        if (newCls is c) && sameComp then k(c)
+        else k(newCls.copy(companion = newComp)(newCls.configOverride, newCls.annotations))
       case _ => super.applyDefn(defn)(k)
 
   /**
@@ -965,7 +969,10 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       
       val rewritten = rewriter.rewrite(obj.fun.body)
       val withCapture = addExtraSyms(rewritten)
-      LifterResult(obj.fun.copy(body = withCapture)(obj.fun.configOverride, obj.fun.annotations), rewriter.extraDefns.toList)
+      val newFun =
+        if withCapture is obj.fun.body then obj.fun
+        else obj.fun.copy(body = withCapture)(obj.fun.configOverride, obj.fun.annotations)
+      LifterResult(newFun, rewriter.extraDefns.toList)
   
   class RewrittenClassCtor(override val obj: ScopedObject.ClassCtor)(using ctx: LifterCtxNew) extends RewrittenScope[Unit](obj):
     override lazy val capturePath: Path = lastWords("tried to create a capture class for a class ctor")
@@ -1472,7 +1479,9 @@ class Lifter(topLevelBlk: Block)(using State, Raise, Config):
       case b => (Set.empty, b)
     
     val transformed = topLevelRewriter.applyBlock(top)
-    val newSyms = syms ++ topLevelRewriter.extraDefns.map(_.sym)
-    val withDefns = topLevelRewriter.extraDefns.foldLeft(transformed):
-      case (acc, d) => Define(d, acc)
-    Scoped(newSyms, withDefns)
+    if (transformed is top) && topLevelRewriter.extraDefns.isEmpty then root.obj.contents
+    else
+      val newSyms = syms ++ topLevelRewriter.extraDefns.map(_.sym)
+      val withDefns = topLevelRewriter.extraDefns.foldLeft(transformed):
+        case (acc, d) => Define(d, acc)
+      Scoped(newSyms, withDefns)

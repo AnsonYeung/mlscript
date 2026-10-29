@@ -205,7 +205,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
       val (ogParams, remainingParams) = fun.params match
         case head :: next => (head, next)
         case Nil => (LoweredParamList.plain(Nil)(N), Nil)
-      val native = fun.annotations.contains(Annot.Native)
+      val native = fun.annotations.exists(_.isInstanceOf[Annot.Native])
       val cpsBod = applyCpsOnFun(fun.body, contSym.asPath, native)
       
       val mainBod = if !isStackSafetyPass then cpsBod else

@@ -97,7 +97,7 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
       Scoped(Set.single(t), super.applyMainBlock(main))
   
   override def applyFunDefn(fun: FunDefn): FunDefn =
-    if fun.annotations.contains(Annot.Native) then
+    if fun.annotations.exists(_.isInstanceOf[Annot.Native]) then
       FunDefn(
         fun.owner,
         fun.sym,

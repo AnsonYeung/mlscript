@@ -994,6 +994,7 @@ class FlowConstraintsCollector(
         defn match
         case ValDefn(tsym, sym, rhs) =>
           val rhsStrat = processResult(rhs)
+          if tsym.owner.isDefined then generatedVars(tsym).constrainOpaque
           cc.constrain(rhsStrat, generatedVars(tsym))
         case fun: FunDefn =>
           processFunctionDefn(fun)
@@ -1035,6 +1036,7 @@ class FlowConstraintsCollector(
               val clsParams = cls.tree.clsParams.head // TODO use irDefn here and elsewhere
               // TODO: properly check the parameter lists, which may change after passes like lifting
               // softTODO(argsStrat.size === clsParams.size, s"mismatched ctor arg and cls param sizes")
+              for a <- argsStrat.drop(clsParams.size) do cc.constrain(a, UnknownCons)
               registerCtor(new Ctor(c.uid, instId)(ctor, clsParams.zip(argsStrat)))
             case _ =>
               // - the size of 0 means we don't know the cls param symbols,
