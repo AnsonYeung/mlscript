@@ -3,7 +3,7 @@ import fse from "fs/promises";
 import fs from "fs";
 import Rendering from "../../../../hkmc2/shared/src/test/mlscript-compile/Rendering.mjs";
 import Runtime from "../../../../hkmc2/shared/src/test/mlscript-compile/Runtime.mjs";
-import { Bench } from 'tinybench';
+import { Bench } from "tinybench";
 
 globalThis.fs = fs;
 
@@ -77,6 +77,6 @@ const csvRows = bench.tasks.map(task => {
     return `${name},${time / 1000},${moe / 1000}`;
   }
   return `${name},-1,-1`;
-}).join('\n');
+}).join("\n");
 
-fs.writeFileSync('hkmc2Benchmarks/src/test/logs/nofibs.csv', csvRows, 'utf-8');
+fs.writeFileSync("hkmc2Benchmarks/src/test/logs/nofibs.csv", csvRows, "utf-8");
