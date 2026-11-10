@@ -481,7 +481,6 @@ class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Confi
       def applyCallOrRef(fn: FunDefn, args: Ls[Ls[Arg]], default: => Block)(k: Result => Block): Block =
         val fnParamNum = fn.params.size
         val callParamNum = args.size
-        println(fnParamNum + ", " + callParamNum)
         if fnParamNum === 0 then default
         else if fnParamNum === 1 && callParamNum === 0 then default
         else if fnParamNum < callParamNum then die
@@ -515,7 +514,6 @@ class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Confi
         case _ => super.applyResult(r)(k)
       override def applyPath(p: Path)(k: Path => Block): Block = p match
         case CallOrRefToFun(fnSym, args) if fnMap.contains(fnSym) =>
-          println(fnSym)
           val fn = fnMap(fnSym)
           applyCallOrRef(fn, args, super.applyPath(p)(k)): r =>
             val sym = TempSymbol(N, N)
