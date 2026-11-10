@@ -69,11 +69,20 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
       paths.runtimePath.selN(Tree.Ident("cpsHandlerImpl"))
   
   extension (builder: Block => Block)
-    def stackSafePre(cont: Path, retVal: Path) =
+    def stackSafePre(fun: Path, owner: Opt[Path], args: List[Path]) =
       val tmp = TempSymbol(N, N)
+      val tmp2 = TempSymbol(N, N)
+      val thisSym = owner match
+        case Some(value) => value
+        case None => Value.Lit(Tree.UnitLit(true))(N)
+      val tup = Tuple(true, args.map(_.asArg))(N)
       builder
         .assignScoped(tmp, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
-        .ifthen(tmp.asPath, Case.Lit(Tree.BoolLit(true)), Return(Call(raiseStackPath, (cont.asArg :: retVal.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N)))
+        .ifthen(tmp.asPath, Case.Lit(Tree.BoolLit(true)),
+          blockBuilder
+            .assignScoped(tmp2, tup)
+            .ret(Call(raiseStackPath, (fun.asArg :: thisSym.asArg :: tmp2.asPath.asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N))
+        )
   
   def mapTail(b: Block)(f: BlockTail => Block): Block = b match
     case b: BlockTail => f(b)
@@ -209,14 +218,23 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
       val cpsBod = applyCpsOnFun(fun.body, contSym.asPath, native)
       
       val mainBod = if !isStackSafetyPass then cpsBod else
-        val paramSym = VarSymbol(Tree.Ident("retVal"), N) // will always receive unit
-        val pList = LoweredParamList.plain(Param.simple(paramSym) :: Nil)(N)
-        val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
-        cpsId += 1
-        val bod = blockBuilder
-          .assign(NoSymbol, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
-          .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
-        rest(bod)
+        if fun.params.size > 1 then
+          val paramSym = VarSymbol(Tree.Ident("retVal"), N) // will always receive unit
+          val pList = LoweredParamList.plain(Param.simple(paramSym) :: Nil)(N)
+          val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
+          cpsId += 1
+          val bod = blockBuilder
+            .assign(NoSymbol, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
+            .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
+          rest(bod)
+        else
+          val funPath = fun.owner match
+            case Some(value) => Select(value.asPath, fun.dSym.id)(S(fun.dSym), N)(false)
+            case None => fun.asPath
+          val args = fun.params.headOption.map(x => x.params).getOrElse(Nil).map(_.sym.asSimpleRef)
+          blockBuilder
+            .stackSafePre(funPath, fun.owner.map(_.asPath), contSym.asPath :: args)
+            .rest(cpsBod)
       
       if native then
         // make a non-cps forwarder
@@ -275,7 +293,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         val bms = BlockMemberSymbol(nme, Nil, true)
         val tSym = TermSymbol(syntax.Fun, N, Tree.Ident(nme), N)
         val bodd = blockBuilder
-          .stackSafePre(Value.MemberRef(bms, tSym)(N), param.asPath)
+          .stackSafePre(Value.MemberRef(bms, tSym)(N), N, param.asSimpleRef :: Nil)
           .rest(bod)
         val fnDef = FunDefn(N, bms, tSym, pList :: Nil, bodd)(N, Nil)
         val blk = (rest: Block) => Scoped(Set(bms), Define(fnDef, rest))
@@ -293,7 +311,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
           cpsId += 1
           val bod = blockBuilder
-            .stackSafePre(cpsCont.asPath, Value.Lit(Tree.UnitLit(false))(N))
+            .stackSafePre(cpsCont.asPath, N, Value.Lit(Tree.UnitLit(false))(N) :: Nil)
             .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
           rest(bod)
         

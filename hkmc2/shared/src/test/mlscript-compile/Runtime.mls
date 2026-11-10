@@ -762,11 +762,11 @@ module ShadowStackImpl with
 // CPS
 
 data class CpsSuspend(k: Function, tag: Any, handlerFun: Function)
-data class CpsStackSafetyEffect(k: Function, tag: Any, retVal: Any)
+data class CpsStackSafetyEffect(k: Function, tag: Any, owner: Any, args: Array)
 fun cpsId(x) = x
 fun cpsId2(k: Function, x) = k(x)
 fun cpsSetCheckDepth() = CpsImpl.cpsSetCheckDepth()
-fun cpsRaiseStack(k: Function, retVal) = CpsImpl.cpsRaiseStack(k, retVal)
+fun cpsRaiseStack(k: Function, owner, args) = CpsImpl.cpsRaiseStack(k, owner, args)
 fun runStackSafeCps(limit, f: () -> Any) = CpsImpl.runStackSafeCps(limit, f)
 fun ss_cpsHandlerImpl(ss_k: Function, k: Function, tag, f: Function) = CpsImpl.ss_cpsHandlerImpl(ss_k, k, tag, f)
 fun cpsHandlerImpl(k: Function, tag, f: Function) = CpsImpl.cpsHandlerImpl(k, tag, f)
@@ -794,56 +794,59 @@ module CpsImpl with
     handlerTrampoline(k, tag, f(cpsId))
 
   fun ss_handlerTrampoline(ss_k: Function, k: Function, tag, cur: Any) =
-    fun propagateSuspend(ps_k, res, reinstall) =
+    fun propagateSuspend(ps_k: Function, res, reinstall) =
       if cpsSetCheckDepth() do
-        return cpsRaiseStack(_ => cpsSetCheckDepth(); ss_handlerTrampoline(ps_k, k, tag, res), ())
+        return cpsRaiseStack(propagateSuspend, null, [ps_k, res, reinstall])
       if res is CpsSuspend(resume, tag', handlerFun) then
         fun suspendCont1(resume_k: Function, r) =
           if cpsSetCheckDepth() do
-            return cpsRaiseStack(_ => cpsSetCheckDepth(); suspendCont1(resume_k, r), ())
+            return cpsRaiseStack(suspendCont1, null, [resume_k, r])
           fun resumeCont1Reinstall(resume_r) =
             if cpsSetCheckDepth() do
-              return cpsRaiseStack(resumeCont1, resume_r)
+              return cpsRaiseStack(resumeCont1Reinstall, null, [resume_r])
             ss_handlerTrampoline(resume_k, k, tag, resume_r)
           fun resumeCont1(resume_r) =
             if cpsSetCheckDepth() do
-              return cpsRaiseStack(resumeCont1, resume_r)
+              return cpsRaiseStack(resumeCont1, null, [resume_r])
             propagateSuspend(resume_k, resume_r, false)
           resume(if reinstall then resumeCont1Reinstall else resumeCont1, r)
         ps_k of CpsSuspend(suspendCont1, tag', handlerFun)
       else k(ps_k, res)
     if cpsSetCheckDepth() do
-      return cpsRaiseStack(_ => cpsSetCheckDepth(); ss_handlerTrampoline(ss_k, k, tag, cur), ())
+      return cpsRaiseStack(ss_handlerTrampoline, null, [ss_k, k, tag, cur])
     if cur is
       CpsSuspend(resume, tag', handlerFun) and tag' === tag then
         fun handlerFunCont(hfc_k, k1, v) =
           if cpsSetCheckDepth() do
-            return cpsRaiseStack(_ => cpsSetCheckDepth(); handlerFunCont(hfc_k, k1, v), ())
+            return cpsRaiseStack(handlerFunCont, null, [hfc_k, k1, v])
           fun resumeCont(resume_r) =
             if cpsSetCheckDepth() do
-              return cpsRaiseStack(resumeCont, resume_r)
+              return cpsRaiseStack(resumeCont, null, [resume_r])
             ss_handlerTrampoline(hfc_k, k1, tag, resume_r)
           resume(resumeCont, v)
         fun cont(r) =
           if cpsSetCheckDepth() do
-            return cpsRaiseStack(cont, r)
+            return cpsRaiseStack(cont, null, [r])
           propagateSuspend(ss_k, r, false)
         handlerFun(cont, cpsId2, handlerFunCont)
     else propagateSuspend(ss_k, cur, true)
 
   fun ss_cpsHandlerImpl(ss_k: Function, k: Function, tag, f: Function) =
-    let res = f(res => ss_handlerTrampoline(ss_k, k, tag, res), cpsId2)
-    res
+    fun cont(res) =
+      if cpsSetCheckDepth do
+        return cpsRaiseStack(cont, null, [res])
+      ss_handlerTrampoline(ss_k, k, tag, res)
+    f(cont, cpsId2)
   
   object StackDelayCpsHandler with
-    fun delay(k, retVal) = new CpsStackSafetyEffect(k, stackHandler, retVal)
+    fun delay(k, owner, args) = new CpsStackSafetyEffect(k, stackHandler, owner, args)
   
   fun cpsSetCheckDepth() =
     set stackDepth += 1
     stackDepth >= stackLimit && stackHandler !== null
 
-  fun cpsRaiseStack(k: Function, retVal) =
-    (stackHandler as StackDelayCpsHandler).delay(k, retVal)
+  fun cpsRaiseStack(k: Function, owner, args) =
+    (stackHandler as StackDelayCpsHandler).delay(k, owner, args)
   
   fun runStackSafeCps(limit, f: () -> Any) =
     set stackLimit = limit in...
@@ -851,9 +854,9 @@ module CpsImpl with
     set stackHandler = StackDelayCpsHandler in...
     let result = f()
     while result is 
-      CpsStackSafetyEffect(k, tag, retVal) do
+      CpsStackSafetyEffect(k, tag, owner, args) do
         set stackDepth = 1 in...
-        result = k(retVal)
+        result = k.apply(owner, args)
     result
 
 
