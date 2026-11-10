@@ -311,7 +311,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
           val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
           cpsId += 1
           val bod = blockBuilder
-            .stackSafePre(cpsCont.asPath, N, Value.Lit(Tree.UnitLit(false))(N) :: Nil)
+            .assign(NoSymbol, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
             .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
           rest(bod)
         
@@ -481,6 +481,7 @@ class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Confi
       def applyCallOrRef(fn: FunDefn, args: Ls[Ls[Arg]], default: => Block)(k: Result => Block): Block =
         val fnParamNum = fn.params.size
         val callParamNum = args.size
+        println(fnParamNum + ", " + callParamNum)
         if fnParamNum === 0 then default
         else if fnParamNum === 1 && callParamNum === 0 then default
         else if fnParamNum < callParamNum then die
@@ -505,11 +506,16 @@ class SimpleEtaExpander(using TL, Raise, Elaborator.State, Elaborator.Ctx, Confi
           r match
             case c: Call if c.metadata.mayRaiseEffects =>
               val fn = fnMap(fnSym)
-              applyCallOrRef(fn, args, super.applyResult(r)(k))(k)
+              def rest =
+                applyArgss(args): newArgss =>
+                  if newArgss is args then k(c)
+                  else k(Call(c.fun, newArgss.ne_!)(c.metadata, c.toLoc))
+              applyCallOrRef(fn, args, rest)(k)
             case _ => super.applyResult(r)(k) // this shouldn't happen
         case _ => super.applyResult(r)(k)
       override def applyPath(p: Path)(k: Path => Block): Block = p match
         case CallOrRefToFun(fnSym, args) if fnMap.contains(fnSym) =>
+          println(fnSym)
           val fn = fnMap(fnSym)
           applyCallOrRef(fn, args, super.applyPath(p)(k)): r =>
             val sym = TempSymbol(N, N)
