@@ -214,7 +214,7 @@ class CpsHandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL
         val (cpsCont, rest) = createCpsCont(pList, cpsBod, paramSym)
         cpsId += 1
         val bod = blockBuilder
-          .stackSafePre(cpsCont.asPath, Value.Lit(Tree.UnitLit(false))(N))
+          .assign(NoSymbol, Call(checkDepthCpsPath, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
           .ret(Call(cpsCont.asPath, (Value.Lit(Tree.UnitLit(false))(N).asArg :: Nil) ne_:: Nil)(resMetadata, N))
         rest(bod)
       
