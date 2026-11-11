@@ -70,7 +70,7 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
     ret.sortBy(x => x.headOption.getOrElse(BigInt(-1))).toList
   
   // Note: `line` has the last state as the head, and the first state at the end
-  def generate(parts: PartitionedBlock, ctx: FunctionCtx): Block =
+  def generate(parts: PartitionedBlock, ctx: FunctionCtx, postResult: PostResult, useResVar: Bool): Block =
     val edges = computeEdges(parts)
     val lines = computeStraightLines(parts.entry, edges)
     def transformState(state: StateId) =
@@ -85,8 +85,9 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
           assert(uid === nextState)
           blockBuilder
             .chain(strategy.preResult(flattenCtx.pcVar, uid))
-            .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-            .chain(strategy.postResult(paths, flattenCtx.ctx, flattenCtx.pcVar, flattenCtx.vars, uid, res, false))
+            .staticif(useResVar, _.assign(ctx.rVar, res))
+            .staticif(!useResVar, _.assignFieldN(paths.runtimePath, paths.resumeValueIdent, res))
+            .chain(postResult.postResult(paths, flattenCtx.ctx, flattenCtx.pcVar, flattenCtx.vars, uid, res, false))
             .break(lblSym)
       val transformed = transform.applyBlock(blk.blk)
       Label(

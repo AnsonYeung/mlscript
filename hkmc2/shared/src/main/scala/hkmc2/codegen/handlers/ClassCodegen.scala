@@ -152,21 +152,8 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
   ): Block =
     val loopLbl = LabelSymbol(N, "handlerLoop")
     val pcField = fieldFromTS(allocatedFields("pc")._2)
-    val postTransform = new BlockTransformerShallow(SymbolSubst.Id):
+    val symbolFixer = new BlockTransformerShallow(SymbolSubst.Id):
       override def applyBlock(b: Block): Block = b match
-        case StateTransition(S(res), uid) =>
-          applyResult(res): r2 =>
-            blockBuilder
-              .assign(ctx.rVar, r2)
-              .assignFieldS(pcField, intLit(uid))
-              .ifthen(paths.curEffect, Case.Lit(Tree.UnitLit(true)), End(), S(
-                Return(Call(paths.unwindFramedPath, (Value.This(clsDSym)(N).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N))
-              ))
-              .continue(loopLbl)
-        case StateTransition(N, uid) =>
-          blockBuilder
-            .assignFieldS(pcField, intLit(uid))
-            .continue(loopLbl)
         case Assign(sym: LocalVarSymbol, rhs, rst) if allocatedVars.contains(sym) =>
           val fieldNme = allocatedVars(sym)
           val field = fieldFromTS(allocatedFields(fieldNme)._2)
@@ -174,9 +161,6 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
             blockBuilder
               .assignFieldS(field, rhs2)
               .rest(applyBlock(rst))
-        case Return(EffectfulResult()) =>
-          // stack safety modify
-          super.applyBlock(b)
         case _ => super.applyBlock(b)
       override def applyPath(p: Path)(k: Path => Block): Block = p match
         case Value.SimpleRef(sym: LocalVarSymbol) if allocatedVars.contains(sym) =>
@@ -189,9 +173,45 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
         case s: LocalVarSymbol if allocatedVars.contains(s) =>
           lastWords("VarSymbol occurs in unexpected places and is not replaced")
         case _ => sym
+    object ClassPostResult extends PostResult:
+      override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block = 
+        blockBuilder
+          .ifthen(
+            paths.curEffect,
+            Case.Lit(Tree.UnitLit(true)),
+            End(),
+            S(
+              blockBuilder
+                .assignFieldS(pcField, intLit(uid))
+                .ret(Call(paths.unwindFramedPath, (Value.This(clsDSym)(N).asArg :: Nil) ne_:: Nil)(CallMetadata.defaultMlsFun, N))
+            )
+          )
+          .staticif(withTransition, _.assign(pcVar, intLit(uid)))
+    val pcTmp = TempSymbol(N, N, "pc")
+    def postTransform(transition: (Opt[Result], BigInt) => Block) = new BlockTransformerShallow(SymbolSubst.Id):
+      override def applyBlock(b: Block) = b match
+        case StateTransition(res, uid) => transition(res, uid)
+        case Return(EffectfulResult()) =>
+          blockBuilder.rest(b)
+        case _ => super.applyBlock(b)
+    // The fallback form which always works
+    val fallbackPostTransform = postTransform:
+      case (N, id) => Assign(pcTmp, intLit(id), Continue(loopLbl))
+      case (S(res), id) => blockBuilder
+        .chain(currentStrategy.preResult(pcTmp, id))
+        .assign(ctx.rVar, res)
+        .chain(ClassPostResult.postResult(paths, ctx, pcTmp, Nil, id, res, true))
+        .continue(loopLbl)
     val refresher = new SymbolRefresher(Map.empty)
-    val arms = parts.states.iterator
-      .map: (sid, part) =>
-        Case.Lit(Tree.IntLit(sid)) -> postTransform.applyBlock(part.blk)
-      .toList
-    refresher(Scoped(flattenCtx.scopedVars, Label(loopLbl, true, Match(pcField, arms, N, End()), End())))
+    val oneState = parts.states.size <= 1
+    var mainBody =
+      if oneState then
+        fallbackPostTransform.applyBlock(parts.states.head._2.blk)
+      else
+        val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx.copy(pcVar = pcTmp, postTransform = postTransform, fallbackPostTransform = fallbackPostTransform))
+        Label(loopLbl, true, straightLineCg.generate(parts, ctx, ClassPostResult, true), End())
+    val bod = blockBuilder
+      .scopedVars(flattenCtx.scopedVars.toSet)
+      .assignScoped(pcTmp, pcField)
+      .rest(mainBody)
+    refresher(symbolFixer.applyBlock(bod))

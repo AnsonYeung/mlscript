@@ -56,7 +56,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
             flattenCtx.fallbackPostTransform.applyBlock(parts.states.head._2.blk)
           else
             val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx)
-            Label(flattenCtx.mainLoopLbl, true, straightLineCg.generate(parts, ctx), End())
+            Label(flattenCtx.mainLoopLbl, true, straightLineCg.generate(parts, ctx, currentStrategy.postResultImpl, false), End())
         )
       val transformer = new SymbolRefresher(Map.empty):
         override def applyBlock(b: Block): Block =

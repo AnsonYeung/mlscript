@@ -25,12 +25,11 @@ object HandlerLowering:
   
   val defaultStrategy: Strategy = IfCheck()
 
-  abstract class Strategy:
-    def beginUnwind(using State): Block
-    def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
-    def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
-    def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = identity
-    def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
+  trait PostResult:
+    def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block
+  
+  object DefaultPostResult extends PostResult:
+    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
       blockBuilder
         .ifthen(
           paths.curEffect,
@@ -39,6 +38,21 @@ object HandlerLowering:
           S(ctx.doUnwind(res.toLoc.fold(unit)(locToStr(_)), intLit(uid), savedVars)(using paths))
         )
         .staticif(withTransition, _.assign(pcVar, intLit(uid)))
+  
+  object ShadowPostResult extends PostResult:
+    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
+      blockBuilder.assign(pcVar, intLit(uid))
+
+  object ExceptionPostResult extends PostResult:
+    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
+      identity
+  
+  abstract class Strategy:
+    def beginUnwind(using State): Block
+    def effectfulCallToInternal(loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
+    def runStackSafe(stackSafe: Bool, loweringCtx: LoweringCtx, p: Path, k: Result => Block)(using State): Block
+    def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = identity
+    def postResultImpl: PostResult = DefaultPostResult
     def mkEffectPath(using State): Path = HandlerPaths().mkEffectPath
     def enterHandleBlockPath(using State): Path = HandlerPaths().enterHandleBlockPath
     
@@ -103,7 +117,7 @@ object HandlerLowering:
       else
         k(Call(p, Nil ne_:: Nil)(CallMetadata.defaultMlsFun, N))
     override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block = blockBuilder.assign(pcVar, intLit(uid))
-    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block = identity
+    override def postResultImpl: PostResult = ExceptionPostResult
   
   case class DoubleCompilation() extends Strategy:
     override def beginUnwind(using State): Block =
@@ -155,9 +169,8 @@ object HandlerLowering:
     override def preResult(pcVar: LocalVarSymbol, uid: StateId): Block => Block =
       // pc write back pattern
       blockBuilder.assign(pcVar, Tuple(false, intLit(uid).asArg :: Nil)(N))
-    override def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block =
-      blockBuilder.assign(pcVar, intLit(uid))
-    
+    override def postResultImpl: PostResult = ShadowPostResult
+
     override def mkEffectPath(using State): Path = HandlerPaths().shadowMkEffectPath
     override def enterHandleBlockPath(using State): Path = HandlerPaths().shadowEnterHandleBlockPath
 
@@ -885,7 +898,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
       case (S(res), id) => blockBuilder
         .chain(currentStrategy.preResult(pcVar, id))
         .assignFieldN(paths.runtimePath, paths.resumeValueIdent, res)
-        .chain(currentStrategy.postResult(paths, ctx, pcVar, vars, id, res, true))
+        .chain(currentStrategy.postResultImpl.postResult(paths, ctx, pcVar, vars, id, res, true))
         .continue(mainLoopLbl)
     
     val flattenCtx = FlattenCtx(
@@ -911,7 +924,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         fallbackPostTransform.applyBlock(parts.states.head._2.blk)
       else
         val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx)
-        Label(mainLoopLbl, true, straightLineCg.generate(parts, ctx), End())
+        Label(mainLoopLbl, true, straightLineCg.generate(parts, ctx, currentStrategy.postResultImpl, false), End())
         
     val getSavedTmp = freshTmp(erasedType = S(ErasedType.Int), "saveOffset")
     // Runtime fields and the saved-local array carry unknown references. Restore
