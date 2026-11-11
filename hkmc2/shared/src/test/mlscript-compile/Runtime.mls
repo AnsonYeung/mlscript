@@ -99,7 +99,9 @@ type Pattern[A, B] = { unapply: A -> MatchResult[B] }
 module Tuple with
   
   @pure
-  fun slice(xs: Indexable, i: Int, j: Int) = xs.slice(i, xs.length - j)
+  fun slice[A](xs: Indexable[A], i: Int, j: Int): Indexable[A] = xs.slice(i, xs.length - j)
+  @pure
+  fun sliceArray[A](xs: Array[A], i: Int, j: Int): Array[A] = xs.slice(i, xs.length - j)
   
   @pure
   fun lazySlice(xs: Indexable, i: Int, j: Int) = LazyArray.dropLeftRight(i, j)(xs)
@@ -144,8 +146,8 @@ fun printRaw(x) = console.log(render(x, indent: 2, breakLength: 76))
 // TraceLogger
 
 module TraceLogger with
-  mut val enabled = false
-  mut val indentLvl = 0
+  mut val enabled: Bool = false
+  mut val indentLvl: Int = 0
   fun indent() =
     if enabled then
       let prev = indentLvl
@@ -170,18 +172,20 @@ module TraceLogger with
 // Casts below decode slots whose types are fixed by this layout.
 
 mut val curEffect: EffectSig | null = null
-mut val resumeValue = null
-mut val resumeArr = null
-mut val resumeIdx = null
-mut val resumePc = -1
+mut val resumeValue: Any = null
+mut val resumeArr: Array | null = null
+mut val resumeIdx: Int | null = null
+mut val resumePc: Int = -1
 
 object EffectException
 object FatalEffect
 object PrintStackEffect
 
-data abstract class FunctionContFrame(next: FunctionContFrame | null) with
+open js { plainField }
+
+data abstract class FunctionContFrame(@plainField mut val next: FunctionContFrame | null) with
   val isContCls = true
-  fun resume(value)
+  fun resume(value: Any): Any
   fun getLocals: Array[LocalVarInfo]
   fun getNme: Any
   fun getLoc: Any
@@ -230,20 +234,24 @@ data class FunctionContFrameImpl(_next: FunctionContFrame | null, saved: Array) 
       loc is null then "pc=" + saved.[1]
       else loc
 
-data class HandlerContFrame(next: FunctionContFrame | ShadowFunctionContFrame | null, nextHandler: HandlerContFrame | null, handler: Any)
+data class HandlerContFrame(
+  @plainField mut val next: FunctionContFrame | ShadowFunctionContFrame | null
+  @plainField mut val nextHandler: HandlerContFrame | null
+  handler: Any
+)
 
 data class ContTrace(
-  next: FunctionContFrame | ShadowFunctionContFrame | null,
-  last: ContTrace | HandlerContFrame | FunctionContFrame | ShadowFunctionContFrame | null,
-  nextHandler: HandlerContFrame | null,
-  lastHandler: ContTrace | HandlerContFrame | null,
-  resumed: Bool
+  @plainField mut val next: FunctionContFrame | ShadowFunctionContFrame | null
+  @plainField mut val last: ContTrace | HandlerContFrame | FunctionContFrame | ShadowFunctionContFrame | null
+  @plainField mut val nextHandler: HandlerContFrame | null
+  @plainField mut val lastHandler: ContTrace | HandlerContFrame | null
+  @plainField mut val resumed: Bool
 )
 // PrintStackEffect stores the showLocals flag; FatalEffect has no handler function.
 data class EffectSig(contTrace: ContTrace, handler: Any, handlerFun: Function | Bool | null)
 
 abstract class NonLocalReturn with
-  fun ret(value)
+  fun ret(value: Any): Any
 
 data class FnLocalsInfo(fnName: Str, locals: Array[LocalVarInfo])
 data class LocalVarInfo(localName: Str, value: Any)
@@ -309,6 +317,7 @@ fun showStackTrace(header: Str, tr: EffectSig, debug: Bool, showLocals: Bool) =
   msg
 
 fun showFunctionContChain(cont: Any, hl: Map[Str, Set], vis: Set, reps: Int): Str =
+  let =reps
   if cont is FunctionContFrameImpl as frame then
     let result = frame!constructor!name + "(pc=" + frame.saved.[1]
     hl.forEach((m, marker, ...) => if m.has(cont) do set result += ", " + marker)
@@ -326,6 +335,7 @@ fun showFunctionContChain(cont: Any, hl: Map[Str, Set], vis: Set, reps: Int): St
     "(NOT CONT)"
 
 fun showHandlerContChain(cont: Any, hl: Map[Str, Set], vis: Set, reps: Int): Str =
+  let =reps
   if cont is HandlerContFrame as frame then
     let result = frame.handler!constructor!name
     hl.forEach((m, marker, ...) => if m.has(cont) do set result += ", " + marker)
@@ -416,6 +426,7 @@ fun enterHandleBlock(handler: Any, body: () -> Any) =
     handleBlockImpl(curEffect, handler)
 
 fun handleEffects(cur: Any): Any =
+  let =cur
   while cur is
     EffectSig as effect then
       let nxt = handleEffect(effect)
@@ -429,6 +440,7 @@ fun handleEffects(cur: Any): Any =
 
 // return either new effect, final result or the same continuation if there is no handler
 fun handleEffect(cur: EffectSig): Any =
+  let =cur
   // debugEff(cur)
   // find the handle block corresponding to the current effect
   let prevHandlerFrame = cur.contTrace
@@ -487,6 +499,7 @@ fun resume(contTrace: ContTrace)(value: Any): Any =
   handleEffects(resumeContTrace(contTrace, value))
 
 fun resumeContTrace(contTrace: ContTrace, value: Any): Any =
+  let =value
   let cont = contTrace.next
   let handlerCont = contTrace.nextHandler
   while
@@ -532,7 +545,7 @@ val JSRT = RuntimeJS
 // shadow stack
 
 data class ShadowStackMarker(reason)
-data class ShadowFunctionContFrame(next: ShadowFunctionContFrame | null, fn: Function, varsClass: Array) with
+data class ShadowFunctionContFrame(@plainField mut val next: ShadowFunctionContFrame | null, fn: Function, varsClass: Array) with
   fun resume(value) =
     set resumeValue = value
     fn(varsClass)
@@ -633,6 +646,7 @@ module ShadowStackImpl with
       tr.nextHandler = tr.nextHandler.nextHandler
     // validateContTrace(tr, "popHandler")
   fun handleEffects(cur: Any): Any =
+    let =cur
     while cur is
       EffectSig then
         let nxt = handleEffect(cur)
@@ -667,6 +681,7 @@ module ShadowStackImpl with
 
   // return either new effect, final result or the same continuation if there is no handler
   fun handleEffect(cur: EffectSig): Any =
+    let =cur
     // console.log("handleEffect enter")
     // console.log(cur.contTrace)
     // validateContTrace(cur.contTrace, "handleEffect start")
@@ -729,6 +744,8 @@ module ShadowStackImpl with
     resumeContTrace(contTrace, value)
 
   fun resumeContTrace(contTrace: ContTrace, value: Any): Any =
+    let =contTrace
+    let =value
     // Append these onto the resume frames later
     let savedResumeFrames = curContTrace
     set curContTrace = contTrace
@@ -880,10 +897,10 @@ fun toJsAsync(thunk: () -> Any) =
   Promise.resolve(r)
 
 // stack safety
-mut val stackLimit = 0 // How deep the stack can go before heapifying the stack
-mut val stackDepth = 0
-mut val stackHandler = null
-mut val stackResume = null
+mut val stackLimit: Int = 0 // How deep the stack can go before heapifying the stack
+mut val stackDepth: Int = 0
+mut val stackHandler: Any = null
+mut val stackResume: Function | null = null
 
 object StackDelayHandler with
   fun delay() = mkEffect of this, k =>
@@ -916,7 +933,3 @@ fun runStackSafe(limit: Int, f: () -> Any) =
 class Int31(v: Int) with
   fun zext() = bitand(v, bitnot(shl(1, 31))) as Int
   fun sext() = bitor(v, shl(1, 31)) as Int
-
-fun plus_impl(lhs, rhs) = if lhs is
-  Int31 and rhs is Int31 then lhs + rhs
-  else unreachable

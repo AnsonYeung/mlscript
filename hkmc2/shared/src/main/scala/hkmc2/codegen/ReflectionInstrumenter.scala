@@ -54,7 +54,7 @@ class ReflectionInstrumenter(using State, Raise, Ctx) extends BlockTransformer(n
 
   def assign(res: Result, symName: Str = "tmp")(k: Path => Block): Block =
     // TODO: skip assignment if res: Path?
-    val sym = new TempSymbol(N, erasedType = res.erasedValueType, symName)
+    val sym = new TempSymbol(N, initErasedType = res.erasedType, symName)
     Scoped(Set(sym), Assign(sym, res, k(sym.asSimpleRef)))
 
   def tuple(elems: Ls[ArgWrappable], symName: Str = "tmp")(k: Path => Block): Block =
@@ -101,19 +101,18 @@ class ReflectionInstrumenter(using State, Raise, Ctx) extends BlockTransformer(n
       blockCtor("VirtualClassSymbol", Ls(toValue(sym.nme)), symName)(k)
     case baseSym: BaseTypeSymbol =>
       val name = scope.allocateOrGetName(baseSym)
-      val (owner, bsym, paramsOpt, auxParams) = (baseSym.defn, defnMap.get(baseSym)) match
-        case (S(defn), _) => (defn.owner, defn.bsym,
-          defn.paramsOpt.map(LoweredParamList.fixed), defn.auxParams.map(LoweredParamList.fixed))
-        case (_, S(defn: ClsLikeDefn)) => (defn.owner, defn.sym, defn.paramsOpt, defn.auxParams)
+      val (paramsOpt, auxParams) = (baseSym.defn, defnMap.get(baseSym)) match
+        case (S(defn), _) => (defn.paramsOpt.map(LoweredParamList.fixed), defn.auxParams.map(LoweredParamList.fixed))
+        case (_, S(defn: ClsLikeDefn)) => (defn.paramsOpt, defn.auxParams)
         // FIXME: hack to patch in staging for returning the object Unit.
-        case _ if baseSym == State.unitSymbol => (N, baseSym, N, Nil)
+        case _ if baseSym == State.unitSymbol => (N, Nil)
         case _ =>
           raise(ErrorReport(msg"Unable to infer parameters from symbol in staged module, which are necessary to reconstruct class instances: ${sym.toString()}" -> baseSym.toLoc :: Nil))
           return End()
 
-      val path: ArgWrappable = pOpt.getOrElse(owner match
+      val path: ArgWrappable = pOpt.getOrElse(baseSym.owner match
         case S(owner) => owner.asThis.selSN(sym.nme)
-        case N => bsym.asBlkMember.get.asMemberRef(baseSym.asClsOrMod.get))
+        case N => baseSym.bms.get.asMemberRef(baseSym))
       baseSym match
         case _: ClassSymbol =>
           transformParamsOpt(paramsOpt): paramsOpt =>
@@ -189,10 +188,7 @@ class ReflectionInstrumenter(using State, Raise, Ctx) extends BlockTransformer(n
           transformPath(qual): x =>
             transformPath(fld): y =>
               blockCtor("DynSelect", Ls(x, y, toValue(kind.isArrayIdx)), "dynsel")(k)
-        case Cast(value, target, check) =>
-          transformResult(value): v =>
-            blockCtor("Symbol", Ls(toValue(target.describe)), "target"): t =>
-              blockCtor("Cast", Ls(v, t, toValue(check)), "cast")(k)
+        case cast: CastPath => transformCast(cast)(k)
         case _: SuperSelect =>
           raise(ErrorReport(msg"Super selection is not supported in staged modules." -> p.toLoc :: Nil))
           End()
@@ -200,8 +196,16 @@ class ReflectionInstrumenter(using State, Raise, Ctx) extends BlockTransformer(n
           raise(ErrorReport(msg"Value.This not supported in staged module." -> p.toLoc :: Nil))
           End()
 
+  /** The reflected `Block.Cast` accepts any result, so both forms of IR casts map to it.
+    * TODO: update the reflection library to actually mirror the IR. */
+  private def transformCast(cast: Cast)(using Context)(k: Path => Block): Block =
+    transformResult(cast.value): v =>
+      blockCtor("Symbol", Ls(toValue(cast.target.describe)), "target"): t =>
+        blockCtor("Cast", Ls(v, t, toValue(cast.check)), "cast")(k)
+
   def transformResult(r: Result)(using Context)(k: Path => Block): Block = r match
     case p: Path => transformPath(p)(k)
+    case cast: CastResult => transformCast(cast)(k)
     case Tuple(mut, elems) =>
       assert(!mut, "mutable tuple not supported")
       transformArgs(elems): xs =>
@@ -383,13 +387,15 @@ class ReflectionInstrumenter(using State, Raise, Ctx) extends BlockTransformer(n
     val sym = f.owner.get.asThis.selSN(genSymName)
 
     // turn into fundefn
-    val dSym = TermSymbol(f.dSym.k, f.dSym.owner, Tree.Ident(f.sym.nme + "_instr"), erasedType = N)
+    val dSym = TermSymbol(f.dSym.k, f.dSym.owner, Tree.Ident(f.sym.nme + "_instr"))
     val argSyms = f.params.flatMap(_.params).map(_.sym)
     val newBody = Scoped(Set(argSyms*), transformFunDefn(f)(using new HashMap)(Return(_)))
 
     // TODO: remove it. only for test
     val debug = (k: Block) => call(sym, Nil)(fnPrintCode(_)(k))
-    val newFun = f.copy(sym = genSym, dSym = dSym, params = Ls(LoweredParamList.plain(Nil)(N)), body = newBody)(f.configOverride, f.annotations)
+    val newFun = f.copy(owner = f.owner, sym = genSym, dSym = dSym,
+      signature = FunDefn.Signature.fromParams(Ls(LoweredParamList.plain(Nil)(N)), ErasedResult.fromAnnotations(N, f.annotations)),
+      body = newBody)(f.configOverride, f.annotations)
     (newFun, debug)
 
   override def applyBlock(b: Block): Block = super.applyBlock(b) match

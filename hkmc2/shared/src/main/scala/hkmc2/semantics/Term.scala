@@ -28,6 +28,8 @@ enum Annot extends Located:
   case JsSymbol(key: SymbolKey)(val toLoc: Opt[Loc])
   case Fresh()(val toLoc: Opt[Loc])
   case Untyped()(val toLoc: Opt[Loc])
+  case Unsafe()(val toLoc: Opt[Loc])
+  case PlainField()(val toLoc: Opt[Loc])
   case Modifier(mod: Keyword)(val toLoc: Opt[Loc])
   case Trm(trm: Term)(val toLoc: Opt[Loc])
   // NOTE: The presence of TailRec and TailCall annotations does not affect whether a function is optimized or not;
@@ -42,7 +44,8 @@ enum Annot extends Located:
   case NativeAsync()(val toLoc: Opt[Loc])
   case HandlerInstrumented()(val toLoc: Opt[Loc])
   case RaiseEffects()(val toLoc: Opt[Loc])
-  // Whether the function is guaranteed to not raise effects.
+  // * EffectAnalysis Annotations
+  // @pure: overriding annotation indicating that the function is pure.
   case Pure()(val toLoc: Opt[Loc])
   // Buffered classes expose generated allocation and access methods on the class value.
   case Bufferable(keepInstances: Bool)(val toLoc: Opt[Loc])
@@ -67,13 +70,15 @@ enum Annot extends Located:
   def subTerms: Vector[Term] = this match
     case Trm(trm) => Vector.single(trm)
     case JsSymbol(key) => Vector.single(key.term)
-    case Fresh() | _: Modifier | Untyped() | TailRec() | TailCall() | Inline() | Native() | NoInline()
+    case Fresh() | _: Modifier | Untyped() | Unsafe() | PlainField() | TailRec() | TailCall() | Inline() | Native() | NoInline()
       | Generator() | Async() | NativeAsync() | HandlerInstrumented() | RaiseEffects() | Pure() | _: Bufferable | _: Config | _: Debug | _: Affine => Vector.empty
   
   def show(using Scope, ShowCfg, Raise): Document = this match
     case JsSymbol(key) => doc"@jsSymbol(${key.term.show})"
     case Fresh() => doc"@annotations.fresh"
     case Untyped() => doc"@untyped"
+    case Unsafe() => doc"@unsafe"
+    case PlainField() => doc"@js.plainField"
     case Inline() => doc"@inline"
     case NoInline() => doc"@noInline"
     case Generator() => doc"@generator"
@@ -266,7 +271,7 @@ object Resolvable:
         Nil,
         if defn.tparams.isEmpty
         then N
-        else S(defn.tparams.map(tp => Param(FldFlags.empty, tp.sym, N, Modulefulness.none)(tp.toLoc))),
+        else S(defn.tparams.map(tp => Param(FldFlags.empty, tp.sym, N, Modulefulness.none, Nil)(tp.toLoc))),
         defn.rhs,
         TermDefFlags.empty, // TODO: handle class-like definitions with flags
         Modulefulness.none, // TODO: handle modulefulness for class-like definitions
@@ -277,7 +282,7 @@ object Resolvable:
         defn.paramsOpt.toList ::: defn.auxParams, 
         if defn.tparams.isEmpty
         then N
-        else S(defn.tparams.map(tp => Param(FldFlags.empty, tp.sym, N, Modulefulness.none)(tp.toLoc))),
+        else S(defn.tparams.map(tp => Param(FldFlags.empty, tp.sym, N, Modulefulness.none, Nil)(tp.toLoc))),
         N, // TODO: handle class-like definitions with signatures
         TermDefFlags.empty, // TODO: handle class-like definitions with flags
         Modulefulness.none, // TODO: handle modulefulness for class-like definitions
@@ -312,13 +317,16 @@ enum Term extends Statement, AutoLocated, ShapePublisher:
   
   // --- NEW ---
   case SimpleRef(sym: SimpleRefSymbol)(val tree: Opt[Tree.Ident]) extends Term, NewRefImpl
-  case SelfRef(sym: InnerSymbol)(val tree: Tree.Ident) extends Term, NewRefImpl
+  case SelfRef(sym: ThisSymbol)(val tree: Tree.Ident) extends Term, NewRefImpl
   case MemberRef(sym: MemberSymbol)(val tree: Opt[Tree.Ident], val resSym: FlowSymbol) extends Term, NewResolvableImpl, NewRefImpl
   /** A direct reference to an inherited implementation, retaining the lexical receiver. */
   case Super(receiver: Term, owner: InnerSymbol, id: Tree.Ident)(val resSym: FlowSymbol) extends Term, NewResolvableImpl, ShapeHost
   /** An optional class selection fixes the lookup scope for an explicit member projection. */
   case NewSel(prefix: Term, id: Tree.Ident, cls: Opt[NewSel])(val resSym: FlowSymbol) extends Term, NewSelImpl, ShapeHost
-  case UnresolvedRef(prefixes: Ls[Term], id: Tree.Ident)(val resSym: FlowSymbol) extends Term, UnresolvedRefImpl, ShapeHost
+  /** A name without an explicit binding, looked up in the wildcard opens visible where it is written
+    * (`prefixes`, possibly none) or in implicit namespaces, as `lookup` specifies. */
+  case UnresolvedRef(prefixes: Ls[Term], id: Tree.Ident)(val resSym: FlowSymbol, val lookup: NameLookup)
+    extends Term, UnresolvedRefImpl, ShapeHost
   case Capture(base: Term, thru: AnyDefinitionSymbol) extends Term
   // --- LEGACY ---
   /** A term that wraps another term, indicating that the symbol of the inner term is resolved.
@@ -389,6 +397,7 @@ enum Term extends Statement, AutoLocated, ShapePublisher:
   case Continue(label: LabelSymbol)
   case Try(body: Term, finallyDo: Term)
   case Annotated(annot: Annot, target: Term)
+  // Each argument term represents one constructor argument list, as in New.
   case Handle(lhs: LocalVarSymbol, rhs: Term, args: List[Term],
     derivedClsSym: ClassSymbol, defs: Ls[HandlerTermDefinition], body: Term)(
     // Abortive handlers never resume their body: a method's result is the handled expression's result.
@@ -617,7 +626,9 @@ end ShowCfg
 
 object ShowCfg:
   // * For use when displaying things for internal use (not for end users)
-  val internal = ShowCfg(
+  // Each display must collect its own symbols: sharing this set across compilations retains
+  // their owner states and resolver graphs, and lets parallel displays mutate the same set.
+  def internal: ShowCfg = ShowCfg(
     showErasedTypes = true,
     showFlowSymbols = true,
     showExpansionMappings = false,
@@ -656,7 +667,7 @@ object RcdField:
     val id = new Tree.Ident(name)
     id.withLocOf(field)
     val sym = new BlockMemberSymbol(name, Nil)
-    val tsym = TermSymbol(RecordField, N, id, erasedType = N)
+    val tsym = TermSymbol(RecordField, N, id, erasure = N)
     sym.tsym = S(tsym)
     // Value-field lookup removes the synthetic definition's capture mark, leaving
     // enclosing call-site marks intact. A structural type field instead refers
@@ -676,6 +687,16 @@ final case class DefineVar(sym: LocalSymbol | TermSymbol, rhs: Term)(val toLoc: 
   * Records a function that modifies the current compiler configuration. */
 final case class SetConfig(modify: hkmc2.Config => hkmc2.Config)(val toLoc: Opt[Loc]) extends Statement:
   override def toString: String = "#config(...)"
+
+/** Where an UnresolvedRef looks up its name (see NewResolver.unresolvedRef). */
+enum NameLookup:
+  /** Only in wildcard opens. */
+  case Opens
+  /** In the implicit namespaces that flow reveals, and otherwise in wildcard opens. */
+  case NamespacesThenOpens
+  /** Only in implicit namespaces, for a leading-dot selection `.name`, which never
+    * consults the scope where it is written. */
+  case LeadingDot
 
 enum Visibility:
   case Public, Private
@@ -760,6 +781,20 @@ final case class TermDefinition(
     if (k is syntax.Fun) && body.nonEmpty then annotations.collectFirst:
       case annotation: Annot.Async => annotation
     else N
+  /** A generator call returns a generator object; the body's result is only the payload of its
+    * final step. The elaborator rejects the annotation on functions without a parameter list,
+    * which are then compiled as ordinary functions.
+    */
+  def generatorAnnotation: Opt[Annot.Generator] =
+    if (k is syntax.Fun) && body.nonEmpty && params.nonEmpty then annotations.collectFirst:
+      case annotation: Annot.Generator => annotation
+    else N
+  /** The annotation whose lowering replaces the function's result by a wrapper object
+    * (a promise or a generator) once all of its written parameter lists have been applied.
+    * Async generators are not modeled: a function with both annotations is treated as async.
+    */
+  def resultWrapperAnnotation: Opt[Annot.Async | Annot.Generator] =
+    asyncAnnotation.orElse(generatorAnnotation)
   /** A result annotation denotes the whole result; a separate function signature
     * includes the arrows corresponding to the definition's written parameter lists.
     */
@@ -785,7 +820,8 @@ final case class TermDefinition(
 
 final case class HandlerTermDefinition(
   resumeSym: VarSymbol,
-  td: TermDefinition
+  td: TermDefinition,
+  annots: Ls[Annot],
 )
 
 object ObjBody:
@@ -906,7 +942,7 @@ sealed abstract class TypeLikeDef extends Definition:
 sealed abstract class ClassLikeDef extends TypeLikeDef:
   val owner: Opt[InnerSymbol]
   val kind: ClsLikeKind
-  val sym: DefinitionSymbol[? <: ClassLikeDef] & InnerSymbol
+  val sym: ClassLikeDefSymbol
   val bsym: BlockMemberSymbol
   val ctorSym: Opt[ClassCtorSymbol]
   val tparams: Ls[TyParam]
@@ -1078,6 +1114,8 @@ end ClassDef
 
 
 case class TypeDef(
+  /** The class, module, or object whose body declares the alias, if any. */
+  owner: Opt[InnerSymbol],
   sym: TypeAliasSymbol,
   bsym: BlockMemberSymbol,
   tparams: Ls[TyParam],
@@ -1162,9 +1200,10 @@ final case class TyParam(flags: FldFlags, vce: Opt[Bool], sym: VarSymbol)(val to
 
 
 object Param:
-  def simple(sym: VarSymbol) = Param(FldFlags.empty, sym, N, Modulefulness.none)(sym.toLoc)
+  def simple(sym: VarSymbol) = Param(FldFlags.empty, sym, N, Modulefulness.none, Nil)(sym.toLoc)
 
-final case class Param(flags: FldFlags, sym: VarSymbol, sign: Opt[Term], modulefulness: Modulefulness)
+final case class Param(flags: FldFlags, sym: VarSymbol, sign: Opt[Term], modulefulness: Modulefulness,
+    annotations: Ls[Annot])
 (val toLoc: Opt[Loc]) extends Declaration:
   var fldSym: Opt[MemberSymbol] = N
   
@@ -1178,11 +1217,12 @@ final case class Param(flags: FldFlags, sym: VarSymbol, sign: Opt[Term], modulef
     signType = p.signType
     this
   
-  def subTerms: Ls[Term] = sign.toList
+  def subTerms: Ls[Term] = sign.toList ::: annotations.flatMap(_.subTerms)
   
   
   def show(using Scope, ShowCfg, Raise): Document =
-    doc"${flags.show(true)}${sym.showName}${flags.showOptMarker}${sign.fold(doc"")(": " :: _.show)}"
+    annotations.map(a => a.show :: " ").mkDocument(doc"") ::
+      doc"${flags.show(true)}${sym.showName}${flags.showOptMarker}${sign.fold(doc"")(": " :: _.show)}"
   
   def showDbg(using DebugPrinter): Str =
     flags.show(true) + sym.showDbg + flags.showOptMarker + sign.fold("")(": " + _.showDbg)

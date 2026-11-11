@@ -9,6 +9,10 @@ module lastpiece with ...
 
 open annotations
 
+// The port uses Haskell strings, represented by linked lists of characters.
+type String = List[Char]
+
+
 
 fun isSome(x) = x is Some
 

@@ -22,8 +22,8 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
     val baseName = ctx.debugInfo.debugNme
     val workerSym = new BlockMemberSymbol(s"$baseName$$worker", Nil, true)
     val workerDSym = new TermSymbol(syntax.Fun, N, Tree.Ident(s"$baseName$$worker"), N)
-    val workerVarsParam = new VarSymbol(Tree.Ident(s"$baseName$$vars"), N)
-    val dummyThisVar = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this"), N))
+    val workerVarsParam = new VarSymbol(Tree.Ident(s"$baseName$$vars"), N, mut = true)
+    val dummyThisVar = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this"), N, mut = true))
     val savedVars = Iterator.single(flattenCtx.pcVar) ++ dummyThisVar.iterator ++ ctx.resumeInfo.allArgs.iterator ++ flattenCtx.vars.iterator
     val varIndexes = savedVars.zipWithIndex.toMap
     def readFromIndex(idx: Int): Path =
@@ -44,7 +44,7 @@ class ShadowStackCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fla
       N,
       workerSym,
       workerDSym,
-      LoweredParamList.plain(Param.simple(workerVarsParam) :: Nil)(N) :: Nil,
+      FunDefn.Signature.fromParams(LoweredParamList.plain(Param.simple(workerVarsParam) :: Nil)(N) :: Nil, ctx.orig.signature.result),
       genWorkerBody()
     )(N, Annot.Private :: Annot.HandlerInstrumented()(N) :: ctx.orig.annotations)
     ctx.replaceAnnotWithInline = true

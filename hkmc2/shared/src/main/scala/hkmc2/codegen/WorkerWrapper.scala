@@ -23,7 +23,7 @@ class WorkerWrapper
     (using DebugPrinter, State, Config, Raise)
   extends BlockTransformer(SymbolSubst.Id):
   import tl.*
-  
+
   private def withInline(annotations: Ls[Annot]): Ls[Annot] =
     if annotations.exists(_.isInstanceOf[Annot.Inline]) then annotations else Annot.Inline()(N) :: annotations
   
@@ -48,9 +48,9 @@ class WorkerWrapper
       body.size <= cfg.altSmallThreshold
   
   private def freshParam(param: Param, mapping: collection.mutable.Map[Symbol, Symbol]): Param =
-    val freshSym = new VarSymbol(param.sym.id, erasedType = param.sym.erasedType)
+    val freshSym = new VarSymbol(param.sym.id, erasedType = param.sym.erasedType, mut = param.sym.mut)
     mapping(param.sym) = freshSym
-    Param(param.flags, freshSym, param.sign, param.modulefulness)(param.toLoc).withSignTypeOf(param)
+    Param(param.flags, freshSym, param.sign, param.modulefulness, param.annotations)(param.toLoc).withSignTypeOf(param)
   
   private def flattenParams(params: Ls[LoweredParamList]): (LoweredParamList, Map[Symbol, Symbol]) =
     val mapping = collection.mutable.LinkedHashMap.empty[Symbol, Symbol]
@@ -70,10 +70,14 @@ class WorkerWrapper
     val (workerParams, paramMapping) = flattenParams(fun.params)
     val workerSym = new BlockMemberSymbol(s"${fun.sym.nme}$$worker", Nil, nameIsMeaningful = true)
     val workerBody = rewriteParams(body, paramMapping)
-    val worker = FunDefn.withFreshSymbol(
+    val workerSignature = FunDefn.Signature.fromParams(workerParams :: Nil, fun.signature.result)
+    val workerDSym = TermSymbol(syntax.Fun, N, syntax.Tree.Ident(workerSym.nme))
+    workerSym.tsym = S(workerDSym)
+    val worker = FunDefn(
       N,
       workerSym,
-      workerParams :: Nil,
+      workerDSym,
+      workerSignature,
       workerBody,
     )(fun.configOverride, withoutInline(fun.annotations))
     val workerArgs = fun.params.flatMap(_.params).map: param =>
@@ -81,23 +85,29 @@ class WorkerWrapper
     val wrapperBody = Return(
       Call(worker.asPath, workerArgs ne_:: Nil)(CallMetadata.mlsFunWithEffect, N),
     )
+    // The generator body now belongs to the worker. The wrapper returns its Iterator directly
+    // under the same symbol, whose source erasure keeps the payload for later source cloning.
+    val wrapperAnnotations = withInline(fun.annotations.filter:
+      case Annot.NoInline() | Annot.Generator() => false
+      case _ => true)
+    val wrapperSignature =
+      if fun.generator then FunDefn.Signature.fromParams(fun.params,
+        ErasedResult.fromAnnotations(fun.signature.erasure.ret, wrapperAnnotations))
+      else fun.signature
     val wrapper = FunDefn(
       fun.owner,
       fun.sym,
       fun.dSym,
-      fun.params,
+      wrapperSignature,
       wrapperBody,
-    )(fun.configOverride, withInline(fun.annotations.filter:
-      case Annot.NoInline() | Annot.Generator() => false
-      case _ => true
-    ))
+    )(fun.configOverride, wrapperAnnotations)
     log(dbg"▶ Worker-wrapper: ${fun.dSym.showDbg} -> ${worker.dSym.showDbg}")
     Scoped(Set.single(worker.sym), Define(wrapper, Define(worker, rest)))
   
   private def mkInlineOnly(fun: FunDefn, body: Block): FunDefn =
     val annotations = withInline(fun.annotations)
     if (annotations is fun.annotations) && (body is fun.body) then fun
-    else FunDefn(fun.owner, fun.sym, fun.dSym, fun.params, body)(fun.configOverride, annotations)
+    else fun.copy(fun.owner, fun.sym, fun.dSym, fun.signature, body)(fun.configOverride, annotations)
   
   override def applyProgram(prog: Program): Program =
     val res = super.applyProgram(prog)

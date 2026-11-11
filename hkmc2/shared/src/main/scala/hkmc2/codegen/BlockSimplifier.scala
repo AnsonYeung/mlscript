@@ -120,6 +120,14 @@ class BlockSimplifier
     
   end Helper
   
+  /** Simplifier rewrites substitute values into existing casts, which can make them redundant.
+    * Dropping those casts exposes literals and known values to folding and propagation. */
+  trait RefinesCasts extends BlockTransformer:
+    override protected def rebuildCast(cast: CastResult, value: Result): Result =
+      Cast.refined(value, cast.target, cast.check)(cast.toLoc)
+    override protected def rebuildCastPath(cast: CastPath, value: Path): Path =
+      Cast.refinedPath(value, cast.target, cast.check)(cast.toLoc)
+  
   
   // * Only such variables can be assigned directly in the IR
   type LocalVar = LocalVarSymbol
@@ -149,7 +157,7 @@ class BlockSimplifier
   
   /** A simple pass to eliminate the most obvious kind of dead code;
     * hopefully allows more expensive passes such as DataFlowAnalysis to do less work. */
-  class DeadCodeElim() extends BlockTransformer(SymbolSubst.Id), Helper:
+  class DeadCodeElim() extends BlockTransformer(SymbolSubst.Id), Helper, RefinesCasts:
     
     var analysisDone = false
     
@@ -192,12 +200,14 @@ class BlockSimplifier
           * backend a cast it cannot emit. This cannot live in `Result.freeVars`: resolving a target to its
           * `BlockMemberSymbol` needs a `Ctx` that the context-free `lazy val` does not have.
           *
-          * Both traversal entry points must call this: `applyResult` matches `Cast` before its `Path` case, so
-          * `applyPath` never sees a returned or assigned cast, only the ones a `ValDefn` binds.
+          * Both traversal entry points must call this: `applyResult` matches every cast before its `Path` case,
+          * so `applyPath` only sees the path casts in path positions, such as arguments.
           */
         def markCastTarget(target: ErasedValueType): Unit =
           target.canonicalize match
-            case ErasedType.AnyRef(_, tpeSym) => usedVars += tpeSym.bms.get
+            case ErasedType.AnyRef(_, tpeSym) =>
+              usedVars += tpeSym.bms.getOrElse:
+                lastWords(s"Missing binding for cast target '${tpeSym.nme}'")
             case _ =>
 
         override def applyResult(r: Result): Unit =
@@ -449,7 +459,7 @@ class BlockSimplifier
     * Note that if the program tree is changed, it is imperative to register the change,
     * otherwise dead assignment removal (which runs when no change was detected) will not work correctly,
     * as it relies on object identity. */
-  class DataFlowAnalysis(localVars: Set[LocalVar]) extends BlockTransformer(SymbolSubst.Id), Helper:
+  class DataFlowAnalysis(localVars: Set[LocalVar]) extends BlockTransformer(SymbolSubst.Id), Helper, RefinesCasts:
     
     
     val capturedVars = MutSet.empty[LocalVar]
@@ -557,8 +567,8 @@ class BlockSimplifier
     // *   - `false` means no known value.
     // *   - `true` means definitely uninitialized,
     // *     meaning any variable access can be replaced by `undefined`, ie, `Value.Lit(UnitLit(false))`.
-    // *   - `Value`/`Cast` means this exact value is still available for propagation.
-    type KnownValue = Bool | Value | Cast
+    // *   - `Value`/`CastPath` means this exact value is still available for propagation.
+    type KnownValue = Bool | Value | CastPath
     
     // * The propagated value fact for an assignment, plus equivalent
     // * references that could be substituted while their requirements hold.
@@ -573,9 +583,9 @@ class BlockSimplifier
         (l, r) match
         case (false, _) | (_, false) => false
         case (true, true) => true
-        case (true, v: (Value | Cast)) => v
-        case (v: (Value | Cast), true) => v
-        case (v1: (Value | Cast), v2: (Value | Cast)) if v1 === v2 => v1
+        case (true, v: (Value | CastPath)) => v
+        case (v: (Value | CastPath), true) => v
+        case (v1: (Value | CastPath), v2: (Value | CastPath)) if v1 === v2 => v1
         case _ => false
       
       def mergeRefs(l: List[TrackedRef], r: List[TrackedRef]): List[TrackedRef] =
@@ -686,7 +696,7 @@ class BlockSimplifier
             // * slot - a `return`, which Wasm validates against the declared result instead of coercing into it.
             // * Consumers wanting the literal look through the cast with `litThroughUncheckedCasts`.
             // * A *checked* cast is excluded: propagating it would duplicate a test that can throw.
-            case c @ Cast(Value.Lit(_), _, false) => c
+            case c @ CastPath(Value.Lit(_), _, false) => c
             case _ => false
           val refs = opt match
             case S((r @ Value.SimpleRef(lv: LocalVar)) -> rhs) =>
@@ -1181,7 +1191,7 @@ class BlockSimplifier
         case true =>
           registerChange(s"${loc.showDbg} ~> undefined")
           return k(Value.Lit(syntax.Tree.UnitLit(false))(v.toLoc))
-        case lit: (Value | Cast) =>
+        case lit: (Value | CastPath) =>
           registerChange(s"${loc.showDbg} ~> ${lit.showDbg}")
           return k(lit)
         case false =>
@@ -1261,7 +1271,7 @@ class BlockSimplifier
     * - all the statements between the two matches are pure and can thus be moved out of the way,
     *   similar to how `MergeMatchArmTransformer` works (in `Lowering.scala`) – we reuse `TrivialStatementsAndMatch`.
     * See examples in [test:case-of-case]. */
-  class CaseOfCase(using cfg: Config.Inliner) extends BlockTransformer(SymbolSubst.Id), Helper:
+  class CaseOfCase(using cfg: Config.Inliner) extends BlockTransformer(SymbolSubst.Id), Helper, RefinesCasts:
     
     type Shape = Literal | ClassLikeSymbol
     
@@ -1412,23 +1422,59 @@ class BlockSimplifier
             case _ => N
           case _ => N
 
-      /** Build a mapping from module `this` symbols to their call-site qualifier paths.
-        *
-        * For example, for `Outer.Mid.Inner.f(x)`, this records:
-        * `Inner.this -> Outer.Mid.Inner`, `Mid.this -> Outer.Mid`,
-        * and `Outer.this -> Outer`. */
-      def buildThisMapping(qual: Path, ownerSym: InnerSymbol): Map[InnerSymbol, Path] =
-        def loop(currentQual: Path, currentOwner: InnerSymbol, acc: Map[InnerSymbol, Path]): Map[InnerSymbol, Path] =
-          val acc2 = acc + (currentOwner -> currentQual)
+      /** Find the paths that replace `this` references, ordered outermost first.
+        * For example:
+        * {{{
+        * class Owner(val value) with
+        *   module Nested with
+        *     fun f() = value
+        * val instance = new Owner(1)
+        * class Holder(val saved)
+        * val holder = new Holder(instance.Nested)
+        * }}}
+        * `instance.Nested.f()` gives `Owner.this -> instance`, then
+        * `Nested.this -> instance.Nested`.
+        * `holder.saved.f()` gives only `Nested.this -> holder.saved`.
+        * The `saved` field belongs to `Holder` and stores the nested module;
+        * its access path does not expose the `Owner` instance needed by `f`.
+        */
+      def buildThisMapping(qual: Path, ownerSym: InnerSymbol): Ls[(InnerSymbol, Path)] =
+        def loop(currentQual: Path, currentOwner: InnerSymbol, acc: Ls[(InnerSymbol, Path)]): Ls[(InnerSymbol, Path)] =
+          val acc2 = (currentOwner -> currentQual) :: acc
           currentQual match
-          case s: Select =>
-            s.qual match
-            case Value.This(sym) => loop(s.qual, sym, acc2)
-            case _ => s.qual.targetSymbol match
-              case S(ds: InnerSymbol) => loop(s.qual, ds, acc2)
-              case _ => acc2
+          case s: Select if s.symbol.contains(currentOwner.asDefnSym) =>
+            currentOwner.irClassContainer.asDefnSym.irClsLikeDefn.flatMap(_.owner) match
+            case S(parent) => loop(s.qual, parent, acc2)
+            case N => acc2
           case _ => acc2
-        loop(qual, ownerSym, Map.empty)
+        loop(qual, ownerSym, Nil)
+
+      /** Capture unstable receiver prefixes before entering the copied body: callbacks may
+        * reassign variables, and getters must run only once. Keep stable paths intact,
+        * including immutable selections rooted in a captured parent, so further inlining
+        * can still recover their enclosing receivers.
+        */
+      def bindThisMapping(
+          paths: Ls[(InnerSymbol, Path)],
+          receiverMapping: Map[InnerSymbol, Path],
+      ): (Block => Block, Map[InnerSymbol, Path]) =
+        // Reuse the availability map; only paths changed by receiver captures need updating.
+        val (acc, _, mapping) = paths.foldLeft((blockBuilder, Map.empty[Path, Path], receiverMapping)):
+          case ((acc, evaluated, mapping), (sym, path)) =>
+            val rhs = path match
+              case s: Select =>
+                val qual = evaluated.getOrElse(s.qual, s.qual)
+                if qual is s.qual then s
+                else Select(qual, s.name)(s.symbol, s.toLoc)(s.sanitize)
+              case _ => path
+            val (prefix, bound) =
+              if rhs.isStable then (acc, rhs)
+              else
+                val receiver = VarSymbol(syntax.Tree.Ident("receiver"), erasedType = path.erasedType, mut = false)
+                (acc.assignScoped(receiver, rhs), receiver.asSimpleRef)
+            val updatedMapping = if bound is path then mapping else mapping.updated(sym, bound)
+            (prefix, evaluated + (path -> bound), updatedMapping)
+        (acc, mapping)
 
       /** Receivers that a copied method body needs from outside its own definitions.
         * Unlike lexical variables, `This` references are not included in `Block.freeVars`. */
@@ -1439,7 +1485,7 @@ class BlockSimplifier
           applyBlock(blk)
           override def applyValue(value: Value): Unit = value match
             case Value.This(_: TopLevelSymbol) => ()
-            case Value.This(sym) => referenced += sym
+            case Value.This(sym: InnerSymbol) => referenced += sym
             case _ => super.applyValue(value)
           override def applyClsLikeDefn(defn: ClsLikeDefn): Unit =
             defined += defn.isym
@@ -1529,7 +1575,11 @@ class BlockSimplifier
           // Instantiate nodes are rendered according to the receiving JS builder's
           // freezing policy. Moving a body across compilation units with a different
           // policy could silently turn mutable values into frozen values, or vice versa.
-          if defn.dSym.getState.compilationUnitConfig.exists(_.noFreeze =/= config.noFreeze)
+          // Cross-target bodies may reference bindings emitted by a different backend.
+          // * TODO: instead of hacks like this, in the future, we should make sure to
+          // * produce artifacts in taregt folders keyed by the config options that alter bin. compat.
+          if defn.dSym.getState.compilationUnitConfig.exists(cfg =>
+            cfg.noFreeze =/= config.noFreeze || !cfg.target.sameBackend(config.target))
           then return false
           if defn.dSym.getState.compilationUnitConfig.exists(_.effectHandlers =/= config.effectHandlers)
           then return false
@@ -1627,7 +1677,7 @@ class BlockSimplifier
             // * A non-local definition cannot be eliminated from the local block. This is based
             // * on where the definition was encountered, rather than symbol state: incremental
             // * worksheet blocks can share a state while still having distinct function bodies.
-            map = map + (f.dSym -> info)
+            map += f.dSym -> info
             true
           else
             val info = map(f.dSym)
@@ -1809,21 +1859,21 @@ class BlockSimplifier
             case _ => super.applyBlock(b)
         
           override def applyValue(v: Value)(k: Value => Block): Block = v match
-            case Value.This(sym) if thisMapping.contains(sym) =>
+            case Value.This(sym: InnerSymbol) if thisMapping.contains(sym) =>
               thisMapping(sym) match
               case v2: Value => k(v2)
               case _ => super.applyValue(v)(k)
             case _ => super.applyValue(v)(k)
 
           override def applyPath(p: Path)(k: Path => Block): Block = p match
-            case Value.This(sym) if thisMapping.contains(sym) =>
+            case Value.This(sym: InnerSymbol) if thisMapping.contains(sym) =>
               k(thisMapping(sym))
             case _ => super.applyPath(p)(k)
 
         def applyBlock(blk: Block) =
           Label(lblSym, false, Copier.apply(blk), _)
       
-      class Transformer(m: InlinerMap) extends BlockTransformer(SymbolSubst()):
+      class Transformer(m: InlinerMap) extends BlockTransformer(SymbolSubst()), RefinesCasts:
         
         // The call graph may be cyclic, in which case we break the infinite loop using this map by
         // assuring that the block corresponding to a term symbol may only be transformed once.
@@ -1876,19 +1926,19 @@ class BlockSimplifier
               val newBdy = enterFunctionBody(fun, applyBlock(fun.body))
               newFunctionBody(fun.dSym) = S(newBdy)
               if newBdy is fun.body then fun else
-              FunDefn(fun.owner, fun.sym, fun.dSym, fun.params, newBdy)(fun.configOverride, fun.annotations)
+              fun.withBody(newBdy)
             case S(N) =>
               // The expansion of the function body itself reaches its own definition, which is impossible
               lastWords("Function body contains its own definition.")
             case S(S(blk)) =>
               if blk is fun.body then fun else
-              FunDefn(fun.owner, fun.sym, fun.dSym, fun.params, blk)(fun.configOverride, fun.annotations)
+              fun.withBody(blk)
 
         private def inlineCall(
             call: Call,
             callee: TermSymbol,
             argss: NELs[Ls[Arg]],
-            thisMapping: => Map[InnerSymbol, Path],
+            thisMapping: => Ls[(InnerSymbol, Path)],
         )(k: Result => Block): Block =
           val info = m(callee)
           if shouldDeferCrossUnitInline(info) || info.isLoopBreaker then
@@ -1902,7 +1952,8 @@ class BlockSimplifier
           .fold(super.applyResult(call)(k)): blk =>
             val cfg = summon[Config.Inliner]
             val threshold = if insideInlineAnnotatedFunction then cfg.altSmallThreshold else cfg.inlineThreshold
-            val receiverMapping = thisMapping
+            val receiverPaths = thisMapping
+            val receiverMapping = receiverPaths.toMap
             info.inlineCost(blk, threshold) match
             case N =>
               super.applyResult(call)(k)
@@ -1921,15 +1972,16 @@ class BlockSimplifier
                 registerChange(s"inline call ${callee.showDbg}")
                 log(dbg"Inline call for ${callee}, with args ${argss}")
                 val extraArgss = argss.drop(info.defn.params.length)
+                val (receiverPrefix, boundReceivers) = bindThisMapping(receiverPaths, receiverMapping)
                 def go(acc: Block => Block, args: List[(VarSymbol, Result)], mapping: Map[Symbol, Symbol]): Block =
                   args match
                   case Nil =>
                     val resSym = TempSymbol(
                       N,
-                      erasedType = if extraArgss.isEmpty then call.erasedValueType else N,
+                      initErasedType = if extraArgss.isEmpty then call.erasedType else N,
                       "inlinedVal",
                     )
-                    val copier = Copier(resSym, mapping, receiverMapping)
+                    val copier = Copier(resSym, mapping, boundReceivers)
                     val newBlk = copier.applyBlock(blk)
                     if extraArgss.isEmpty then
                       acc(Scoped(Set.single(resSym), newBlk(k(resSym.asSimpleRef))))
@@ -1940,9 +1992,9 @@ class BlockSimplifier
                             annotations = call.metadata.annotations.filterNot(_.isInstanceOf[Annot.TailCall]),
                           ), call.toLoc)))))
                   case (sym, value) :: argRest =>
-                    val newSym = VarSymbol(sym.id, erasedType = sym.erasedType)
+                    val newSym = VarSymbol(sym.id, erasedType = sym.erasedType, mut = sym.mut)
                     go(acc.assignScoped(newSym, value), argRest, mapping + (sym -> newSym))
-                go(blockBuilder, matchedArgs, Map.empty)
+                go(receiverPrefix, matchedArgs, Map.empty)
         
         override def applyResult(r: Result)(k: Result => Block): Block = r match
           case c @ Call(MethodCallQualifier(qual, ts), argss) if m.contains(ts) && argss.nonEmpty =>
@@ -1952,11 +2004,11 @@ class BlockSimplifier
             inlineCall(c, ts, argss,
               ts.owner match
               case S(ownerSym: InnerSymbol) => buildThisMapping(qual, ownerSym)
-              case _ => Map.empty,
+              case _ => Nil,
             )(k)
 
           case c @ Call(TermSymbolPath(ts), argss) if m.contains(ts) && argss.nonEmpty =>
-            inlineCall(c, ts, argss, Map.empty)(k)
+            inlineCall(c, ts, argss, Nil)(k)
           case _ => super.applyResult(r)(k)
       
       def replace(m: InlinerMap, prog: Program): Program =

@@ -8,10 +8,14 @@ import Message.MessageContext
 import hkmc2.codegen.HandlerLowering
 
 
-/** The compilation target of a program. */
-enum CompilationTarget:
-  case JS
-  case Wasm
+/** The compilation target of a program, with a name for diagnostics independent of its backend options. */
+enum CompilationTarget(val displayName: Str):
+  // Cast comments expose the IR coercions that JavaScript otherwise erases.
+  case JS(emitCastComments: Bool) extends CompilationTarget("JavaScript")
+  case Wasm extends CompilationTarget("Wasm")
+
+  /** Compares backend choices, ignoring options such as JavaScript cast comments. */
+  def sameBackend(that: CompilationTarget): Bool = ordinal == that.ordinal
 
 
 def config(using Config): Config = summon
@@ -34,6 +38,7 @@ case class Config(
   commentGeneratedCode: Bool,
   noFreeze: Bool,
   noModuleCheck: Bool,
+  aggressive: Bool,
   debug: Debug,
   optimizer: Optimizer,
   // Check internal invariants whose checks are too costly to always run, such as MemberStorage.privateOwner's.
@@ -81,7 +86,7 @@ object Config:
     effectHandlers = N,
     liftDefns = S(LiftDefns()),
     patMatConsequentSharingThreshold = default.patMatConsequentSharingThreshold, // minimum: 1
-    target = CompilationTarget.JS,
+    target = CompilationTarget.JS(emitCastComments = false),
     rewriteWhileLoops = false,
     stageCode = false,
     qqEnabled = false,
@@ -89,6 +94,7 @@ object Config:
     commentGeneratedCode = false,
     noFreeze = false,
     noModuleCheck = false,
+    aggressive = false,
     debug = Debug.default,
     optimizer = Optimizer.FastOpt,
     checkInvariants = false,
@@ -245,6 +251,8 @@ object Config:
     // One specific scenario is Rendering.mls, which Runtime.mls depends on, and hence using stack safety will
     // reference Runtime.mls during construction of the Rendering module, causing a cyclic dependency error.
     doNotInstrumentTopLevelModCtor: Bool = false,
+    // Whether tail resumptive handlers should be optimized.
+    optTailResumptiveHandlers: Bool = true
   )
   
   case class StackSafety(stackLimit: Int)
@@ -266,6 +274,7 @@ object Config:
     debugEta: Bool = false,
     debugDpe: Bool = false,
     debugDce: Bool = false,
+    logEffects: Bool = false,
   ):
     def effectiveDebugEta: Bool = debug || debugEta
     def effectiveDebugDpe: Bool = debug || debugDpe
@@ -332,7 +341,7 @@ object Config:
     given Raise = _ => ()
     def modifier(tree: syntax.Tree): Config => Config = tree match
       case App(Directive(prefix, _), args) => modifier(Directive(prefix, args))
-      case Directive(Ident("config"), Tup(args)) => ConfigParser.parseOverrides(args)
+      case Directive(Ident("config"), Tup(args)) => ConfigParser.parseOverrides(args, allowCompilationTarget = true)
       case Directive(Ident("lang"), Tup(args)) => ConfigParser.parseLanguageDirective(args)
       case Directive(Ident("dbg"), Tup(args)) => ConfigParser.parseDebugDirective(args, definitionLocal = false, sourceDir)
       case _ => identity
@@ -437,9 +446,15 @@ object ConfigParser:
         case N => cfg
   
   /** Parse a list of config override arguments (from the Tup tree) into a Config modification function. */
-  def parseOverrides(args: Ls[Tree])(using Raise): Config => Config =
+  def parseOverrides(args: Ls[Tree], allowCompilationTarget: Bool)(using Raise): Config => Config =
     args.foldLeft(identity[Config]): (acc, arg) =>
-      val override_ = parseOverride(arg)
+      val override_ = arg match
+        case NamedArg("target", _) if !allowCompilationTarget =>
+          raise(ErrorReport(
+            msg"Compilation target can only be set by a top-level '#config' directive" -> arg.toLoc :: Nil,
+            source = Diagnostic.Source.Compilation))
+          identity[Config]
+        case _ => parseOverride(arg)
       cfg => override_(acc(cfg))
   
   /** Parse a single config override argument. */
@@ -465,6 +480,15 @@ object ConfigParser:
     case PrefixOpApp(Ident("-"), IntLit(v)) => S(-v.toInt)
     case _ =>
       expect("an integer value")(tree)
+      N
+
+  private def parseCompilationTarget(tree: Tree)(using Raise): Opt[CompilationTarget] = tree.deparenthesized match
+    case Sel(Ident("CompilationTarget"), Ident("JS")) | Ident("JS") =>
+      S(CompilationTarget.JS(emitCastComments = false))
+    case Sel(Ident("CompilationTarget"), Ident("Wasm")) | Ident("Wasm") =>
+      S(CompilationTarget.Wasm)
+    case _ =>
+      expect("CompilationTarget.JS or CompilationTarget.Wasm")(tree)
       N
 
   private def parseVersionName(tree: Tree)(using Raise): Opt[Str] = tree match
@@ -686,6 +710,7 @@ object ConfigParser:
       var checkInstantiateEffect = base.checkInstantiateEffect
       var softLifterError = base.softLifterError
       var doNotInstrumentTopLevelModCtor = base.doNotInstrumentTopLevelModCtor
+      var optTailResumptiveHandlers = base.optTailResumptiveHandlers
       args.foreach:
         case NamedArg("debug", value) =>
           setFrom(value)(parseBool)(v => debug = v)
@@ -697,9 +722,11 @@ object ConfigParser:
           setFrom(value)(parseBool)(v => softLifterError = v)
         case NamedArg("doNotInstrumentTopLevelModCtor", value) =>
           setFrom(value)(parseBool)(v => doNotInstrumentTopLevelModCtor = v)
+        case NamedArg("optTailResumptiveHandlers", value) =>
+          setFrom(value)(parseBool)(v => optTailResumptiveHandlers = v)
         case other =>
           unsupported("EffectHandlers", other)
-      S(Config.EffectHandlers(strategy, debug, stackSafety, checkInstantiateEffect, softLifterError, doNotInstrumentTopLevelModCtor))
+      S(Config.EffectHandlers(strategy, debug, stackSafety, checkInstantiateEffect, softLifterError, doNotInstrumentTopLevelModCtor, optTailResumptiveHandlers))
     case _ =>
       expect("EffectHandlers(...)")(tree)
       N
@@ -722,6 +749,7 @@ object ConfigParser:
       var debugEta = base.debugEta
       var debugDpe = base.debugDpe
       var debugDce = base.debugDce
+      var logEffects = base.logEffects
       args.foreach:
         case NamedArg("debug", value) =>
           setFrom(value)(parseBool)(v => debug = v)
@@ -741,6 +769,8 @@ object ConfigParser:
           setFrom(value)(parseBool)(v => debugDpe = v)
         case NamedArg("debugDce", value) =>
           setFrom(value)(parseBool)(v => debugDce = v)
+        case NamedArg("logEffects", value) =>
+          setFrom(value)(parseBool)(v => logEffects = v)
         case other =>
           unsupported(passName, other)
       S(Config.FlowAnalysisConfig(
@@ -753,6 +783,7 @@ object ConfigParser:
         debugEta,
         debugDpe,
         debugDce,
+        logEffects,
       ))
     case _ =>
       expect(s"${passName}(...)")(tree)
@@ -779,6 +810,8 @@ object ConfigParser:
   /** Parse a single field override like `tailRecOpt: false`. */
   private def parseField(name: Str, value: Tree)(using Raise): Config => Config = name match
     case "language" => parseLanguageOverride(value)
+    case "target" =>
+      parsedField(value)(parseCompilationTarget)(v => _.copy(target = v))
     case "noOpt" =>
       parsedField(value)(parseBool)(v => _.mapOptimizer(_ => Optimizer.NoOpt))
     case "tailRecOpt" =>
@@ -787,6 +820,8 @@ object ConfigParser:
       parsedField(value)(parseBool)(v => _.copy(noFreeze = v))
     case "noModuleCheck" =>
       parsedField(value)(parseBool)(v => _.copy(noModuleCheck = v))
+    case "aggressive" =>
+      parsedField(value)(parseBool)(v => _.copy(aggressive = v))
     case "rewriteWhileLoops" =>
       parsedField(value)(parseBool)(v => _.copy(rewriteWhileLoops = v))
     case "stageCode" =>

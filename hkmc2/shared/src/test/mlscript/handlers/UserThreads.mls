@@ -1,3 +1,4 @@
+:.
 :js
 :effectHandlers
 :lift
@@ -6,11 +7,11 @@ open annotations
 
 abstract class ThreadEffect with
   val tasks = mut []
-  fun start(thread: () -> ()): ()
+  fun start(thread: ThreadEffect -> ()): ()
   fun fork(thread: () -> ()): ()
   fun yld(): ()
 
-class Lock(val locked) with
+class Lock(mut val locked) with
   fun lock(th: ThreadEffect) =
     while locked do
       th.yld()
@@ -18,14 +19,14 @@ class Lock(val locked) with
   fun unlock() =
     set locked = false
 
-fun f(h, x) =
+fun f(h: ThreadEffect, x) =
   print("f " + x)
   h.yld()
   print("f " + x)
   h.yld()
   print("f " + x)
 
-fun mainn(h) =
+fun mainn(h: ThreadEffect) =
   print("main start")
   h.fork(() => f(h, 0))
   h.fork(() => f(h, 1))
@@ -40,11 +41,11 @@ handle h = ThreadEffect with
     k(())
   fun yld()(k) =
     @native this.tasks.push(() => k(()))
-    enterHandleBlock(this, () => (@native this.tasks.shift())())
+    enterHandleBlock(this, () => (@native this.tasks.shift()){as Function}())
   fun start(main)(k) =
     this.tasks.push(() => mainn(this))
     while this.tasks.length != 0 do
-      enterHandleBlock(this, () => (@native this.tasks.shift())())
+      enterHandleBlock(this, () => (@native this.tasks.shift()){as Function}())
     k(())
 in
   h.start(mainn)
@@ -68,11 +69,11 @@ handle h = ThreadEffect with
     k(())
   fun yld()(k) =
     this.tasks.push(() => k(()))
-    enterHandleBlock(this, () => this.tasks.shift()())
+    enterHandleBlock(this, () => this.tasks.shift(){as Function}())
   fun start(main)(k) =
     this.tasks.push(() => mainn(this))
     while this.tasks.length != 0 do
-      enterHandleBlock(this, () => this.tasks.shift()())
+      enterHandleBlock(this, () => this.tasks.shift(){as Function}())
     k(())
 in
   h.start(mainn)
@@ -98,14 +99,14 @@ abstract class ThreadEffect with
 val tasks = mut []
 //│ tasks = []
 
-fun f(x) = h =>
+fun f(x) = (h: ThreadEffect) =>
   print("f " + x)
   h.yld()
   print("f " + x)
   h.yld()
   print("f " + x)
 
-fun mainn(h) =
+fun mainn(h: ThreadEffect) =
   print("main start")
   h.fork(f(0))
   h.fork(f(1))
@@ -114,7 +115,7 @@ fun mainn(h) =
 
 fun dequeue() =
   if tasks.length != 0 do
-    (@native tasks.shift())(())
+    (@native tasks.shift()){as Function}(())
 
 fun start(thread: ThreadEffect -> ()) =
   handle h = ThreadEffect with
@@ -155,7 +156,7 @@ fun enqueue(k, x) =
   @native tasks.push(() => k(x))
 fun dequeue() =
   if tasks.length != 0 do
-    (@native tasks.shift())()
+    (@native tasks.shift()){as Function}()
 //│ tasks = []
 
 let exchanger = None
@@ -182,7 +183,7 @@ fun start(thread: ThreadEffect -> ()) =
     thread(h)
   dequeue()
 
-fun mainn(h) =
+fun mainn(h: ThreadEffect) =
   h.fork(h =>
     print("[t1] Sending 0")
     let v = h.xchg(0)

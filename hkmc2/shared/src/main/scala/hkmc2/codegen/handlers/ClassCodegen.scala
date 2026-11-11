@@ -19,8 +19,8 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
   given Config = cfg
   
   def generate(b: Block, parts: PartitionedBlock, ctx: FunctionCtx): Block =
-    val curDepth = VarSymbol(Tree.Ident("curDepth"), S(ErasedType.Int))
-    val callTmpVar = VarSymbol(Tree.Ident("callTmp"), N)
+    val curDepth = VarSymbol(Tree.Ident("curDepth"), S(ErasedType.Int), mut = true)
+    val callTmpVar = VarSymbol(Tree.Ident("callTmp"), N, mut = true)
     val baseName = ctx.debugInfo.debugNme
     val clsSym = new BlockMemberSymbol(s"$baseName$$Cont", Nil, true)
     val clsDSym = new ClassSymbol(Tree.DummyTypeDef(syntax.Cls), Tree.Ident(s"$baseName$$Cont"))
@@ -95,20 +95,20 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
     def fieldFromTS(ts: TermSymbol): Select =
       Select(Value.This(clsDSym)(N), ts.id)(S(ts), N)(false)
     // Allocate before actual variables to reserve the name
-    val pc = allocFieldWithName(VarSymbol(Tree.Ident("pc"), S(ErasedType.Int)), "pc")
-    val isContCls = allocFieldWithName(VarSymbol(Tree.Ident("isContCls"), S(ErasedType.Bool)), "isContCls")
-    val next = allocFieldWithName(VarSymbol(Tree.Ident("next"), N), "next")
-    val selfField = ctx.thisPath.map(_ => allocFieldWithName(VarSymbol(Tree.Ident("this"), N), "this"))
-    val selfParam = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this"), N))
+    val pc = allocFieldWithName(VarSymbol(Tree.Ident("pc"), S(ErasedType.Int), mut = true), "pc")
+    val isContCls = allocFieldWithName(VarSymbol(Tree.Ident("isContCls"), S(ErasedType.Bool), mut = true), "isContCls")
+    val next = allocFieldWithName(VarSymbol(Tree.Ident("next"), N, mut = true), "next")
+    val selfField = ctx.thisPath.map(_ => allocFieldWithName(VarSymbol(Tree.Ident("this"), N, mut = true), "this"))
+    val selfParam = ctx.thisPath.map(_ => VarSymbol(Tree.Ident("this"), N, mut = true))
     val allFields = isContCls :: next :: selfField ++: (pc :: savedVars.map(allocField))
-    val params = selfParam ++: (VarSymbol(Tree.Ident("pc"), N) :: savedVars.map(vs => VarSymbol(Tree.Ident(vs.nme), N)))
+    val params = selfParam ++: (VarSymbol(Tree.Ident("pc"), N, mut = true) :: savedVars.map(vs => VarSymbol(Tree.Ident(vs.nme), N, mut = true)))
     val allFieldsInit = Value.Lit(Tree.BoolLit(true))(N) :: Value.Lit(Tree.UnitLit(true))(N) :: params.map(_.asSimpleRef)
     val initFields = (allFieldsInit zip allFields).foldRight[Block](End()): (p, rst) =>
         Define(ValDefn(p._2._2, p._2._1, p._1)(N, Nil), rst)
     val resumeBody = genResumeBody(parts, ctx, selfField.map(f => fieldFromTS(f._2)), allocatedVars, allocatedFields, fieldFromTS, clsDSym)
     val resumeDSym = genFTS("resume")
     val resumeSym = genBMS("resume")
-    val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, LoweredParamList.plain(Param.simple(ctx.rVar) :: Nil)(N) :: Nil, resumeBody)(N, Annot.HandlerInstrumented()(N) :: Nil)
+    val resumeMtd = FunDefn(S(clsDSym), resumeSym, resumeDSym, FunDefn.Signature.fromParams(LoweredParamList.plain(Param.simple(ctx.rVar) :: Nil)(N) :: Nil, ctx.orig.signature.result), resumeBody)(N, Annot.HandlerInstrumented()(N) :: Nil)
     ctx.newDefns ::= ClsLikeDefn(
       N,
       clsDSym,

@@ -37,7 +37,7 @@ class BlockTraverser:
     case Break(lbl) => applySymbol(lbl)
     case Continue(lbl) => applySymbol(lbl)
     case Return(res) => applyResult(res)
-    case Throw(exc) => applyResult(exc)
+    case Throw(exc, _) => applyResult(exc)
     case Match(scrut, arms, dflt, rst) =>
       val scrut2 = applyPath(scrut)
       arms.foreach: arm =>
@@ -77,7 +77,7 @@ class BlockTraverser:
       applyPath(qual); applyPath(fld); applyDynSelectKind(kind)
     case p @ Select(qual, name) =>
       applyPath(qual); p.symbol.foreach(_.traverse)
-    case c @ Cast(value, _, _) => applyResult(value)
+    case CastPath(value, _, _) => applyPath(value)
     case v: Value => applyValue(v)
   
   def applyValue(v: Value): Unit = v match

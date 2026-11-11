@@ -43,9 +43,9 @@ class BlockTransformer(subst: SymbolSubst):
     case Return(res) =>
       applyResult(res): res2 =>
         if res2 is res then b else Return(res2)
-    case Throw(exc) =>
+    case Throw(exc, annotations) =>
       applyResult(exc): exc2 =>
-        if exc2 is exc then b else Throw(exc2)
+        if exc2 is exc then b else Throw(exc2, annotations)
     case Match(scrut, arms, dflt, rst) =>
       def applySub(b: Block) = if rst.isEmpty then applySubBlock(b) else applySubBlockNonTail(b)
       applyPath(scrut): scrut2 =>
@@ -190,6 +190,9 @@ class BlockTransformer(subst: SymbolSubst):
     case Record(mut, fields) =>
       applyRcdArgs(fields): fields2 =>
         k(if fields2 is fields then r else Record(mut, fields2)(r.toLoc))
+    case c @ CastResult(value, _, _) =>
+      applyResult(value): value2 =>
+        k(if value2 is value then c else rebuildCast(c, value2))
     case p: Path => applyPath(p)(k)
   
   def applyPath(p: Path)(k: Path => Block): Block = p match
@@ -209,10 +212,21 @@ class BlockTransformer(subst: SymbolSubst):
       applyPath(qual): qual2 =>
         val sym2 = p.symbol.mapConserve(_.subst)
         k(if (qual2 is qual) && (sym2 is p.symbol) then p else Select(qual2, name)(sym2, p.toLoc)(p.sanitize))
-    case c @ Cast(value, target, check) =>
-      applyResult(value): value2 =>
-        k(if value2 is value then c else Cast(value2, target, check)(c.toLoc))
+    // * The operand of a path cast is itself in a path position, so substitution cannot turn it into a computation.
+    case c @ CastPath(value, _, _) =>
+      applyPath(value): value2 =>
+        k(if value2 is value then c else rebuildCastPath(c, value2))
     case v: Value => applyValue(v)(k)
+  
+  /** Rebuilds `cast` around its transformed operand. Transformers that can compare
+    * representations override this to drop a cast that substitution made redundant
+    * (see `Cast.refined`); the context-free `Cast.apply` cannot decide that. */
+  protected def rebuildCast(cast: CastResult, value: Result): Result =
+    Cast(value, cast.target, cast.check)(cast.toLoc)
+  
+  /** Rebuilds a path cast around its transformed operand, like [[rebuildCast]]. */
+  protected def rebuildCastPath(cast: CastPath, value: Path): Path =
+    Cast.path(value, cast.target, cast.check)(cast.toLoc)
   
   def applyValue(v: Value)(k: Value => Block) = v match
     case Value.SimpleRef(l) =>
@@ -239,7 +253,6 @@ class BlockTransformer(subst: SymbolSubst):
     case sym: BuiltinSymbol => sym.subst
   
   def applyImportSymbol(sym: ImportSymbol): ImportSymbol = sym match
-    case sym: TempSymbol => sym.subst
     case sym: VarSymbol => sym.subst
     case sym: BlockMemberSymbol => sym.subst
   
@@ -255,7 +268,9 @@ class BlockTransformer(subst: SymbolSubst):
     val params2 = fun.params.mapConserve(applyParamList)
     val body2 = applyFunBodyLikeBlock(fun.body)
     if (own2 is fun.owner) && (sym2 is fun.sym) && (dSym2 is fun.dSym) && (params2 is fun.params) && (body2 is fun.body)
-      then fun else FunDefn(own2, sym2, dSym2, params2, body2)(fun.configOverride, fun.annotations)
+      then fun else
+        val signature = if params2 is fun.params then fun.signature else fun.signature.copy(params = params2)
+        FunDefn(own2, sym2, dSym2, signature, body2)(fun.configOverride, fun.annotations)
   
   def applyValDefn(defn: ValDefn)(k: ValDefn => Block): Block =
     val ValDefn(tsym, sym, rhs) = defn
@@ -294,7 +309,10 @@ class BlockTransformer(subst: SymbolSubst):
     val ClsLikeDefn(own, isym, sym, ctorSym, kind, paramsOpt, auxParams, parentPath, methods,
       privateFields, publicFields, preCtor, ctor, mod, bufferable, termCompanion, _) = defn
     val own2 = own.mapConserve(_.subst)
-    val isym2 = isym.subst
+    val isym2: ClassLikeDefSymbol = isym match
+      case sym: ClassSymbol => sym.subst
+      case sym: ModuleOrObjectSymbol => sym.subst
+      case sym: PatternSymbol => sym.subst
     val sym2 = sym.subst
     val ctorSym2 = ctorSym.mapConserve(_.subst)
     val termCompanion2 = termCompanion.mapConserve(_.subst)
@@ -342,7 +360,11 @@ class BlockTransformer(subst: SymbolSubst):
   def applyParamList(pl: LoweredParamList): LoweredParamList =
     def applyParam(p: Param): Param =
       val sym2 = p.sym.subst
-      if sym2 is p.sym then p else p.copy(sym = sym2)(p.toLoc)
+      if sym2 is p.sym then p else
+        // A binding substitution retains the calling convention. Type-changing rewrites must
+        // construct their parameter lists and signatures together instead.
+        assert(p.sym.erasedType.corresponds(sym2.erasedType)(_ is _), "Parameter renaming changed its erased type")
+        p.copy(sym = sym2)(p.toLoc)
     val params2 = pl.params.mapConserve(applyParam)
     val restParam2 = pl.restParam.mapConserve(applyParam)
     if (params2 is pl.params) && (restParam2 is pl.restParam)

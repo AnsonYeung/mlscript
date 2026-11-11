@@ -63,7 +63,7 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
 
   var scopeStates: List[ScopeState] = Nil
 
-  private def freshTmp(erasedType: Opt[ErasedType], nme: Str = "tmp") = TempSymbol(N, erasedType, nme)
+  private def freshTmp(erasedType: Opt[ErasedValueType], nme: Str = "tmp") = TempSymbol(N, erasedType, nme)
   private def getCurScopedTmp = scopeStates.head.tmp
   private def unwrapGenerators = scopeStates.head.inNativeCtx
 
@@ -102,7 +102,7 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
         fun.owner,
         fun.sym,
         fun.dSym,
-        fun.params,
+        fun.signature,
         applyMainBlock(fun.body)
       )(fun.configOverride, fun.annotations)
     else
@@ -111,7 +111,7 @@ class GeneratorHandlerLowering(strategy: GeneratorBase)(using Config, Elaborator
         fun.owner,
         fun.sym,
         fun.dSym,
-        fun.params,
+        FunDefn.Signature.fromParams(fun.params, ErasedResult.Generator(fun.signature.result.bodyType)),
         applyFunBodyLikeBlock(fun.body)
       )(fun.configOverride, if async then Annot.NativeAsync()(N) :: baseAnnots else baseAnnots)
   
