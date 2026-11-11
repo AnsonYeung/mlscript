@@ -209,7 +209,7 @@ class ClassCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: FlattenCt
         fallbackPostTransform.applyBlock(parts.states.head._2.blk)
       else
         val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx.copy(pcVar = pcTmp, postTransform = postTransform, fallbackPostTransform = fallbackPostTransform))
-        Label(loopLbl, true, straightLineCg.generate(parts, ctx, ClassPostResult, true), End())
+        Label(loopLbl, true, straightLineCg.generate(parts, ctx, ClassPostResult, true, !cfg.stackSafety.isDefined), End())
     val bod = blockBuilder
       .scopedVars(flattenCtx.scopedVars.toSet)
       .assignScoped(pcTmp, pcField)

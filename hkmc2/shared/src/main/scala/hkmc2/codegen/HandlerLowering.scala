@@ -924,7 +924,7 @@ class HandlerLowering(paths: HandlerPaths, opt: Opt[EffectHandlers])(using TL, R
         fallbackPostTransform.applyBlock(parts.states.head._2.blk)
       else
         val straightLineCg = StraightLineCodegen(hctx, paths, flattenCtx)
-        Label(mainLoopLbl, true, straightLineCg.generate(parts, ctx, currentStrategy.postResultImpl, false), End())
+        Label(mainLoopLbl, true, straightLineCg.generate(parts, ctx, currentStrategy.postResultImpl, false, false), End())
         
     val getSavedTmp = freshTmp(erasedType = S(ErasedType.Int), "saveOffset")
     // Runtime fields and the saved-local array carry unknown references. Restore

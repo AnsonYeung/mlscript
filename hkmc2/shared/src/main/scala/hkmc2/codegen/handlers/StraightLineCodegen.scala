@@ -70,7 +70,7 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
     ret.sortBy(x => x.headOption.getOrElse(BigInt(-1))).toList
   
   // Note: `line` has the last state as the head, and the first state at the end
-  def generate(parts: PartitionedBlock, ctx: FunctionCtx, postResult: PostResult, useResVar: Bool): Block =
+  def generate(parts: PartitionedBlock, ctx: FunctionCtx, postResult: PostResult, useResVar: Bool, ignoreEntry: Bool): Block =
     val edges = computeEdges(parts)
     val lines = computeStraightLines(parts.entry, edges)
     def transformState(state: StateId) =
@@ -95,7 +95,8 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
         Assign(flattenCtx.pcVar, intLit(nextState), End())
         // End()
       )
-    def straightLineToArms(blk: Block, line: List[StateId]) = line match
+    def straightLineToArms(blk: Block, line: List[StateId]): Block = line match
+      case head :: next if ignoreEntry && head == parts.entry => straightLineToArms(blk, next) 
       case head :: next =>
         val headTransformed = flattenCtx.fallbackPostTransform.applyBlock(parts.states(head).blk)
         val initial: Block =
@@ -109,12 +110,14 @@ class StraightLineCodegen(hctx: SharedState, paths: HandlerPaths, flattenCtx: Fl
           // Applying this function to a block b will result in b appearing in the tail
           // of the sequence of match blocks
           case (acc, uid) =>
-            val transformed = transformState(uid)
-            Match(
-              flattenCtx.pcVar.asSimpleRef,
-              Case.Lit(Tree.IntLit(uid)) -> transformed :: Nil,
-              N,
-              acc
-            )
+            if ignoreEntry && uid == parts.entry then acc
+            else
+              val transformed = transformState(uid)
+              Match(
+                flattenCtx.pcVar.asSimpleRef,
+                Case.Lit(Tree.IntLit(uid)) -> transformed :: Nil,
+                N,
+                acc
+              )
       case Nil => blk
     lines.foldLeft(End())(straightLineToArms)
