@@ -23,7 +23,14 @@ import hkmc2.codegen.handlers.ShadowStackCodegen
 
 object HandlerLowering:
   
-  val defaultStrategy: Strategy = IfCheck()
+  val defaultStrategy: Strategy = sys.env.getOrElse("HANDLER_STRATEGY", "if") match
+    case "if" => IfCheck()
+    case "exception" => ExceptionRethrow()
+    case "double" => DoubleCompilation()
+    case "gen" => Generator()
+    case "agen" => AsyncGenerator()
+    case "ss" => ShadowStack()
+    case "cps" => Cps()
 
   trait PostResult:
     def postResult(paths: HandlerPaths, ctx: FunctionCtx, pcVar: LocalVarSymbol, savedVars: List[LocalVarSymbol], uid: StateId, res: Result, withTransition: Bool): Block => Block
@@ -202,11 +209,11 @@ object HandlerLowering:
   
   // These nofib options is also used for resolving `internals.runStackSafe` stub
   val nofibMaxStackDepth = 100
-  val nofibEffectHandlers: Opt[EffectHandlers] =
+  val nofibEffectHandlers: Opt[EffectHandlers] = if sys.env.contains("HANDLER_NO_HANDLER") then N else
     S(EffectHandlers(
       strategy = defaultStrategy,
       debug = false,
-      stackSafety = S(Config.StackSafety(nofibMaxStackDepth)),
+      stackSafety = if sys.env.contains("HANDLER_NO_STACK_SAFETY") then N else S(Config.StackSafety(nofibMaxStackDepth)),
       false,
       false,
       false,
