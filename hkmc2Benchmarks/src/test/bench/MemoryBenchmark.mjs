@@ -44,12 +44,12 @@ let nofibList = [
 let results = [];
 
 for (const suiteName of nofibList) {
-  console.log(`\n----------------------------------------`);
   console.log(`Benchmarking: ${suiteName}`);
-  console.log(`----------------------------------------`);
 
   await new Promise((resolve) => {
-    const worker = fork("./hkmc2Benchmarks/src/test/bench/MemoryWorker.mjs", [suiteName]);
+    const worker = fork("./hkmc2Benchmarks/src/test/bench/MemoryWorker.mjs", [suiteName], {
+      execArgv: ["--predictable", "--expose-gc"]
+    });
     let ok = false;
 
     worker.on('message', (stats) => {
