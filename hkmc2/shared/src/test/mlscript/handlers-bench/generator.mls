@@ -4,6 +4,7 @@
 :lift
 
 // Note: Runs in at least 2^n time
+// Note: computes f(n) = n + 2f(n-1) where f(0) = 0
 
 import "../../mlscript-compile/handlers-bench/generator.mls"
 generator.run(5)
