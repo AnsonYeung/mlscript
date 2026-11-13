@@ -7,17 +7,17 @@ open GeneratorEffects
 
 module generator with ...
 
-data class Leaf
+data class Leaf()
 data class Node(left: Tree, value: Int, right: Tree)
 type Tree = Leaf | Node
 
-data class Empty
+data class Empty()
 data class Thunk(n: Int, thunk: Function[(), Generator])
 type Generator = Empty | Thunk
 
 fun make(n: Int): Tree =
   if n ===
-    0 then new Leaf
+    0 then Leaf()
     else
       let t = make(n - 1)
       Node(t, n, t)
@@ -33,7 +33,7 @@ fun generate(f: Function[(), ()]): Generator =
   handle h = Eff with
     fun yld(x)(k) = Thunk(x, () => k(()))
   f(h)
-  new Empty
+  Empty()
 
 fun sum(a: Int, g: Generator) =
   if g is
