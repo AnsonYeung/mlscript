@@ -25,3 +25,5 @@ fun run(n: Int) =
   fun step(l, s) =
     if l === 0 then s else step(l - 1, run_(n, s))
   step(1000, 0)
+
+fun main() = run(5)

@@ -22,3 +22,5 @@ fun run(n) =
   handle h = Prime with
     fun isPrime(e)(k) = k(true)
   primes(2, n, 0, h)
+
+fun main() = run(5)

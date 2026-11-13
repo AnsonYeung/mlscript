@@ -21,3 +21,5 @@ fun run(n: Int) =
       k(())
   range(0, n, h)
   s
+
+fun main() = run(10)

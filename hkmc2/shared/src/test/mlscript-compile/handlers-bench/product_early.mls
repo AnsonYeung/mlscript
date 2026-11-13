@@ -31,3 +31,5 @@ fun run(n: Int) =
     if i === 0 then a
     else loop(i - 1, a + runProduct(xs))
   loop(n, 0)
+
+fun main() = run(10)

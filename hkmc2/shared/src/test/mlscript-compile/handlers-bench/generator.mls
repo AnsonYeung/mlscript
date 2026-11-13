@@ -42,3 +42,5 @@ fun sum(a: Int, g: Generator) =
       sum(v + a, f())
 
 fun run(n) = sum(0, generate of h => iterate of h, make of n)
+
+fun main() = run(5)

@@ -11,3 +11,5 @@ fun fibonacci(n) =
 
 fun run(n) =
   fibonacci(n)
+
+fun main() = run(5)

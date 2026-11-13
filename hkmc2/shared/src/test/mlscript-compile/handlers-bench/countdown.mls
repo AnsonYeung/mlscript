@@ -22,3 +22,5 @@ fun run(n) =
       set s = i
       k(())
   countdown(h)
+
+fun main() = run(5)

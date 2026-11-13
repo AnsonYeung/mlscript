@@ -55,3 +55,5 @@ fun run(n: Int) =
   sum of (e: Emit) =>
     catch of (s: Stop) =>
       feed(n, (r: Read) => parse(0, r, e, s), e, s)
+
+fun main() = run(10)
