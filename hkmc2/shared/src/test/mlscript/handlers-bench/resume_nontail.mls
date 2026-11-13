@@ -3,8 +3,19 @@
 :effectHandlers
 :lift
 
-// Note: computes f(n) = n + 2f(n-1) where f(0) = 0
+// The caller must retain its continuation for all 1000 iterations after cross-module inlining.
 
+:expect 37
 import "../../mlscript-compile/handlers-bench/resume_nontail.mls"
 resume_nontail.run(5)
 //│ = 37
+
+// The extra forwarding function must preserve handler instrumentation too.
+:expect 37
+resume_nontail.main()
+//│ = 37
+
+// Even when no effect is raised, the worker must pop the frame registered on entry.
+:expect 0
+resume_nontail.run(0)
+//│ = 0

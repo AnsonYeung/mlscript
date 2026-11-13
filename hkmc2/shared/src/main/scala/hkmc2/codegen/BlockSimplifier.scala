@@ -1875,15 +1875,21 @@ class BlockSimplifier
       
       class Transformer(m: InlinerMap) extends BlockTransformer(SymbolSubst()), RefinesCasts:
         
+        // Inlining can introduce handler instrumentation into a forwarding function.
+        // Keep the marker with its cached body so callers retain the barrier against
+        // inlining lowered code before handler lowering in another compilation unit.
+        case class OptimizedBody(body: Block, handlerInstrumented: Bool)
+
         // The call graph may be cyclic, in which case we break the infinite loop using this map by
         // assuring that the block corresponding to a term symbol may only be transformed once.
         // This map also allows the function block to be optimized on first use before its declaration.
         // Key not in map -> not yet analyzed
         // Key in map but value is None -> the optimized body is being computed
         // Key in map with value -> the function is optimized
-        val newFunctionBody = MutMap.empty[TermSymbol, Option[Block]]
+        val newFunctionBody = MutMap.empty[TermSymbol, Option[OptimizedBody]]
         var insideInlineAnnotatedFunction = false
         var insideCrossUnitFunctionBody = false
+        var currentBodyHandlerInstrumented = false
 
         def spendInlineFuel(cost: Int): Bool =
           if cost <= 0 then return true
@@ -1898,11 +1904,15 @@ class BlockSimplifier
           insideInlineAnnotatedFunction = old
           res
         
-        inline def enterFunctionBody[T](fun: FunDefn, inline thunk: => T): T =
-          val old = insideCrossUnitFunctionBody
+        def transformFunctionBody(fun: FunDefn): OptimizedBody =
+          val oldCrossUnit = insideCrossUnitFunctionBody
+          val oldHandlerInstrumented = currentBodyHandlerInstrumented
           insideCrossUnitFunctionBody = fun.dSym.getState isnt State
-          val res = enterFunBlock(fun.inline, thunk)
-          insideCrossUnitFunctionBody = old
+          currentBodyHandlerInstrumented = fun.handlerInstrumented
+          val body = enterFunBlock(fun.inline, applyBlock(fun.body))
+          val res = OptimizedBody(body, currentBodyHandlerInstrumented)
+          insideCrossUnitFunctionBody = oldCrossUnit
+          currentBodyHandlerInstrumented = oldHandlerInstrumented
           res
 
         def shouldDeferCrossUnitInline(info: InlinerAnalyzer.InlinerFunInfo): Bool =
@@ -1920,19 +1930,22 @@ class BlockSimplifier
           case _ => super.applyBlock(blk)
         
         override def applyFunDefn(fun: FunDefn): FunDefn =
-          newFunctionBody.get(fun.dSym) match
+          val optimized = newFunctionBody.get(fun.dSym) match
             case N =>
               newFunctionBody(fun.dSym) = N
-              val newBdy = enterFunctionBody(fun, applyBlock(fun.body))
+              val newBdy = transformFunctionBody(fun)
               newFunctionBody(fun.dSym) = S(newBdy)
-              if newBdy is fun.body then fun else
-              fun.withBody(newBdy)
+              newBdy
             case S(N) =>
               // The expansion of the function body itself reaches its own definition, which is impossible
               lastWords("Function body contains its own definition.")
-            case S(S(blk)) =>
-              if blk is fun.body then fun else
-              fun.withBody(blk)
+            case S(S(body)) => body
+          val annotations =
+            if optimized.handlerInstrumented && !fun.handlerInstrumented then
+              Annot.HandlerInstrumented()(N) :: fun.annotations
+            else fun.annotations
+          if (optimized.body is fun.body) && (annotations is fun.annotations) then fun else
+            FunDefn(fun.owner, fun.sym, fun.dSym, fun.signature, optimized.body)(fun.configOverride, annotations)
 
         private def inlineCall(
             call: Call,
@@ -1946,10 +1959,11 @@ class BlockSimplifier
           newFunctionBody.get(callee)
           .getOrElse:
             newFunctionBody(callee) = N
-            val newBdy = enterFunctionBody(info.defn, applyBlock(info.defn.body))
+            val newBdy = transformFunctionBody(info.defn)
             newFunctionBody(callee) = S(newBdy)
             S(newBdy)
-          .fold(super.applyResult(call)(k)): blk =>
+          .fold(super.applyResult(call)(k)): optimized =>
+            val blk = optimized.body
             val cfg = summon[Config.Inliner]
             val threshold = if insideInlineAnnotatedFunction then cfg.altSmallThreshold else cfg.inlineThreshold
             val receiverPaths = thisMapping
@@ -1971,6 +1985,7 @@ class BlockSimplifier
               case S(matchedArgs) =>
                 registerChange(s"inline call ${callee.showDbg}")
                 log(dbg"Inline call for ${callee}, with args ${argss}")
+                currentBodyHandlerInstrumented ||= optimized.handlerInstrumented
                 val extraArgss = argss.drop(info.defn.params.length)
                 val (receiverPrefix, boundReceivers) = bindThisMapping(receiverPaths, receiverMapping)
                 def go(acc: Block => Block, args: List[(VarSymbol, Result)], mapping: Map[Symbol, Symbol]): Block =
